@@ -23,7 +23,7 @@ Keep the repository private until the clean-history cutover is verified and the 
 - [x] Old branch ancestry, pull-request records, commits, Actions, and artifacts are absent from the recreated repository. New Dependabot requests can reuse old request numbers.
 - [x] Existing local review work is preserved; local Git refs and objects containing old history are removed.
 - [x] A fresh remote clone passes the current-tree and complete-history audits, including commit identities and every advertised branch/pull-request ref.
-- [ ] CI, Gitleaks, and the history-enabled public-readiness workflow pass on the final pushed commit.
+- [x] CI, Gitleaks, and the history-enabled public-readiness workflow pass on the verified cutover source revision. Recheck the final pushed head before visibility changes.
 - [x] Repository description, homepage, topics, squash-only merge settings, and owner-only collaborator access are verified. Auto-merge is part of the public branch-protection transition.
 
 See [HISTORY_RESET.md](../release/HISTORY_RESET.md) for the approved procedure and limits, and [PUBLIC_READINESS.md](../release/PUBLIC_READINESS.md) for evidence.

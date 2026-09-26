@@ -1,6 +1,6 @@
 # Public-readiness assessment
 
-Reviewed 2026-09-26. Source preparation and the clean-history cutover are verified. The owner approved public visibility, but a subsequent generated pull-request merge failed the email-identity audit. The repository was temporarily returned to private pending remediation. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
+Reviewed 2026-09-26. Source preparation and the clean-history cutover are verified. Following a failed GitHub-generated commit email check, the owner approved email privacy and a second private repository recreation. The corrected source passes CI, Gitleaks, and the complete-history audit; a fresh generated merge uses safe noreply identities. Final public controls are verified after publication. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
 
 ## Source and engineering evidence
 
@@ -34,9 +34,15 @@ Repository description, homepage, topics, merge settings, and owner-only collabo
 
 The [public CodeQL run](https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/actions/runs/36235359832) succeeds for both C# and JavaScript/TypeScript on that same publication revision. GitHub's analysis records report zero results, no errors, and no warnings for each language; there are no open code-scanning alerts at the checkpoint. These scans supplement the source/history and media review.
 
-Final verification of the publication documentation pull request caught a new non-noreply author address in GitHub's automatically generated test merge. The source branch and main commits still use the reviewed noreply identity. The repository was immediately returned to private; account-wide GitHub email privacy and removal of the generated PR metadata require additional owner approval. The main revision's green checks and the earlier 26-commit public checkpoint do not certify this later merge ref. Recheck all advertised refs, final workflows, protection, and public access after remediation. The repository was briefly public; restricting visibility does not erase independently retained copies.
+Final verification of the publication documentation pull request caught a new non-noreply author address in GitHub's automatically generated test merge. The source branch and main commits still used the reviewed noreply identity. The repository was immediately returned to private. The owner subsequently approved account-wide GitHub email privacy and recreation of CAVE again; repository mutations remain confined to CAVE. The earlier main checks and public checkpoint did not certify the failed merge ref. The repository was briefly public; restricting visibility does not erase independently retained copies.
 
-The pull-request CI also exposed a test-fixture dependency on the checkout's tracked upstream. The GitHub checkout is detached, so that baseline is unavailable. The sample snapshot test now explicitly requests HEAD and asserts that baseline, preserving the production upstream policy. The unmodified test failure was reproduced in a detached verification clone; after the correction all 13 host tests and all 149 backend tests pass there. The corrected test is prepared locally for the approved remediation.
+The pull-request CI also exposed a test-fixture dependency on the checkout's tracked upstream. The GitHub checkout is detached, so that baseline is unavailable. The sample snapshot test now explicitly requests HEAD and asserts that baseline, preserving the production upstream policy. The unmodified test failure was reproduced in a detached verification clone; after the correction all 13 host tests and all 149 backend tests pass there. Corrected source revision `2286a18924e7d90960e126739c37e60a7e0a3e57` also passed GitHub CI, Gitleaks, and the complete-history audit before the second recreation.
+
+### Email-privacy remediation
+
+GitHub's **Keep my email addresses private** setting is enabled and persisted after reload. This affects GitHub web-generated commit email across the account; it preserves the public username and account attribution. No other repository or global Git configuration was changed. The fresh generated merge `d10a3dd18605999f35beeafe43a41d91188a6820` used safe GitHub noreply author and committer identities and passed the history audit.
+
+CAVE was recreated privately again at the same URL with repository identity `1389072240`. The approved deletion removed the previous replacement's 12 pull requests and Actions records. The reviewed clean source ancestry was retained, and only reviewed CAVE branches are pushed. Existing local review work is preserved. Workflow links above describe the first publication checkpoint; those runs were deleted during the second recreation and are historical evidence. Current checks are available in the replacement repository's Actions pages and README badges.
 
 ## Runtime boundary and functional limitation
 

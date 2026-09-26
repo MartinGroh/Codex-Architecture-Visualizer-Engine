@@ -34,3 +34,13 @@ On 2026-09-26 the repository was recreated privately at the same URL with new Gi
 All 35 recorded old commit and remote-ref object identities were unavailable through the replacement repository's commit API. Fetching the old main commit was rejected. A fresh clone fetched every advertised branch and pull-request ref: all 24 commits at that checkpoint descended from the one clean root and passed the complete-history audit. New Dependabot requests were created after recreation; their numbers may overlap the deleted requests.
 
 The replacement repository's Actions runs and artifacts were created after recreation. Existing local review status, index bytes, complete diff, and all changed/untracked file hashes were identical after replacing their baseline with the same tree and sanitized identity. Old reflogs were expired and recorded old commit objects were pruned from the reviewed Git database. No user review files were removed.
+
+## Second recreation for GitHub-generated commit metadata
+
+Later verification found a non-noreply address in the first replacement's generated pull-request merge metadata. Publication was immediately paused. The owner approved enabling GitHub email privacy and recreating CAVE again, with all repository changes confined to CAVE.
+
+On 2026-09-26 the privacy setting was enabled and verified after reload. A fresh generated merge used safe noreply identities, and corrected source revision `2286a18924e7d90960e126739c37e60a7e0a3e57` passed CI, Gitleaks, and the complete-history audit. Repository identity `1388982522` was deleted with its 12 pull requests and Actions records; GitHub confirmed deletion and the repository API returned 404.
+
+The second replacement was created **privately** with identity `1389072240`, preserving the same URL. It retains only the reviewed clean ancestry rooted at `2466227d04afdb5f39ad8e98fc24075d954c96dd`. Existing local review work is preserved. Recheck all advertised refs, generated merge identities, final workflows, and public controls before completing publication. This removes exposed repository records; it does not certify erasure of independently retained copies or platform backups.
+
+A fresh clone fetched every advertised branch and pull-request ref. All 16 commits at this private checkpoint pass the source and complete-history audits. GitHub's commit API rejects the failed generated merge from the deleted replacement. The final public check repeats this audit because new pull requests can add refs after the checkpoint.

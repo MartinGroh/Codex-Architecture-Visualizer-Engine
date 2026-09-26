@@ -1,6 +1,6 @@
 # Public Source Publication Checklist
 
-The owner approved public visibility after the verified clean-history cutover on 2026-09-26. The repository was temporarily returned to private after a generated pull-request merge commit failed the email-identity audit. Resolve that metadata issue before restoring public visibility. Binary releases have separate gates below.
+The owner approved public visibility after the verified clean-history cutover on 2026-09-26. A generated pull-request merge email issue was caught, publication was paused, and the owner approved email privacy and a second CAVE recreation. The fresh generated merge passes its identity audit. Public controls require a final check after the replacement is published. Binary releases have separate gates below.
 
 ## Verified source preparation
 
@@ -31,13 +31,14 @@ See [HISTORY_RESET.md](../release/HISTORY_RESET.md) for the approved procedure a
 ## Controlled public transition
 
 - [x] The owner records an explicit **make public** decision after reviewing the verified cutover.
-- [ ] The owner's GitHub web-operation email privacy is enabled, and a newly generated pull-request merge commit passes the identity audit. Local Git noreply configuration alone does not control GitHub-generated commits.
-- [ ] The failed generated merge metadata is removed from the replacement repository's exposed history; current source and all advertised refs pass a fresh audit.
+- [x] The owner's GitHub web-operation email privacy is enabled, and a newly generated pull-request merge commit passes the identity audit. Local Git noreply configuration alone does not control GitHub-generated commits.
+- [x] The failed generated merge metadata is removed from the replacement repository's exposed history; current source and all advertised refs pass a fresh audit.
 - [x] Visibility changes in a controlled window.
 - [x] Canonical branch protection is applied and read back, including administrator enforcement and owner approval for contributor requests.
 - [x] Private vulnerability reporting, secret scanning, push protection, Dependabot, and CodeQL are enabled and verified. Both CodeQL language analyses pass on the publication source with no findings; no open secret-scanning or Dependabot alerts were reported.
 - [x] Public source, links, badges, security reporting, and clone instructions are checked without authentication. The fresh public clone and all advertised branch/pull-request history pass the audit.
-- [ ] After remediation, final public visibility, branch protection, security controls, workflows, and signed-out access are verified again.
+
+The replacement's final public visibility, branch protection, security controls, workflows, and signed-out access must be checked after publication. The verification result is recorded in the [CAVE cutover pull request](https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/pull/7), together with links to its final scans.
 
 Follow [BRANCH_PROTECTION.md](../repository/BRANCH_PROTECTION.md). Source publication does not authorize exposing an unauthenticated running host to an untrusted network.
 

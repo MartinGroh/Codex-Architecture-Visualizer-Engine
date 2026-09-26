@@ -35,4 +35,6 @@ During preparation the private repository's plan rejected branch protection. On 
 
 `CODEOWNERS` currently names `@MartinGroh` for every file. Contributor and Dependabot requests therefore require the owner's approval. GitHub does not let an author approve their own pull request. Owner-authored requests need another authorized code owner or a separately approved, documented emergency exception; the agent must not weaken the policy to merge its own request.
 
+GitHub's generated pull-request test merge uses account email preferences independently of local Git configuration. Enable **Keep my email addresses private** for web-based Git operations and verify generated merge metadata before publication. During final verification, the publication request's generated merge failed the noreply-identity audit; the repository was temporarily returned to private pending remediation. See [GitHub's commit-email guidance](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address).
+
 Never change visibility merely to make an automation check pass.

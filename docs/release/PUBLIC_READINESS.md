@@ -1,6 +1,6 @@
 # Public-readiness assessment
 
-Reviewed 2026-09-26. Source preparation and the clean-history cutover are verified. After passing final pushed-head checks, the owner explicitly approved public visibility and the repository was made public. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
+Reviewed 2026-09-26. Source preparation and the clean-history cutover are verified. The owner approved public visibility, but a subsequent generated pull-request merge failed the email-identity audit. The repository was temporarily returned to private pending remediation. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
 
 ## Source and engineering evidence
 
@@ -33,6 +33,10 @@ The history audit's successful exit handling was verified both locally and in Gi
 Repository description, homepage, topics, merge settings, and owner-only collaborator access are verified. A signed-out browser shows the public source and confidential reporting link. Unauthenticated requests resolve the license, contribution, support, and security pages and all four workflow badges. A fresh clone with credential helpers and authorization headers disabled fetched every advertised branch and pull-request ref: all 26 commits at the public checkpoint descend from the clean root and pass the current-tree/history audit. Its main revision is the verified publication source. An unauthenticated request for the recorded old preparation commit returns 404.
 
 The [public CodeQL run](https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/actions/runs/36235359832) succeeds for both C# and JavaScript/TypeScript on that same publication revision. GitHub's analysis records report zero results, no errors, and no warnings for each language; there are no open code-scanning alerts at the checkpoint. These scans supplement the source/history and media review.
+
+Final verification of the publication documentation pull request caught a new non-noreply author address in GitHub's automatically generated test merge. The source branch and main commits still use the reviewed noreply identity. The repository was immediately returned to private; account-wide GitHub email privacy and removal of the generated PR metadata require additional owner approval. The main revision's green checks and the earlier 26-commit public checkpoint do not certify this later merge ref. Recheck all advertised refs, final workflows, protection, and public access after remediation. The repository was briefly public; restricting visibility does not erase independently retained copies.
+
+The pull-request CI also exposed a test-fixture dependency on the checkout's tracked upstream. The GitHub checkout is detached, so that baseline is unavailable. The sample snapshot test now explicitly requests HEAD and asserts that baseline, preserving the production upstream policy. The unmodified test failure was reproduced in a detached verification clone; after the correction all 13 host tests and all 149 backend tests pass there. The corrected test is prepared locally for the approved remediation.
 
 ## Runtime boundary and functional limitation
 

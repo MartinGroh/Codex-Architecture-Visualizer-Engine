@@ -306,7 +306,14 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task SnapshotEndpointLabelsSampleEvidence()
     {
-        using var client = CreateSampleFactory().CreateClient();
+        // CONSTRAINT: GitHub pull-request checkouts are detached and have no upstream.
+        // This host-composition test explicitly compares with HEAD; production still requires its configured baseline.
+        using var client = CreateSampleFactory().WithWebHostBuilder(builder => builder
+            .ConfigureTestServices(services =>
+            {
+                services.RemoveAll<GitBaselineRequest>();
+                services.AddSingleton(new GitBaselineRequest(GitBaselineKind.Head, null));
+            })).CreateClient();
 
         var workspaceId = MachineWorkspaceCatalogStore.CreateWorkspaceId(_workspaceRoot);
         using var response = await client.GetAsync(
@@ -323,6 +330,7 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
         Assert.Equal(9, snapshot.GetProperty("graph").GetProperty("nodes").GetArrayLength());
         var git = snapshot.GetProperty("git");
         Assert.Equal("Ready", git.GetProperty("status").GetString());
+        Assert.Equal("Head", git.GetProperty("baseline").GetProperty("kind").GetString());
         Assert.False(string.IsNullOrWhiteSpace(
             git.GetProperty("baseline").GetProperty("resolvedSha").GetString()));
     }

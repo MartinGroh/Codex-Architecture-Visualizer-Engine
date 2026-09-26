@@ -163,6 +163,9 @@ try {
         foreach ($revision in $revisions) {
             foreach ($historyPattern in $historyPatterns) {
                 $matches = @(& git grep -I -n -E -e $historyPattern.GitPattern $revision -- . 2>$null)
+                if ($LASTEXITCODE -gt 1) {
+                    throw 'Unable to scan a Git revision.'
+                }
                 foreach ($matchLine in $matches) {
                     $metadata = [regex]::Match(
                         $matchLine,
@@ -196,6 +199,9 @@ try {
 
     $scopeDescription = if ($IncludeHistory) { 'current tree and Git history' } else { 'current tree' }
     Write-Host "Public-readiness audit passed for the $scopeDescription." -ForegroundColor Green
+    # Git grep returns 1 for no matches; GitHub's PowerShell wrapper propagates it
+    # unless the successful audit explicitly terminates with a zero exit code.
+    exit 0
 }
 finally {
     Pop-Location

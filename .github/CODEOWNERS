@@ -1,0 +1,10 @@
+# Repository-wide ownership. Add area owners as the maintainer group grows.
+* @MartinGroh
+
+/Architecture.md @MartinGroh
+/ArchitectureAndCodeGuidlines.md @MartinGroh
+/docs/decisions/ @MartinGroh
+/docs/release/ @MartinGroh
+/docs/security/ @MartinGroh
+/plugins/cave/ @MartinGroh
+/.github/workflows/ @MartinGroh

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open CAVE"
+  short_description: "Open the live architecture view in Codex"
+  default_prompt: "Use $open to open this workspace's live CAVE architecture view inside Codex."

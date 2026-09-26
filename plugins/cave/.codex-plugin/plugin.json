@@ -1,0 +1,42 @@
+{
+  "name": "cave",
+  "version": "0.3.0+codex.20260923152414",
+  "description": "Explore and monitor software architecture while Codex changes it.",
+  "author": {
+    "name": "Martin Groh",
+    "url": "https://github.com/MartinGroh"
+  },
+  "repository": "https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine",
+  "license": "MIT",
+  "keywords": [
+    "architecture",
+    "codegraph",
+    "visualization",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "CAVE",
+    "shortDescription": "See architecture and change impact while Codex works.",
+    "longDescription": "CAVE maps architecture, Git deltas, agent activity, opt-in public conversation, node memos, and Codex usage.",
+    "developerName": "Martin Groh",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "brandColor": "#7157F5",
+    "composerIcon": "./assets/cave-icon.png",
+    "logo": "./assets/cave-icon.png",
+    "logoDark": "./assets/cave-icon.png",
+    "defaultPrompt": [
+      "Initialize CAVE for this workspace.",
+      "Open CAVE inside Codex.",
+      "Show the architecture of this workspace.",
+      "Explain the impact of the current changes.",
+      "Summarize what Codex is changing now."
+    ]
+  }
+}

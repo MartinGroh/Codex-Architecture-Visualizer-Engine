@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Cave.Application/Cave.Application.csproj" />
+    <Project Path="src/Cave.Domain/Cave.Domain.csproj" />
+    <Project Path="src/Cave.Host/Cave.Host.csproj" />
+    <Project Path="src/Cave.Infrastructure/Cave.Infrastructure.csproj" />
+    <Project Path="src/Cave.Mcp/Cave.Mcp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cave.Tests/Cave.Tests.csproj" />
+  </Folder>
+</Solution>

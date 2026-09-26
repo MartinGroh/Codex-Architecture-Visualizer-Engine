@@ -1,0 +1,35 @@
+name: Architecture proposal
+description: Propose a cross-boundary design before implementation.
+title: "[Architecture]: "
+labels: [architecture, design-needed]
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision to make
+    validations:
+      required: true
+  - type: textarea
+    id: owner
+    attributes:
+      label: Proposed owner and dependency direction
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Contracts, privacy, operations, and compatibility
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification, delivery, and rollback
+    validations:
+      required: true

@@ -1,0 +1,33 @@
+name: Public readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      include_history:
+        description: Include every fetched Git revision
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  repository-audit:
+    name: Repository audit
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Audit current tree
+        shell: pwsh
+        run: ./scripts/audit-public-readiness.ps1
+      - name: Audit Git history
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.include_history }}
+        shell: pwsh
+        run: ./scripts/audit-public-readiness.ps1 -IncludeHistory

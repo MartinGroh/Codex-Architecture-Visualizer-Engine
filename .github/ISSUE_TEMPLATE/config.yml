@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/security/advisories
+    about: Report vulnerabilities and sensitive disclosures privately.
+  - name: Support and privacy guidance
+    url: https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/blob/main/SUPPORT.md
+    about: Read what diagnostic information is safe to share.

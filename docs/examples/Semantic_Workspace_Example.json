@@ -1,0 +1,94 @@
+{
+  "format": "cave-semantic-workspace",
+  "formatVersion": 1,
+  "workspace": {
+    "schemaVersion": 1,
+    "id": "semantic-example",
+    "name": "Example engineering workspace",
+    "revision": 3,
+    "updatedAtUtc": "2026-08-30T08:00:00+00:00",
+    "diagrams": [
+      {
+        "id": "diagram-system",
+        "title": "System design",
+        "purpose": "Show the editable delivery intent beside CodeGraph evidence.",
+        "tracking": {
+          "boardId": "board-development",
+          "columnId": "column-doing",
+          "progress": { "mode": "Manual", "value": 40 },
+          "metadata": {}
+        },
+        "metadata": {}
+      }
+    ],
+    "entities": [
+      {
+        "id": "entity-api",
+        "diagramId": "diagram-system",
+        "type": "service",
+        "title": "Architecture API",
+        "description": "Typed read and mutation boundary.",
+        "architectureNodeId": "project:Cave.Host",
+        "blocks": [
+          {
+            "kind": "text",
+            "id": "block-purpose",
+            "text": "Owns the **HTTP projection** of the canonical semantic workspace."
+          },
+          {
+            "kind": "checklist",
+            "id": "block-checklist",
+            "items": [
+              { "id": "check-http", "text": "Verify HTTP parity", "completed": true, "order": 0 },
+              { "id": "check-mcp", "text": "Verify MCP parity", "completed": false, "order": 1 }
+            ]
+          }
+        ],
+        "tracking": {
+          "boardId": "board-development",
+          "columnId": "column-doing",
+          "progress": { "mode": "Manual", "value": 50 },
+          "metadata": {}
+        },
+        "tags": ["api", "semantic-workspace"],
+        "metadata": {}
+      },
+      {
+        "id": "entity-domain",
+        "diagramId": "diagram-system",
+        "type": "domain",
+        "title": "Semantic model",
+        "description": "Stable identity and typed engineering intent.",
+        "architectureNodeId": "project:Cave.Domain",
+        "blocks": [],
+        "tags": ["domain"],
+        "metadata": {}
+      }
+    ],
+    "relationships": [
+      {
+        "id": "relationship-api-domain",
+        "diagramId": "diagram-system",
+        "sourceEntityId": "entity-api",
+        "targetEntityId": "entity-domain",
+        "type": "depends-on",
+        "label": "uses canonical model",
+        "metadata": {}
+      }
+    ],
+    "boards": [
+      {
+        "id": "board-development",
+        "title": "Development",
+        "columns": [
+          { "id": "column-planned", "title": "Planned", "order": 0, "colorToken": "neutral" },
+          { "id": "column-doing", "title": "Doing", "order": 1, "colorToken": "active" },
+          { "id": "column-testing", "title": "Testing", "order": 2, "colorToken": "warning" },
+          { "id": "column-done", "title": "Done", "order": 3, "colorToken": "success" }
+        ],
+        "metadata": {}
+      }
+    ],
+    "assets": []
+  }
+}

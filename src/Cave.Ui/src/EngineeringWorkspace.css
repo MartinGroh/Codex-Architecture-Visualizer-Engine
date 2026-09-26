@@ -1,0 +1,405 @@
+.engineering-workspace {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  color: var(--text);
+  background: var(--surface-subtle);
+}
+
+.engineering-workspace button,
+.engineering-workspace input,
+.engineering-workspace select,
+.engineering-workspace textarea {
+  font: inherit;
+}
+
+.engineering-workspace button:focus-visible,
+.engineering-workspace input:focus-visible,
+.engineering-workspace select:focus-visible,
+.engineering-workspace textarea:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.engineering-workspace__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.engineering-workspace__projection,
+.engineering-workspace__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.engineering-workspace__projection {
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.engineering-workspace__projection button,
+.engineering-workspace__actions button,
+.semantic-diagram-list form button,
+.semantic-diagram-stage > header button,
+.engineering-workspace__board-select button,
+.semantic-entity-inspector__buttons button,
+.semantic-relationship-form button,
+.semantic-asset-form button,
+.engineering-workspace--empty > button,
+.engineering-workspace--loading > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.engineering-workspace__projection button {
+  border-color: transparent;
+  background: transparent;
+}
+
+.engineering-workspace__projection button[aria-selected='true'] {
+  color: var(--violet);
+  background: var(--surface);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 58%, transparent);
+}
+
+.engineering-workspace__actions { margin-left: auto; }
+.engineering-workspace__actions button:hover,
+.semantic-diagram-list form button:hover,
+.semantic-diagram-stage > header button:hover,
+.engineering-workspace__board-select button:hover,
+.semantic-entity-inspector__buttons button:hover,
+.semantic-relationship-form button:hover,
+.semantic-asset-form button:hover {
+  color: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 35%, var(--line));
+  background: var(--violet-soft);
+}
+
+.engineering-workspace button:disabled {
+  cursor: not-allowed;
+  opacity: .48;
+}
+
+.engineering-workspace__revision {
+  color: var(--text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.engineering-workspace__error {
+  margin: 0;
+  padding: 9px 14px;
+  color: color-mix(in srgb, var(--coral) 78%, var(--text));
+  font-size: 11px;
+  line-height: 1.4;
+  border-bottom: 1px solid color-mix(in srgb, var(--coral) 32%, var(--line));
+  background: color-mix(in srgb, var(--coral) 8%, var(--surface));
+}
+
+.engineering-workspace--loading,
+.engineering-workspace--empty {
+  place-content: center;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 360px;
+  padding: 40px;
+  text-align: center;
+}
+
+.engineering-workspace--loading > svg,
+.engineering-workspace--empty > svg { color: var(--violet); }
+.engineering-workspace--loading h2,
+.engineering-workspace--empty h2 { margin: 4px 0 0; font-size: clamp(20px, 2.4vw, 30px); letter-spacing: -.025em; }
+.engineering-workspace--loading p,
+.engineering-workspace--empty p { max-width: 58ch; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
+.engineering-workspace--empty > button { margin-top: 8px; color: var(--violet); border-color: color-mix(in srgb, var(--violet) 34%, var(--line)); }
+
+.engineering-workspace__kanban {
+  min-height: 0;
+  padding: 18px;
+  overflow: auto;
+}
+
+.engineering-workspace__board-select {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.engineering-workspace__board-select form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.engineering-workspace label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.engineering-workspace input,
+.engineering-workspace select,
+.engineering-workspace textarea {
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.engineering-workspace input,
+.engineering-workspace select { min-height: 34px; padding: 7px 9px; }
+.engineering-workspace textarea { min-height: 94px; padding: 9px; line-height: 1.5; resize: vertical; }
+.engineering-workspace__empty-note { margin: 30px 0; color: var(--text-muted); font-size: 12px; text-align: center; }
+
+.engineering-workspace__diagram {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.engineering-workspace__diagram.has-inspector {
+  grid-template-columns: 210px minmax(360px, 1fr) minmax(320px, 390px);
+}
+
+.semantic-diagram-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px 10px;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.semantic-diagram-list__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 8px 8px;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.semantic-diagram-list__heading span { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+.semantic-diagram-list > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 9px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+}
+
+.semantic-diagram-list > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.semantic-diagram-list > button:hover { color: var(--text); background: var(--surface-subtle); }
+.semantic-diagram-list > button.is-active { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 28%, var(--line)); background: var(--violet-soft); }
+.semantic-diagram-list form { display: grid; gap: 7px; margin-top: 10px; padding: 11px 8px 0; border-top: 1px solid var(--line); }
+
+.semantic-diagram-stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: var(--canvas, var(--surface-subtle));
+}
+
+.semantic-diagram-stage > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 74px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.semantic-diagram-stage > header > div { min-width: 0; }
+.semantic-diagram-stage > header h2 { margin: 3px 0 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.15; letter-spacing: -.025em; }
+.semantic-diagram-stage > header p { max-width: 68ch; margin: 5px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.45; }
+.semantic-diagram-stage > header > div > button { min-height: 28px; padding: 4px 7px; border-color: transparent; background: transparent; }
+.semantic-diagram-stage > header form { display: flex; align-items: end; gap: 8px; }
+.semantic-diagram-stage > header input { width: min(220px, 24vw); }
+
+.semantic-flow { min-width: 0; min-height: 0; }
+.semantic-flow .react-flow__background { color: color-mix(in srgb, var(--line) 72%, transparent); }
+.semantic-flow .react-flow__controls,
+.semantic-flow .react-flow__minimap { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow) 58%, transparent); overflow: hidden; }
+.semantic-flow .react-flow__controls button { color: var(--text-muted); border-color: var(--line); background: var(--surface); }
+.semantic-flow .react-flow__edge-path { stroke: color-mix(in srgb, var(--violet) 52%, var(--line-strong)); stroke-width: 1.5; }
+.semantic-flow .react-flow__edge-text { fill: var(--text-muted); font-size: 9px; }
+.semantic-flow .react-flow__edge-textbg { fill: var(--surface); fill-opacity: .94; }
+.semantic-flow .react-flow__node { width: 228px; }
+
+.semantic-entity-node {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-height: 116px;
+  padding: 14px;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow) 64%, transparent);
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.semantic-entity-node.is-selected {
+  border-color: color-mix(in srgb, var(--violet) 64%, var(--line));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--violet) 13%, var(--shadow));
+}
+
+.semantic-entity-node > header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--violet);
+}
+.semantic-entity-node > header span { margin-right: auto; overflow: hidden; color: var(--text-faint); font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.semantic-entity-node > strong { overflow-wrap: anywhere; font-size: 15px; line-height: 1.25; }
+.semantic-entity-node > p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--text-muted); font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.semantic-entity-node > footer { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--text-faint); font-size: 10px; }
+.semantic-entity-node > footer span { display: inline-flex; align-items: center; gap: 4px; }
+.semantic-entity-node__progress { height: 3px; overflow: hidden; border-radius: 3px; background: var(--surface-raised); }
+.semantic-entity-node__progress span { display: block; height: 100%; border-radius: inherit; background: var(--teal); }
+.semantic-entity-node .react-flow__handle { width: 8px; height: 8px; border: 2px solid var(--surface); background: var(--violet); }
+.semantic-flow--far .semantic-entity-node { min-height: 76px; gap: 5px; padding: 11px; }
+.semantic-flow--far .semantic-entity-node > header span { font-size: 11px; }
+
+.semantic-flow__empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 280px;
+  padding: 30px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.semantic-flow__empty svg { color: var(--violet); }
+.semantic-flow__empty strong { color: var(--text); font-size: 15px; }
+.semantic-flow__empty span { max-width: 52ch; font-size: 11px; line-height: 1.5; }
+
+.semantic-entity-inspector {
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.semantic-entity-inspector > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.semantic-entity-inspector > header span { color: var(--text-faint); font-size: 10px; text-transform: uppercase; }
+.semantic-entity-inspector > header h2 { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 20px; line-height: 1.2; letter-spacing: -.025em; }
+.semantic-entity-inspector > header > button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--text-muted); cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-subtle); }
+.semantic-entity-inspector__fields { display: grid; gap: 10px; padding: 14px 16px; }
+.semantic-entity-inspector__buttons { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 14px; }
+.semantic-entity-inspector__buttons button.is-destructive:hover { color: var(--coral); border-color: color-mix(in srgb, var(--coral) 35%, var(--line)); background: color-mix(in srgb, var(--coral) 8%, var(--surface)); }
+
+.semantic-relationship-form,
+.semantic-asset-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+.semantic-relationship-form > strong,
+.semantic-asset-form > strong { grid-column: 1 / -1; color: var(--text-soft); font-size: 12px; }
+.semantic-relationship-form > button,
+.semantic-asset-form > button { grid-column: 1 / -1; }
+
+.semantic-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+.semantic-block-actions > span { flex: 1 0 100%; color: var(--text-soft); font-size: 12px; font-weight: 650; }
+.semantic-block-actions button { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 5px 7px; color: var(--text-muted); font-size: 10px; cursor: pointer; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-subtle); }
+.semantic-block-actions button:hover { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 34%, var(--line)); }
+.semantic-entity-inspector > .rich-content { margin: 0 16px 18px; }
+
+@media (max-width: 1100px) {
+  .engineering-workspace__diagram.has-inspector { grid-template-columns: 180px minmax(300px, 1fr) minmax(300px, 350px); }
+  .engineering-workspace__diagram:not(.has-inspector) { grid-template-columns: 180px minmax(0, 1fr); }
+  .semantic-diagram-stage > header { align-items: start; }
+  .semantic-diagram-stage > header form { display: grid; }
+}
+
+@media (max-width: 760px) {
+  .engineering-workspace { grid-template-rows: auto auto minmax(0, 1fr); }
+  .engineering-workspace__toolbar { align-items: stretch; flex-wrap: wrap; padding: 8px 10px; }
+  .engineering-workspace__projection { flex: 1; }
+  .engineering-workspace__projection button { flex: 1; }
+  .engineering-workspace__actions { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
+  .engineering-workspace__revision { align-self: center; }
+  .engineering-workspace__kanban { padding: 12px 10px; }
+  .engineering-workspace__board-select { align-items: stretch; flex-direction: column; }
+  .engineering-workspace__board-select form { align-items: stretch; }
+  .engineering-workspace__board-select form label { flex: 1; }
+  .engineering-workspace__diagram,
+  .engineering-workspace__diagram.has-inspector,
+  .engineering-workspace__diagram:not(.has-inspector) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(440px, 1fr); overflow-y: auto; }
+  .semantic-diagram-list { grid-auto-flow: column; grid-auto-columns: minmax(150px, 58vw); overflow: auto hidden; border-right: 0; border-bottom: 1px solid var(--line); }
+  .semantic-diagram-list__heading { display: none; }
+  .semantic-diagram-list form { display: none; }
+  .semantic-diagram-stage { min-height: 540px; }
+  .semantic-diagram-stage > header { align-items: stretch; flex-direction: column; }
+  .semantic-diagram-stage > header form { display: flex; }
+  .semantic-diagram-stage > header form label { flex: 1; }
+  .semantic-diagram-stage > header input { width: 100%; }
+  .semantic-entity-inspector { position: fixed; z-index: 120; inset: max(12px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 54px color-mix(in srgb, var(--shadow) 88%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .semantic-entity-node { transition: none; }
+}

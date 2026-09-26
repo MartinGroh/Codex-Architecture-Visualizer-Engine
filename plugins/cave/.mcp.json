@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "cave": {
+      "title": "CAVE",
+      "description": "Live CodeGraph architecture visualization for the active workspace.",
+      "cwd": ".",
+      "command": "./server/Cave.Mcp.exe",
+      "args": []
+    }
+  }
+}

@@ -1,0 +1,11 @@
+.codex-text { min-width: 0; overflow-wrap: anywhere; }
+.codex-text table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .88em; }
+.codex-text th, .codex-text td { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding: .45em .7em; text-align: left; }
+.codex-text th { background: color-mix(in srgb, currentColor 6%, transparent); }
+.codex-text pre { max-width: 100%; overflow-x: auto; }
+.codex-text__writing, .codex-text__comment { margin: .8em 0; padding: .85em 1em; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: .6em; }
+.codex-text__writing > header { display: grid; gap: .3em; padding-bottom: .65em; margin-bottom: .65em; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.codex-text__comment > small { display: block; margin: .4em 0; opacity: .75; }
+.codex-text__citation { font-size: .85em; opacity: .8; }
+.codex-text__followup { border-bottom: 1px dotted currentColor; }
+.codex-text__thread { font-size: .85em; }

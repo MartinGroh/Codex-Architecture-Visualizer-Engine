@@ -1,0 +1,4 @@
+interface:
+  display_name: "Initialize CAVE"
+  short_description: "Prepare this workspace for live CAVE"
+  default_prompt: "Use $init to initialize the current workspace for CAVE and open its live architecture view."

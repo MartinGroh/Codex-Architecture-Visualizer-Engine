@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible CAVE defect using sanitized evidence.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach real workspace captures, prompts, journals, indexes, credentials, or private paths. Use demo mode when possible.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened?
+      description: State the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Give the smallest steps, preferably against `scripts/start-demo.ps1`.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CAVE version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [Synthetic demo, Live CodeGraph, Embedded MCP App, Standalone browser, Packaging or installation]
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Sanitized environment
+      description: OS and relevant .NET, Node.js, Python, Codex, and CodeGraph versions. Remove user names and paths.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, personal paths, internal identifiers, private endpoints, prompts, journals, indexes, and real-workspace captures.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Cave.Ui/package-lock.json
+      - name: Restore frontend
+        run: npm --prefix src/Cave.Ui ci
+      - name: Audit frontend dependencies
+        run: npm --prefix src/Cave.Ui audit --audit-level=high
+      - name: Lint frontend
+        run: npm --prefix src/Cave.Ui run lint
+      - name: Test frontend
+        run: npm --prefix src/Cave.Ui run test
+      - name: Build frontend
+        run: npm --prefix src/Cave.Ui run build
+      - name: Test hook adapter
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s plugins/cave/scripts -p "test_*.py"
+      - name: Validate repository plugin metadata
+        shell: pwsh
+        run: ./scripts/validate-plugin-metadata.ps1
+      - name: Build backend
+        run: dotnet build CAVE.slnx --configuration Release
+      - name: Audit backend dependencies
+        run: dotnet list CAVE.slnx package --vulnerable --include-transitive
+      - name: Test backend
+        run: dotnet test CAVE.slnx --configuration Release --no-build --logger "console;verbosity=normal" --blame-hang-timeout 2m

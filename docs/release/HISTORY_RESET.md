@@ -2,6 +2,8 @@
 
 Approved by the repository owner on 2026-09-26: check in verified preparation, remove old Git history, and delete/recreate the private GitHub repository at the same URL. Public visibility requires a later explicit decision.
 
+The owner subsequently approved public visibility on the same date. Publication, branch protection, public security scans, and signed-out access checks are recorded in [PUBLIC_READINESS.md](PUBLIC_READINESS.md) and the [public-release checklist](../security/PUBLIC_RELEASE_CHECKLIST.md).
+
 ## Why repository recreation is included
 
 The old repository has 15 pull requests whose read-only Git refs retain old ancestry. Rewriting ordinary branches would leave those refs and old Actions artifacts available. GitHub documents these limitations in [Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository).

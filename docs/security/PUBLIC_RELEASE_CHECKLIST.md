@@ -1,6 +1,6 @@
 # Public Source Publication Checklist
 
-Keep the repository private until the clean-history cutover is verified and the owner explicitly approves public visibility. Binary releases have separate gates below.
+The owner approved public visibility after the verified clean-history cutover on 2026-09-26. The repository is now public. Binary releases have separate gates below.
 
 ## Verified source preparation
 
@@ -30,11 +30,11 @@ See [HISTORY_RESET.md](../release/HISTORY_RESET.md) for the approved procedure a
 
 ## Controlled public transition
 
-- [ ] The owner records an explicit **make public** decision after reviewing the verified cutover.
-- [ ] Visibility changes in a controlled window.
-- [ ] Canonical branch protection is applied and read back; the current private plan does not support it.
-- [ ] Private vulnerability reporting, available secret-scanning protections, Dependabot, and CodeQL are enabled and verified.
-- [ ] Public source, links, badges, security reporting, and clone instructions are checked without authentication.
+- [x] The owner records an explicit **make public** decision after reviewing the verified cutover.
+- [x] Visibility changes in a controlled window.
+- [x] Canonical branch protection is applied and read back, including administrator enforcement and owner approval for contributor requests.
+- [x] Private vulnerability reporting, secret scanning, push protection, Dependabot, and CodeQL are enabled and verified. Both CodeQL language analyses pass on the publication source with no findings; no open secret-scanning or Dependabot alerts were reported.
+- [x] Public source, links, badges, security reporting, and clone instructions are checked without authentication. The fresh public clone and all advertised branch/pull-request history pass the audit.
 
 Follow [BRANCH_PROTECTION.md](../repository/BRANCH_PROTECTION.md). Source publication does not authorize exposing an unauthenticated running host to an untrusted network.
 

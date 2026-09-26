@@ -27,10 +27,12 @@ Apply it only with repository-owner authority:
 pwsh ./scripts/configure-branch-protection.ps1 -Repository MartinGroh/Codex-Architecture-Visualizer-Engine -Branch main -Apply
 ```
 
-## Current private-repository limitation
+## Verified public-repository configuration
 
-The GitHub API currently reports that branch protection for this private repository requires an upgraded plan or public visibility. The repository must remain private during preparation, so the configuration is checked in but intentionally not applied yet.
+On 2026-09-26 the owner explicitly approved public visibility after the clean-history cutover. The repository was made public and the canonical policy was applied and read back. Required reviews, CODEOWNERS, latest-push approval, all three strict check contexts, resolved conversations, linear history, and administrator enforcement are enabled; force pushes and branch deletion are disabled. Repository merges are squash-only, auto-merge is available after its gates pass, and merged branches are deleted automatically.
 
-Preferred transition: enable a plan that supports private-repository protection, apply and verify this policy, then make the separate visibility decision. If that is not used, apply and verify protection immediately during the controlled public-visibility transition before announcing the repository.
+During preparation the private repository's plan rejected branch protection. On the public personal repository, GitHub also rejects even an empty `dismissal_restrictions` object: that field is reserved for organization repositories and must be omitted. The canonical script records this constraint. See the [GitHub branch-protection API](https://docs.github.com/en/rest/branches/branch-protection#update-branch-protection).
+
+`CODEOWNERS` currently names `@MartinGroh` for every file. Contributor and Dependabot requests therefore require the owner's approval. GitHub does not let an author approve their own pull request. Owner-authored requests need another authorized code owner or a separately approved, documented emergency exception; the agent must not weaken the policy to merge its own request.
 
 Never change visibility merely to make an automation check pass.

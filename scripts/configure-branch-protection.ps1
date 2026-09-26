@@ -27,7 +27,7 @@ $protection = [ordered] @{
     }
     enforce_admins = $true
     required_pull_request_reviews = [ordered] @{
-        dismissal_restrictions = [ordered] @{ users = @(); teams = @(); apps = @() }
+        # Personal repositories must omit dismissal_restrictions; GitHub reserves it for organizations.
         dismiss_stale_reviews = $true
         require_code_owner_reviews = $true
         require_last_push_approval = $true

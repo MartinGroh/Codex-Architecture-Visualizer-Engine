@@ -6,7 +6,7 @@ Until the first public stable release, security fixes target the latest release 
 
 ## Report a vulnerability
 
-On the public repository, use **Security → Advisories → Report a vulnerability** to submit a confidential report. Maintainers must enable and verify GitHub private vulnerability reporting during the publication transition. While that form is unavailable, use the private contact method on the [maintainer's GitHub profile](https://github.com/MartinGroh). Do not open a public issue for a vulnerability, leaked credential, private path, sensitive capture, or exploitable deployment configuration.
+Use [Report a vulnerability](https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/security/advisories/new) under **Security → Advisories** to submit a confidential report. GitHub private vulnerability reporting is enabled and was verified during publication. If the form is unavailable, use the private contact method on the [maintainer's GitHub profile](https://github.com/MartinGroh). Do not open a public issue for a vulnerability, leaked credential, private path, sensitive capture, or exploitable deployment configuration.
 
 Include:
 

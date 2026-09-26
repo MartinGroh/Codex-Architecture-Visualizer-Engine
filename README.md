@@ -12,7 +12,7 @@
 
 Codex Architecture Visualizer Engine (CAVE) is a local-first map of a software system while Codex is working on it. It keeps semantic architecture, Git changes, agent activity, and explicitly shared conversation as separate evidence, then brings them together in one interactive graph.
 
-> Pre-release status: this repository is being prepared privately. Do not make it public until the [public-release checklist](docs/security/PUBLIC_RELEASE_CHECKLIST.md) is complete.
+> Public pre-release source: the source and clean-history publication checks are recorded in the [public-release checklist](docs/security/PUBLIC_RELEASE_CHECKLIST.md). Binary releases and Codex Plugins Directory publication have separate approval and verification gates.
 
 ![CAVE live activity demo](docs/media/hero-live.png)
 

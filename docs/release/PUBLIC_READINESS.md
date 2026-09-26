@@ -1,6 +1,6 @@
 # Public-readiness assessment
 
-Reviewed 2026-09-26. Source preparation is verified. Keep the repository private until the approved clean-history cutover is verified and the owner makes an explicit public-visibility decision. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
+Reviewed 2026-09-26. Source preparation and the clean-history cutover are verified. Keep the repository private until final pushed-head checks pass and the owner makes an explicit public-visibility decision. See [PUBLIC_RELEASE_CHECKLIST.md](../security/PUBLIC_RELEASE_CHECKLIST.md).
 
 ## Source and engineering evidence
 
@@ -12,7 +12,7 @@ These are detection results, not a guarantee that every possible secret format i
 
 Canonical `scripts/verify.ps1` passes: 149 backend tests, 174 frontend tests, 34 hook tests, launcher/observation checks, build/lint, dependency audits, plugin validation, CodeGraph synchronization/status, and launched live health/snapshot checks. A synthetic browser check confirmed attributed text, tables, writing blocks, comments, and suggestions. No plugin installation or live Codex turn mutation was performed.
 
-A fresh archive of the reviewed source contains 298 files and no Git history or copied CodeGraph state. The canonical demo launcher builds successfully and returns healthy, explicitly synthetic workspace, activity, chat, and usage data, with Codex send disabled. Verification used PowerShell 7.6.6, .NET SDK 10.0.303, and Node 26.8.2; GitHub CI separately exercises its configured Node version. The temporary demo processes were stopped after verification. A fresh remote clone remains a cutover verification gate.
+A fresh archive of the reviewed source contains 298 files and no Git history or copied CodeGraph state. The canonical demo launcher builds successfully and returns healthy, explicitly synthetic workspace, activity, chat, and usage data, with Codex send disabled. Verification used PowerShell 7.6.6, .NET SDK 10.0.303, and Node 26.8.2; GitHub CI separately exercises its configured Node version. The temporary demo processes were stopped after verification. A fresh remote clone also passes source/history audits and matches the current reviewed source tree.
 
 ## Media and local state
 
@@ -22,11 +22,15 @@ Brand provenance is documented in [plugins/cave/assets/README.md](../../plugins/
 
 ## History and GitHub controls
 
-The owner approved check-in followed by old-history removal and deletion/recreation of the private repository at the same URL. Its 15 old pull requests retain ancestry through read-only refs; old Actions artifacts also require removal. The approved procedure and its limits are recorded in [HISTORY_RESET.md](HISTORY_RESET.md). Cutover evidence will be recorded after these actions are verified.
+The owner approved check-in followed by old-history removal and deletion/recreation of the private repository at the same URL. This is complete. The replacement is private, has a new GitHub identity, and begins with a parentless commit containing the exact verified preparation tree. The 15 old pull-request records and old Actions artifacts were removed with the old repository.
+
+All 35 recorded old commit/ref identities were unavailable through the new repository's commit API, and fetching the old main commit was rejected. The fresh clone fetched every advertised branch and pull-request ref; all 24 commits at the checkpoint descended from one clean root and passed the history audit. New Dependabot requests can reuse the old request numbers, but their ancestry contains only the new clean root. Runs and artifacts in the replacement repository were created after recreation. Existing local review files/index/diff were preserved exactly; old reflogs and recorded old commit objects were removed from the reviewed local Git database. The procedure, evidence, and limits are recorded in [HISTORY_RESET.md](HISTORY_RESET.md).
 
 Required branch-check names now match actual GitHub checks: `Build and test`, `Repository audit`, and `Gitleaks`. The private plan returns HTTP 403 for branch protection; the policy must be applied and read back immediately at the approved public transition. Wiki and Discussions stay disabled. Security reporting points to the advisory reporting area, with the maintainer's available private profile contact as a fallback until public vulnerability reporting can be enabled.
 
-Repository recreation stays private. Making it public, enabling the public security controls, and verifying access without authentication are final transition gates.
+The history audit's successful exit handling was verified both locally and in GitHub after correcting propagation of Git's expected no-match result. A subsequent CI run exposed a test race: the durable delivery record can become Completed before the separately written control status becomes Ready. The test now waits for both and always stops/joins the worker before fixture deletion, including on assertion failure. All 11 bridge tests and three repeated completion-test runs pass locally. Current main secret scanning and public-readiness checks pass; final pushed-head CI must also pass before transition.
+
+Repository description, homepage, topics, squash-only merge settings, and owner-only access are verified. Making it public, enabling the public security controls, and verifying access without authentication are final transition gates.
 
 ## Runtime boundary and functional limitation
 

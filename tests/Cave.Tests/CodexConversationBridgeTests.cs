@@ -120,43 +120,53 @@ public sealed class CodexConversationBridgeTests : IDisposable
         using var bridge = CreateBridge(conversations, new StubTaskLocator(binding), runner);
         using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var background = bridge.RunAsync(stopping.Token);
-
-        var queued = await bridge.QueueAsync(
-            _workspaceRoot,
-            binding.SessionId,
-            "Continue from the remote browser.",
-            CancellationToken.None);
-        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
-        ConversationOverlay overlay;
-        do
+        try
         {
-            await Task.Delay(25, stopping.Token);
-            overlay = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            var queued = await bridge.QueueAsync(
+                _workspaceRoot,
+                binding.SessionId,
+                "Continue from the remote browser.",
+                CancellationToken.None);
+            await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            ConversationOverlay overlay;
+            do
+            {
+                await Task.Delay(25, stopping.Token);
+                overlay = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            }
+            // Delivery and control status are separate durable writes. Completion can
+            // become visible before Ready, especially on the Windows CI filesystem.
+            while (overlay.Control.State != ConversationControlState.Ready
+                || overlay.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
+
+            var delivery = Assert.Single(overlay.Control.Deliveries);
+            Assert.Equal(queued.MessageId, delivery.MessageId);
+            Assert.Equal("exact-task", delivery.SessionId);
+            Assert.Equal("bridge-turn", delivery.TurnId);
+            Assert.Equal(ConversationDeliveryState.Completed, delivery.State);
+            Assert.Equal(ConversationControlState.Ready, overlay.Control.State);
+            Assert.True(overlay.Control.CanSend);
+            Assert.Equal("Continue from the remote browser.", runner.Text);
+            Assert.Equal("exact-task", runner.SessionId);
+
+            var immediateReplay = await bridge.QueueAsync(
+                _workspaceRoot,
+                binding.SessionId,
+                "Continue from the remote browser.",
+                CancellationToken.None);
+            Assert.Equal(queued.MessageId, immediateReplay.MessageId);
+            Assert.Equal(ConversationDeliveryState.Completed, immediateReplay.State);
+            overlay = await conversations.ReadAsync(_workspaceRoot, CancellationToken.None);
+            Assert.Single(overlay.Control.Deliveries);
         }
-        while (overlay.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
-
-        var delivery = Assert.Single(overlay.Control.Deliveries);
-        Assert.Equal(queued.MessageId, delivery.MessageId);
-        Assert.Equal("exact-task", delivery.SessionId);
-        Assert.Equal("bridge-turn", delivery.TurnId);
-        Assert.Equal(ConversationDeliveryState.Completed, delivery.State);
-        Assert.Equal(ConversationControlState.Ready, overlay.Control.State);
-        Assert.Equal("Continue from the remote browser.", runner.Text);
-        Assert.Equal("exact-task", runner.SessionId);
-
-        var immediateReplay = await bridge.QueueAsync(
-            _workspaceRoot,
-            binding.SessionId,
-            "Continue from the remote browser.",
-            CancellationToken.None);
-        Assert.Equal(queued.MessageId, immediateReplay.MessageId);
-        Assert.Equal(ConversationDeliveryState.Completed, immediateReplay.State);
-        overlay = await conversations.ReadAsync(_workspaceRoot, CancellationToken.None);
-        Assert.Single(overlay.Control.Deliveries);
-
-        stopping.Cancel();
-        await background;
+        finally
+        {
+            // Stop and join the worker even when an assertion fails, before fixture
+            // disposal removes the directory containing its status journal.
+            stopping.Cancel();
+            await background;
+        }
     }
 
     /// <summary>

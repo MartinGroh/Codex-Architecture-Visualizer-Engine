@@ -37,7 +37,8 @@ See [HISTORY_RESET.md](../release/HISTORY_RESET.md) for the approved procedure a
 - [x] Canonical branch protection is applied and read back, including administrator enforcement and owner approval for contributor requests.
 - [x] Private vulnerability reporting, secret scanning, push protection, Dependabot, and CodeQL are enabled and verified. Both CodeQL language analyses pass on the publication source with no findings; no open secret-scanning or Dependabot alerts were reported.
 - [x] Public source, links, badges, security reporting, and clone instructions are checked without authentication. The fresh public clone and all advertised branch/pull-request history pass the audit.
-- [ ] After remediation, final public visibility, branch protection, security controls, workflows, and signed-out access are verified again.
+
+The replacement's final public visibility, branch protection, security controls, workflows, and signed-out access must be checked after publication. The verification result is recorded in the [CAVE cutover pull request](https://github.com/MartinGroh/Codex-Architecture-Visualizer-Engine/pull/7), together with links to its final scans.
 
 Follow [BRANCH_PROTECTION.md](../repository/BRANCH_PROTECTION.md). Source publication does not authorize exposing an unauthenticated running host to an untrusted network.
 

@@ -187,23 +187,38 @@ public sealed class CodexConversationBridgeTests : IDisposable
         using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var background = bridge.RunAsync(stopping.Token);
 
-        await bridge.QueueAsync(
-            _workspaceRoot,
-            "exact-task",
-            "Wait until the desktop turn ends.",
-            CancellationToken.None);
-        await Task.Delay(200, CancellationToken.None);
+        try
+        {
+            await bridge.QueueAsync(
+                _workspaceRoot,
+                "exact-task",
+                "Wait until the desktop turn ends.",
+                stopping.Token);
 
-        Assert.False(runner.Started.Task.IsCompleted);
-        var waiting = await conversations.ReadAsync(_workspaceRoot, CancellationToken.None);
-        Assert.Equal(ConversationControlState.Queued, waiting.Control.State);
-        Assert.False(waiting.Control.CanSend);
+            // Observe the bridge's active-owner decision before releasing the task.
+            // Fixed sleeps and a separate three-second deadline raced CI file I/O.
+            ConversationOverlay waiting;
+            do
+            {
+                await Task.Delay(25, stopping.Token);
+                waiting = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            }
+            while (waiting.Control.Error is null);
 
-        locator.Binding = locator.Binding with { IsActive = false };
-        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.False(runner.Started.Task.IsCompleted);
+            Assert.Equal(ConversationControlState.Queued, waiting.Control.State);
+            Assert.False(waiting.Control.CanSend);
+            Assert.Contains("desktop-owned", waiting.Control.Error, StringComparison.Ordinal);
 
-        stopping.Cancel();
-        await background;
+            locator.Binding = locator.Binding with { IsActive = false };
+            await runner.Started.Task.WaitAsync(stopping.Token);
+        }
+        finally
+        {
+            // Join the status writer before fixture disposal, including failed waits.
+            stopping.Cancel();
+            await background;
+        }
     }
 
     /// <summary>

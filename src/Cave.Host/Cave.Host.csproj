@@ -10,6 +10,12 @@
     <InternalsVisibleTo Include="Cave.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\resources\agent-flow-light\**\*"
+                      LogicalName="AgentFlowPack/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="AgentFlowPack/LICENSE" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

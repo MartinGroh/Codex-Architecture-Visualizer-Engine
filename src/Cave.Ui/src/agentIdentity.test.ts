@@ -1,21 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { agentDisplayName } from './agentIdentity'
+import { agentDisplayName, agentFocusLabel } from './agentIdentity'
+import type { AgentActivity } from './types'
 
 describe('agentDisplayName', () => {
-  it('keeps an alias tied to identity rather than phase, role, or array order', () => {
-    const agent = { agentId: 'child-review', isSubagent: true }
-    expect(agentDisplayName(agent)).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+ · [a-z0-9]+$/)
-    expect(agentDisplayName({ ...agent })).toBe(agentDisplayName(agent))
-    expect(['child-docs', 'child-review'].map((agentId) => agentDisplayName({ agentId, isSubagent: true })).reverse())
-      .toEqual(['child-review', 'child-docs'].map((agentId) => agentDisplayName({ agentId, isSubagent: true })))
-    expect(agentDisplayName({ agentId: 'child-docs', isSubagent: true })).not.toBe(agentDisplayName(agent))
+  it('uses the shared API name without adding surnames or identifiers', () => {
+    expect(agentDisplayName({ isSubagent: true, displayName: 'Ada' })).toBe('Ada')
+    expect(agentDisplayName({ isSubagent: true, displayName: 'Luna' })).toBe('Luna')
   })
-  it('preserves the main agent role', () => {
-    expect(agentDisplayName({ agentId: 'main-task', isSubagent: false })).toBe('Main agent')
+  it('keeps unenriched activity clearly identified by role', () => {
+    expect(agentDisplayName({ isSubagent: true })).toBe('Subagent')
+    expect(agentDisplayName({ isSubagent: false, displayName: null })).toBe('Main agent')
   })
-  it('disambiguates agent IDs that share the same generated name pair', () => {
-    const names = ['review-child-138', 'review-child-220'].map((agentId) => agentDisplayName({ agentId, isSubagent: true }))
-    expect(names[0].split(' · ')[0]).toBe(names[1].split(' · ')[0])
-    expect(names[0]).not.toBe(names[1])
+  it('does not infer summary provenance from a historical scope declaration', () => {
+    const agent: AgentActivity = {
+      agentId: 'child', isSubagent: true, agentType: 'default', state: 'Active', phase: 'Reading',
+      summary: 'Check documentation', hasDeclaredScope: true, hasObservedActivity: true,
+      startedAtUtc: '2026-09-27T12:00:00Z', updatedAtUtc: '2026-09-27T12:01:00Z',
+    }
+    expect(agentFocusLabel(agent)).toBe('Work summary')
+    expect(agentFocusLabel({ ...agent, summaryEvidence: 'Observed' })).toBe('Observed action')
+    expect(agentFocusLabel({ ...agent, summaryEvidence: 'Declared' })).toBe('Current focus / subgoal')
   })
 })

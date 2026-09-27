@@ -84,6 +84,7 @@ else
 
 builder.Services.AddSingleton<GitDeltaService>();
 builder.Services.AddSingleton<CaveInfoService>();
+builder.Services.AddSingleton<WorkspaceConversationService>();
 builder.Services.AddSingleton<ArchitectureSnapshotService>();
 builder.Services.AddSingleton<WorkspaceGraphMonitorFactory>();
 builder.Services.AddSingleton<IWorkspaceCatalogStore>(services => new MachineWorkspaceCatalogStore(
@@ -92,6 +93,10 @@ builder.Services.AddSingleton<IWorkspaceCatalogStore>(services => new MachineWor
     services.GetRequiredService<TimeProvider>()));
 builder.Services.AddSingleton<WorkspaceCatalogService>();
 builder.Services.AddSingleton<WorkspaceActivityService>();
+builder.Services.AddSingleton(services => new WorkspaceAgentFlowService(
+    services.GetRequiredService<WorkspaceActivityService>(),
+    services.GetRequiredService<WorkspaceConversationService>(),
+    demoMode ? AgentFlowSourceMode.Demo : AgentFlowSourceMode.Live));
 builder.Services.AddSingleton<WorkspaceRecentActivityService>();
 builder.Services.AddSingleton<WorkspaceGraphMonitorRegistry>();
 builder.Services.AddSingleton<ISemanticWorkspaceStore, FileSemanticWorkspaceStore>();
@@ -126,6 +131,8 @@ app.MapGet(
     async (WorkspaceCatalogService catalog, CancellationToken cancellationToken) =>
         TypedResults.Ok(await catalog.GetOverviewAsync(cancellationToken)));
 app.MapRecentActivity();
+app.MapAgentFlow();
+app.MapAgentFlowResources();
 app.MapGet(
     "/api/activity",
     async (

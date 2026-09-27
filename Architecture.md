@@ -59,7 +59,11 @@ flowchart LR
     Events --> Projection
     Events --> Compact["Compact activity projection"]
     Compact --> Display["GET /api/activity - external displays"]
-    Conversation --> Projection
+    Conversation --> SharedWork["WorkspaceConversationService\nsharing + exact-task goal policy"]
+    SharedWork --> Projection
+    Compact --> LightFlow["WorkspaceAgentFlowService"]
+    SharedWork --> LightFlow
+    LightFlow --> LightApi["GET /api/agent-flow\nnative apps + devices"]
     Projection --> Snapshot["Architecture snapshot"]
     Snapshot --> API["HTTP + SSE"]
     Snapshot --> Tools["MCP tools + app polling"]
@@ -71,7 +75,7 @@ flowchart LR
     Control -->|"validated thread/resume + turn/start"| AppServer["Local Codex App Server"]
     AppServer --> Conversation
     AppServer -->|"read-only thread/goal/get"| Goal["ICodexGoalProvider\nopt-in exact-task goal"]
-    Goal --> Projection
+    Goal --> SharedWork
     Tools --> UI2["Codex MCP App\nsemantic view projection"]
     UI2 --> HostChat["MCP Apps message + sampling"]
 ```
@@ -131,10 +135,18 @@ Sample data is retained only as an explicit test/demo configuration. Normal brow
 
 ## ADR: Current goals, agent focus, compact flow, and independent usage
 
-The existing snapshot service enriches the opt-in conversation overlay with a read-only native goal from `thread/goal/get`, through the application-owned `ICodexGoalProvider` and the infrastructure `CodexAppServerGoalProvider`. Only the exact `ConversationControl.SessionId` observed for this workspace is queried. CAVE never enumerates, resumes, starts, or mutates a task to obtain a goal. Disabled sharing and an absent exact binding omit goal data. After a potentially slow lookup, the service rechecks sharing and binding before publishing any objective. The cache retains at most 32 exact task entries for 15 seconds; it never substitutes a previous task's goal. No-goal and unavailable reads remain distinct. Native creation/update timestamps are retained as raw integers because their units are not documented. Goal and exact control changes use the canonical snapshot/SSE stream; retrieval-only timestamp changes do not advance its version. Explicit demo mode supplies synthetic goal data.
+`WorkspaceConversationService` owns opt-in conversation and read-only native goal enrichment for both the architecture snapshot and Agent Flow Light. It reads `thread/goal/get` through the application-owned `ICodexGoalProvider` and the infrastructure `CodexAppServerGoalProvider`. Only the exact `ConversationControl.SessionId` observed for this workspace is queried. CAVE never enumerates, resumes, starts, or mutates a task to obtain a goal. Disabled sharing and an absent exact binding omit goal data. After a potentially slow lookup, the service rechecks sharing and binding before publishing any objective. The cache retains at most 32 exact task entries for 15 seconds; it never substitutes a previous task's goal. No-goal and unavailable reads remain distinct. Native creation/update timestamps are retained as raw integers because their units are not documented. Goal and exact control changes use the canonical snapshot/SSE stream; retrieval-only timestamp changes do not advance its version. Explicit demo mode supplies synthetic goal data.
 
 The UI shows a workspace's shared main goal separately from each agent's declared focus/subgoal. Codex's native goal has no structured subgoal field. Observed tool summaries stay labeled as observed actions. Goal text is gated again by sharing and matching task identity in the frontend. Architecture and Live views have a collapsible current-work panel; static architecture nodes retain their existing overlay policy. Agent flow adds a Compact view with a responsive agent list and native keyboard/touch timeline disclosures, while preserving the Timeline view and its Grid/List project layouts. Compact and Timeline use the same retained project lanes and terminal milestone projection. Mobile defaults to Compact unless the operator has persisted a different view choice.
 
-Subagents receive deterministic display aliases derived solely from their observed stable agent IDs in `agentIdentity.ts`. A short stable discriminator distinguishes matching generated name pairs. These are presentation names, not Codex account identities or a declaration of role; their original IDs remain authoritative and available in identity tooltips. All flow, work-context, spotlight, node-badge, and inspector names use that owner.
+`AgentDisplayNames` in Application owns deterministic single first names derived solely from original observed agent IDs. The requested pool is 48 female and 16 male names (75% female). Architecture snapshots attach `AgentActivity.DisplayName`; browser `agentIdentity.ts` consumes that supplied label, while unenriched activity keeps its explicit role label. Agent Flow Light uses the same owner. These are nonunique presentation names, not Codex account identities or declarations of role; original IDs remain authoritative in existing snapshot identity tooltips. Flow, work-context, spotlight, node-badge, inspector, and device views share these names.
+
+## ADR: Agent Flow Light and portable resources
+
+The user requested a dedicated API and resource pack for other apps, including STM32N6 companion displays. `GET /api/agent-flow?workspace=<catalog-id>` is a versioned external read contract owned by `WorkspaceAgentFlowService`; its thin Host route resolves the existing opaque catalog selection. It composes the existing `WorkspaceActivityService` projection with `WorkspaceConversationService`, without acquiring a graph or monitor, duplicating activity lifecycle policy, or adding a tracker. The existing activity-only feed remains its own supported external contract. The Light feed includes at most 32 rows and a 2048 UTF-16-unit main-goal objective with explicit truncation. `currentFocus` is populated only from declared summary evidence. Main-goal Private, Unbound, Ready and Unavailable states are distinct; Ready with null goal means no native goal. Activity, generation, and goal-retrieval timestamps remain separate. Live and Demo modes are explicitly labeled.
+
+The Light feed hashes original agent IDs into full lowercase SHA256 row keys, preserving stable correlation without exposing native task IDs. Those keys cannot address a Codex task and do not replace canonical event identities. It returns no root paths, chat messages, graph, Git data, account identity, guessed per-agent goals or token attribution. Source errors become fixed safe diagnostics on this external transport; the original canonical sources retain their diagnostic evidence. Existing workspace conversation sharing governs main-goal text.
+
+`resources/agent-flow-light` owns the portable schema, synthetic fixture, client guide, static assets, Node polling example, and fixed-buffer C client. Host embeds those source resources and the root MIT license at build time, serves the exact schema at `/api/agent-flow/schema`, and packages only embedded resources into `/api/agent-flow/resources`. No arbitrary filesystem path is accepted and no runtime source directory is required after publish. Clients need no browser. The C example owns parsing and bounded polling, while the consuming n6 app owns its HTTP, RTOS, graphics, board configuration, and firmware delivery. Host-compiler tests verify the portable parser; they do not establish on-device compatibility or deployment health.
 
 Account token activity and rate-limit reads are independent requests in the existing App Server usage adapter. A successful source is retained when the other fails; `Ready` with a diagnostic reports partial availability, while both failed sources remain `Unavailable`. Null fields remain unknown, including `ordinaryUsageAllowed`; zero usage is a reported value. The usage spotlight identifies the limiting included Codex window and respects the backend permission result. Shared machine pages refresh account information every 60 seconds with cancellation and no overlapping requests. Completed unavailable responses render diagnostics rather than remaining labeled as loading.

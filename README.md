@@ -24,6 +24,7 @@ Codex Architecture Visualizer Engine (CAVE) is a local-first map of a software s
 - An opt-in public conversation journal containing only user prompts and final replies.
 - An embedded Codex MCP App plus a trusted-network browser workspace with exact-task chat and editable engineering intent.
 - Selection details, change impact, semantic routes, dark mode, and responsive layouts.
+- Shared current goals, agent focus, compact Agent flow, and a portable read-only display API.
 
 [Watch the 37-second overview](docs/media/cave-overview.mp4) · [Watch the 26-second drill-down](docs/media/cave-drilldown.mp4) · [Browse all demo media](docs/wiki/Demo-and-Media.md)
 
@@ -112,6 +113,14 @@ The latest source and history assessment is recorded in [Public readiness](docs/
 Codex 0.157 integration checks and the supported public-chat text formats are documented in [Codex compatibility](docs/design/Codex_Compatibility.md). Changed plugin hooks require review through `/hooks` after installation.
 
 ## Develop and verify
+
+### Agent Flow Light for apps and devices
+
+`GET /api/agent-flow?workspace=<catalog-id>` returns bounded agent status, stable first names, declared focus, and the opt-in shared main goal without loading a semantic graph. Download its portable JSON schema, assets, polling example, and fixed-buffer C client from `GET /api/agent-flow/resources`.
+
+See the [Agent Flow Light resource pack](resources/agent-flow-light/README.md) and [STM32N6 integration notes](resources/agent-flow-light/embedded/README.md). Board transport, display wiring, and firmware verification belong to the consuming application.
+
+### Repository checks
 
 ```powershell
 npm --prefix src/Cave.Ui ci

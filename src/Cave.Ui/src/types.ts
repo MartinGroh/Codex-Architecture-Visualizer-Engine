@@ -122,6 +122,7 @@ export type AgentActivitySourceStatus = 'Unobserved' | 'Ready' | 'Degraded'
 
 export interface AgentActivity {
   agentId: string
+  displayName?: string | null
   agentType: string
   isSubagent: boolean
   state: AgentWorkState

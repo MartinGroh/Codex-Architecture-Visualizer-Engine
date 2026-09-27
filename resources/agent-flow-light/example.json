@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "workspaceId": "example-workspace",
+  "workspaceName": "Atlas Demo",
+  "sourceMode": "Demo",
+  "generatedAtUtc": "2026-09-27T12:00:00Z",
+  "sourceUpdatedAtUtc": "2026-09-27T12:00:00Z",
+  "sourceStatus": "Ready",
+  "error": null,
+  "totalAgentCount": 3,
+  "agents": [
+    {
+      "agentId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "displayName": "Main agent",
+      "agentType": "codex",
+      "isSubagent": false,
+      "state": "Active",
+      "phase": "Editing",
+      "summary": "Improve the Agent Flow view",
+      "currentFocus": "Improve the Agent Flow view",
+      "focusEvidence": "Declared",
+      "startedAtUtc": "2026-09-27T12:00:00Z",
+      "updatedAtUtc": "2026-09-27T12:00:00Z",
+      "evidence": "Observed",
+      "summaryEvidence": "Declared"
+    },
+    {
+      "agentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "displayName": "Ada",
+      "agentType": "default",
+      "isSubagent": true,
+      "state": "Active",
+      "phase": "Validating",
+      "summary": "Verify the small screen layout",
+      "currentFocus": "Verify the small screen layout",
+      "focusEvidence": "Declared",
+      "startedAtUtc": "2026-09-27T12:00:00Z",
+      "updatedAtUtc": "2026-09-27T12:00:00Z",
+      "evidence": "Observed",
+      "summaryEvidence": "Declared"
+    },
+    {
+      "agentId": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "displayName": "Luna",
+      "agentType": "default",
+      "isSubagent": true,
+      "state": "Active",
+      "phase": "Reading",
+      "summary": "read_file",
+      "currentFocus": null,
+      "focusEvidence": null,
+      "startedAtUtc": "2026-09-27T12:00:00Z",
+      "updatedAtUtc": "2026-09-27T12:00:00Z",
+      "evidence": "Observed",
+      "summaryEvidence": "Observed"
+    }
+  ],
+  "mainGoal": {
+    "status": "Ready",
+    "goal": {
+      "objective": "Make architecture and agent work easy to follow",
+      "isTruncated": false,
+      "status": "Active",
+      "tokenBudget": null,
+      "tokensUsed": 0,
+      "timeUsedSeconds": 60,
+      "createdAt": 1,
+      "updatedAt": 2
+    },
+    "retrievedAtUtc": "2026-09-27T12:00:00Z",
+    "error": null
+  }
+}

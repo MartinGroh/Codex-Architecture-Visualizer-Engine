@@ -8,16 +8,14 @@ namespace Cave.Application;
 /// <param name="semanticIndex">The configured semantic-index implementation.</param>
 /// <param name="gitDeltas">The application service that projects independent Git evidence.</param>
 /// <param name="activityStore">The independent observed-activity and declared-scope store.</param>
-/// <param name="conversationStore">The independent opt-in public conversation store.</param>
+/// <param name="conversations">The shared opt-in conversation and exact-task goal policy.</param>
 /// <param name="timeProvider">The authoritative clock for snapshot timestamps.</param>
-/// <param name="goalProvider">The read-only native goal adapter for an exactly bound task.</param>
 public sealed class ArchitectureSnapshotService(
     ISemanticIndex semanticIndex,
     GitDeltaService gitDeltas,
     IAgentActivityStore activityStore,
-    IConversationStore conversationStore,
-    TimeProvider timeProvider,
-    ICodexGoalProvider goalProvider)
+    WorkspaceConversationService conversations,
+    TimeProvider timeProvider)
 {
     /// <summary>
     /// Gets the current graph with source and freshness metadata.
@@ -42,7 +40,8 @@ public sealed class ArchitectureSnapshotService(
             .ConfigureAwait(false);
         var activity = await activityStore.ReadAsync(workspaceRoot, result.Graph, cancellationToken)
             .ConfigureAwait(false);
-        var conversation = await ReadConversationAsync(workspaceRoot, cancellationToken)
+        activity = AgentDisplayNames.Apply(activity);
+        var conversation = await conversations.ReadAsync(workspaceRoot, cancellationToken)
             .ConfigureAwait(false);
 
         return new ArchitectureSnapshot(metadata, result.Graph, git, activity, conversation);
@@ -65,44 +64,10 @@ public sealed class ArchitectureSnapshotService(
 
         var activity = await activityStore.ReadAsync(workspaceRoot, current.Graph, cancellationToken)
             .ConfigureAwait(false);
-        var conversation = await ReadConversationAsync(workspaceRoot, cancellationToken)
+        activity = AgentDisplayNames.Apply(activity);
+        var conversation = await conversations.ReadAsync(workspaceRoot, cancellationToken)
             .ConfigureAwait(false);
         return current with { Activity = activity, Conversation = conversation };
     }
 
-    private async Task<ConversationOverlay> ReadConversationAsync(
-        string workspaceRoot,
-        CancellationToken cancellationToken)
-    {
-        var conversation = await conversationStore.ReadAsync(workspaceRoot, cancellationToken)
-            .ConfigureAwait(false);
-        if (!conversation.SharingEnabled || string.IsNullOrWhiteSpace(conversation.Control.SessionId))
-        {
-            return conversation with { Goal = null };
-        }
-
-        var sessionId = conversation.Control.SessionId;
-        var goal = await goalProvider.GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
-        // A process read may outlive a privacy change or the workspace's task binding.
-        // Re-read the authoritative overlay before publishing any objective, including cached results.
-        conversation = await conversationStore.ReadAsync(workspaceRoot, cancellationToken)
-            .ConfigureAwait(false);
-        if (!conversation.SharingEnabled
-            || !string.Equals(conversation.Control.SessionId, sessionId, StringComparison.Ordinal))
-        {
-            return conversation with { Goal = null };
-        }
-
-        if (!string.Equals(goal.SessionId, sessionId, StringComparison.Ordinal))
-        {
-            goal = new CodexGoalSnapshot(
-                CodexGoalSourceStatus.Unavailable,
-                sessionId,
-                null,
-                timeProvider.GetUtcNow(),
-                "The native goal did not match the exact workspace task.");
-        }
-
-        return conversation with { Goal = goal };
-    }
 }

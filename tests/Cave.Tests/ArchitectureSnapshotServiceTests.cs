@@ -20,9 +20,9 @@ public sealed class ArchitectureSnapshotServiceTests
             new StubSemanticIndex(),
             new GitDeltaService(new StubGitDeltaProvider(), GitBaselineRequest.Upstream),
             new EmptyActivityStore(),
-            new EmptyConversationStore(),
-            new FixedTimeProvider(expectedTime),
-            new RecordingGoalProvider());
+            new WorkspaceConversationService(new EmptyConversationStore(), new RecordingGoalProvider(),
+                new FixedTimeProvider(expectedTime)),
+            new FixedTimeProvider(expectedTime));
 
         var snapshot = await service.GetAsync("C:\\test-workspace", CancellationToken.None);
 
@@ -141,7 +141,8 @@ public sealed class ArchitectureSnapshotServiceTests
 
     private static ArchitectureSnapshotService CreateService(IConversationStore conversations, ICodexGoalProvider goals) =>
         new(new StubSemanticIndex(), new GitDeltaService(new StubGitDeltaProvider(), GitBaselineRequest.Upstream),
-            new EmptyActivityStore(), conversations, TimeProvider.System, goals);
+            new EmptyActivityStore(), new WorkspaceConversationService(conversations, goals, TimeProvider.System),
+            TimeProvider.System);
 
     private static ConversationOverlay Conversation(bool enabled, string? sessionId) =>
         new(enabled, enabled ? ConversationSourceStatus.Ready : ConversationSourceStatus.Disabled, [],

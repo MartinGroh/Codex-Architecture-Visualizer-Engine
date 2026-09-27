@@ -30,6 +30,7 @@ builder.Services.AddSingleton<ICodexUsageProvider>(services => new CodexAppServe
     services.GetRequiredService<TimeProvider>(),
     builder.Configuration["Cave:CodexCommand"]));
 builder.Services.AddSingleton<CaveInfoService>();
+builder.Services.AddSingleton<WorkspaceConversationService>();
 builder.Services.AddSingleton<ISemanticIndex, CodeGraphSemanticIndex>();
 builder.Services.AddSingleton<ArchitectureSnapshotService>();
 builder.Services.AddSingleton<WorkspaceGraphMonitorFactory>();

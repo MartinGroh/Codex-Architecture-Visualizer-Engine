@@ -16,7 +16,7 @@ afterEach(cleanup)
 describe('AgentWorkContext', () => {
   it('shows the exact shared goal and an independently declared subgoal', () => {
     render(<AgentWorkContext conversation={conversation} agents={[{
-      agentId: 'review-child', agentType: 'default', isSubagent: true, state: 'Active', phase: 'Validating',
+      agentId: 'review-child', displayName: 'Ada', agentType: 'default', isSubagent: true, state: 'Active', phase: 'Validating',
       summary: 'Verify mobile disclosure', hasDeclaredScope: true, hasObservedActivity: true,
       summaryEvidence: 'Declared', startedAtUtc: '2026-09-27T12:00:00Z', updatedAtUtc: '2026-09-27T12:01:00Z',
     }]} />)
@@ -24,6 +24,7 @@ describe('AgentWorkContext', () => {
     expect(screen.getByText('Current focus / subgoal: Verify mobile disclosure')).toBeTruthy()
     expect(screen.getByText('0 tokens used of 1,000 · 1m elapsed')).toBeTruthy()
     expect(screen.queryByText('default')).toBeNull()
+    expect(screen.getByText('Ada')).toBeTruthy()
   })
   it('removes the goal immediately when sharing is disabled or the task changes', () => {
     const view = render(<AgentWorkContext conversation={conversation} agents={[]} />)

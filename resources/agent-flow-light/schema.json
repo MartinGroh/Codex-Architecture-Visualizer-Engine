@@ -1,0 +1,306 @@
+{
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "workspaceId",
+    "workspaceName",
+    "sourceMode",
+    "generatedAtUtc",
+    "sourceUpdatedAtUtc",
+    "sourceStatus",
+    "error",
+    "totalAgentCount",
+    "agents",
+    "mainGoal"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "workspaceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "workspaceName": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "sourceMode": {
+      "enum": [
+        "Demo",
+        "Live"
+      ]
+    },
+    "generatedAtUtc": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 48
+    },
+    "sourceUpdatedAtUtc": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "maxLength": 48
+    },
+    "sourceStatus": {
+      "enum": [
+        "Unobserved",
+        "Ready",
+        "Degraded"
+      ]
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 512
+    },
+    "totalAgentCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "agents": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/agent"
+      }
+    },
+    "mainGoal": {
+      "$ref": "#/$defs/mainGoal"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cave:agent-flow-light:1",
+  "title": "CAVE Agent Flow Light v1",
+  "description": "Bounded read-only activity and shared main goal. Text bounds apply to UTF-16 code units on the server. Accept unknown properties within schema version 1.",
+  "$defs": {
+    "agent": {
+      "type": "object",
+      "required": [
+        "agentId",
+        "displayName",
+        "agentType",
+        "isSubagent",
+        "state",
+        "phase",
+        "summary",
+        "currentFocus",
+        "focusEvidence",
+        "startedAtUtc",
+        "updatedAtUtc",
+        "evidence",
+        "summaryEvidence"
+      ],
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "agentType": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "isSubagent": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "Planned",
+            "Active",
+            "Idle",
+            "Completed"
+          ]
+        },
+        "phase": {
+          "enum": [
+            "Thinking",
+            "Reading",
+            "Editing",
+            "Validating",
+            "Working",
+            null
+          ]
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 160
+        },
+        "currentFocus": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 160
+        },
+        "focusEvidence": {
+          "enum": [
+            "Declared",
+            null
+          ]
+        },
+        "startedAtUtc": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 48
+        },
+        "updatedAtUtc": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 48
+        },
+        "evidence": {
+          "enum": [
+            "Observed",
+            "Declared",
+            null
+          ]
+        },
+        "summaryEvidence": {
+          "enum": [
+            "Observed",
+            "Declared",
+            null
+          ]
+        }
+      }
+    },
+    "mainGoal": {
+      "type": "object",
+      "required": [
+        "status",
+        "goal",
+        "retrievedAtUtc",
+        "error"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "Private",
+            "Unbound",
+            "Ready",
+            "Unavailable"
+          ]
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/goal"
+            }
+          ]
+        },
+        "retrievedAtUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "maxLength": 48
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "Private",
+                  "Unbound",
+                  "Unavailable"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "goal": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "goal": {
+      "type": "object",
+      "required": [
+        "objective",
+        "isTruncated",
+        "status",
+        "tokenBudget",
+        "tokensUsed",
+        "timeUsedSeconds",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "objective": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "isTruncated": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "Active",
+            "Paused",
+            "Blocked",
+            "UsageLimited",
+            "BudgetLimited",
+            "Complete"
+          ]
+        },
+        "tokenBudget": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "tokensUsed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "timeUsedSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "createdAt": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "updatedAt": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        }
+      }
+    }
+  }
+}

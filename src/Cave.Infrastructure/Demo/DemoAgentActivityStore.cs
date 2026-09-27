@@ -32,7 +32,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-7),
-                now),
+                now) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
             new AgentActivity(
                 "demo-reviewer",
                 "Review agent",
@@ -43,7 +43,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-4),
-                now.AddSeconds(-5)),
+                now.AddSeconds(-5)) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
             new AgentActivity(
                 "demo-docs",
                 "Documentation agent",
@@ -54,7 +54,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-3),
-                now.AddSeconds(-11)),
+                now.AddSeconds(-11)) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
         };
 
         var nodes = new[]

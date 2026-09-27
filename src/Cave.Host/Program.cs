@@ -38,6 +38,7 @@ if (demoMode)
     builder.Services.AddSingleton<IConversationStore, DemoConversationStore>();
     builder.Services.AddSingleton<IConversationControl, DemoConversationControl>();
     builder.Services.AddSingleton<ICodexUsageProvider, DemoCodexUsageProvider>();
+    builder.Services.AddSingleton<ICodexGoalProvider, DemoCodexGoalProvider>();
 }
 else
 {
@@ -50,6 +51,9 @@ else
     builder.Services.AddSingleton<ICodexTaskLocator>(services =>
         services.GetRequiredService<FileAgentActivityStore>());
     builder.Services.AddSingleton<IConversationStore, FileConversationStore>();
+    builder.Services.AddSingleton<ICodexGoalProvider>(services => new CodexAppServerGoalProvider(
+        services.GetRequiredService<TimeProvider>(),
+        builder.Configuration["Cave:CodexCommand"]));
     builder.Services.AddSingleton<ICodexUsageProvider>(services => new CodexAppServerUsageProvider(
         services.GetRequiredService<TimeProvider>(),
         builder.Configuration["Cave:CodexCommand"]));

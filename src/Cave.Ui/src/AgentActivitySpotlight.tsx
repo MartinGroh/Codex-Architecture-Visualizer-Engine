@@ -1,3 +1,4 @@
+import { agentDisplayName } from './agentIdentity'
 import { AgentAvatar } from './AgentAvatar'
 import type { AgentActivity } from './types'
 
@@ -27,7 +28,7 @@ export function AgentActivitySpotlight({
     ? 'No active agents'
     : `${agents.length} active agent${agents.length === 1 ? '' : 's'}`
   const activeDetail = agents
-    .map((agent) => `${agent.isSubagent ? agent.agentType.trim() || 'Subagent' : 'Main agent'} ${agent.phase ?? 'Working'}${agent.summary ? `: ${agent.summary}` : ''}`)
+    .map((agent) => `${agentDisplayName(agent)} ${agent.phase ?? 'Working'}${agent.summary ? `: ${agent.summary}` : ''}`)
     .join('. ')
   const accessibleMetrics = `${activeNodeCount} active nodes, ${recentEditCount} recent edits, ${unmappedCount} unmapped paths`
 
@@ -69,7 +70,7 @@ export function AgentActivitySpotlight({
                     size={17}
                   />
                 )}
-                <span>{agent.isSubagent ? agent.agentType.trim() || 'Subagent' : 'Main agent'}</span>
+                <span>{agentDisplayName(agent)}</span>
                 <b>{agent.phase ?? 'Working'}</b>
               </span>
             ))}

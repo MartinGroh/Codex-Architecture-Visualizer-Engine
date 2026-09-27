@@ -5,14 +5,20 @@ export interface UsagePresentation {
   burnLabel: string
   windowLabel: string
   resetsLabel: string | null
+  limitLabel: string
+  ordinaryUsageAllowed: boolean | null
 }
 
 export function createUsagePresentation(
   windows: CodexRateLimitWindow[],
   now: Date,
+  ordinaryUsageAllowed: boolean | null = null,
 ): UsagePresentation | null {
-  const window = windows.find((item) => item.limitId === 'codex' && item.window === 'primary')
-    ?? windows.find((item) => item.window === 'primary')
+  // Both included-quota windows constrain the account. Other metered buckets
+  // cannot stand in for the Codex quota, and percentages do not prove access.
+  const window = windows.filter((item) => item.limitId === 'codex')
+    .sort((left, right) => right.usedPercent - left.usedPercent
+      || left.window.localeCompare(right.window))[0]
   if (window === undefined) return null
   const used = Math.max(0, Math.min(100, window.usedPercent))
   const durationMinutes = window.windowDurationMinutes
@@ -28,11 +34,13 @@ export function createUsagePresentation(
     remainingPercent: Math.round(100 - used),
     burnLabel: burn === null
       ? `${used.toFixed(0)}% used`
-      : `${burn < 10 ? burn.toFixed(1) : burn.toFixed(0)}%/${useDays ? 'day' : 'hr'}`,
+      : `Avg ${burn < 10 ? burn.toFixed(1) : burn.toFixed(0)}%/${useDays ? 'day' : 'hr'}`,
     windowLabel: durationMinutes === null ? 'Current window' : formatWindow(durationMinutes),
+    limitLabel: `${window.limitName ?? 'Codex'} ${window.window}`,
+    ordinaryUsageAllowed,
     resetsLabel: resetMs === null
       ? null
-      : `Resets ${new Date(resetMs).toLocaleDateString([], { month: 'short', day: 'numeric' })}`,
+      : `Resets ${new Date(resetMs).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`,
   }
 }
 

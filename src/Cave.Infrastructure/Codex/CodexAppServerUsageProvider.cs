@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Cave.Application;
 
@@ -49,13 +51,14 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             timeout.CancelAfter(RequestTimeout);
             try
             {
-                _cached = await ReadFromAppServerAsync(now, timeout.Token).ConfigureAwait(false);
+                _cached = await ReadFromAppServerAsync(now, timeout.Token, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 _cached = Unavailable(now, "Codex account usage timed out.");
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException
+                or Win32Exception or ArgumentException or FormatException or KeyNotFoundException)
             {
                 _cached = Unavailable(now, $"Codex account usage is unavailable: {exception.Message}");
             }
@@ -73,7 +76,8 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
 
     private async Task<CodexUsageSnapshot> ReadFromAppServerAsync(
         DateTimeOffset retrievedAt,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CancellationToken callerCancellationToken)
     {
         using var process = new Process { StartInfo = CodexAppServerProcess.CreateStartInfo(_codexCommand) };
         if (!process.Start())
@@ -104,41 +108,116 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
                 process,
                 new { method = "account/usage/read", id = 2, @params = new { } },
                 cancellationToken).ConfigureAwait(false);
-            using var usage = await ReadResponseAsync(process, 2, cancellationToken).ConfigureAwait(false);
-            ThrowIfError(usage.RootElement, "Codex account usage request failed");
-
             await CodexAppServerProcess.WriteAsync(
                 process,
-                new { method = "account/rateLimits/read", id = 3, @params = new { } },
+                new { method = "account/rateLimits/read", id = 3, @params = new { excludeResetCreditDetails = true } },
                 cancellationToken).ConfigureAwait(false);
-            using var limits = await ReadResponseAsync(process, 3, cancellationToken).ConfigureAwait(false);
-            ThrowIfError(limits.RootElement, "Codex rate-limit request failed");
 
-            var result = usage.RootElement.GetProperty("result");
-            var summary = result.GetProperty("summary");
-            var daily = result.TryGetProperty("dailyUsageBuckets", out var buckets)
-                && buckets.ValueKind == JsonValueKind.Array
-                    ? buckets.EnumerateArray()
-                        .Select(ReadDailyBucket)
-                        .Where(item => item is not null)
-                        .Select(item => item!)
-                        .OrderBy(item => item.Date)
-                        .TakeLast(30)
-                        .ToArray()
-                    : [];
+            // CONSTRAINT: Token activity and quota are independent account reads. Send both
+            // before waiting, use one stdout reader, and retain either successful response
+            // when the other fails or the shared request deadline expires.
+            var responses = new Dictionary<int, JsonDocument>();
+            string? transportError = null;
+            try
+            {
+                while (responses.Count < 2)
+                {
+                    try
+                    {
+                        var pending = responses.ContainsKey(2) ? 3 : 2;
+                        var alternative = responses.Count == 0 ? 3 : (int?)null;
+                        var response = await ReadResponseAsync(process, pending, cancellationToken, alternative)
+                            .ConfigureAwait(false);
+                        responses.Add(response.RootElement.GetProperty("id").GetInt32(), response);
+                    }
+                    catch (OperationCanceledException) when (!callerCancellationToken.IsCancellationRequested)
+                    {
+                        transportError = "The account read timed out.";
+                        break;
+                    }
+                    catch (Exception exception) when (exception is IOException or JsonException
+                        or InvalidOperationException or FormatException or KeyNotFoundException)
+                    {
+                        transportError = exception.Message;
+                        break;
+                    }
+                }
 
-            return new CodexUsageSnapshot(
-                CodexUsageStatus.Ready,
-                new CodexUsageSummary(
-                    GetNullableInt64(summary, "lifetimeTokens"),
-                    GetNullableInt64(summary, "peakDailyTokens"),
-                    GetNullableInt64(summary, "longestRunningTurnSec"),
-                    GetNullableInt64(summary, "currentStreakDays"),
-                    GetNullableInt64(summary, "longestStreakDays")),
-                daily,
-                ReadRateLimits(limits.RootElement.GetProperty("result")),
-                retrievedAt,
-                Error: null);
+                CodexUsageSummary? summary = null;
+                IReadOnlyList<CodexDailyUsage> daily = [];
+                IReadOnlyList<CodexRateLimitWindow> windows = [];
+                bool? ordinaryUsageAllowed = null;
+                var errors = new List<string>();
+                var successfulReads = 0;
+                if (responses.TryGetValue(2, out var usage))
+                {
+                    try
+                    {
+                        ThrowIfError(usage.RootElement, "Codex token activity request failed");
+                        var result = usage.RootElement.GetProperty("result");
+                        var value = result.GetProperty("summary");
+                        var parsedSummary = new CodexUsageSummary(
+                            GetNullableInt64(value, "lifetimeTokens"),
+                            GetNullableInt64(value, "peakDailyTokens"),
+                            GetNullableInt64(value, "longestRunningTurnSec"),
+                            GetNullableInt64(value, "currentStreakDays"),
+                            GetNullableInt64(value, "longestStreakDays"));
+                        var parsedDaily = result.TryGetProperty("dailyUsageBuckets", out var buckets)
+                            && buckets.ValueKind != JsonValueKind.Null
+                                ? buckets.EnumerateArray().Select(ReadDailyBucket).OrderBy(item => item.Date).TakeLast(30).ToArray()
+                                : [];
+                        summary = parsedSummary;
+                        daily = parsedDaily;
+                        successfulReads++;
+                    }
+                    catch (Exception exception) when (exception is JsonException or InvalidOperationException
+                        or ArgumentException or FormatException or KeyNotFoundException)
+                    {
+                        errors.Add($"Codex token activity is unavailable: {exception.Message}");
+                    }
+                }
+                else
+                {
+                    errors.Add($"Codex token activity is unavailable: {transportError}");
+                }
+
+                if (responses.TryGetValue(3, out var limits))
+                {
+                    try
+                    {
+                        ThrowIfError(limits.RootElement, "Codex rate-limit request failed");
+                        var result = limits.RootElement.GetProperty("result");
+                        var parsedWindows = ReadRateLimits(result);
+                        var permission = result.TryGetProperty("ordinaryUsageAllowed", out var allowed)
+                            && allowed.ValueKind != JsonValueKind.Null ? allowed.GetBoolean() : (bool?)null;
+                        windows = parsedWindows;
+                        ordinaryUsageAllowed = permission;
+                        successfulReads++;
+                    }
+                    catch (Exception exception) when (exception is JsonException or InvalidOperationException
+                        or ArgumentException or FormatException or KeyNotFoundException)
+                    {
+                        errors.Add($"Codex quota is unavailable: {exception.Message}");
+                    }
+                }
+                else
+                {
+                    errors.Add($"Codex quota is unavailable: {transportError}");
+                }
+
+                callerCancellationToken.ThrowIfCancellationRequested();
+                return new CodexUsageSnapshot(
+                    successfulReads > 0 ? CodexUsageStatus.Ready : CodexUsageStatus.Unavailable,
+                    summary, daily, windows, retrievedAt,
+                    errors.Count == 0 ? null : string.Join(" ", errors), ordinaryUsageAllowed);
+            }
+            finally
+            {
+                foreach (var response in responses.Values)
+                {
+                    response.Dispose();
+                }
+            }
         }
         finally
         {
@@ -159,7 +238,8 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
     private static async Task<JsonDocument> ReadResponseAsync(
         Process process,
         int id,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? alternativeId = null)
     {
         while (true)
         {
@@ -172,7 +252,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             var document = JsonDocument.Parse(line);
             if (document.RootElement.TryGetProperty("id", out var responseId)
                 && responseId.ValueKind == JsonValueKind.Number
-                && responseId.GetInt32() == id)
+                && (responseId.GetInt32() == id || responseId.GetInt32() == alternativeId))
             {
                 return document;
             }
@@ -188,10 +268,10 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             return;
         }
 
-        var message = error.TryGetProperty("message", out var value)
-            ? value.GetString()
-            : null;
-        throw new InvalidOperationException($"{prefix}: {message ?? "unknown App Server error"}.");
+        var code = error.TryGetProperty("code", out var value) && value.ValueKind == JsonValueKind.Number
+            ? value.GetInt32().ToString(CultureInfo.InvariantCulture) : "unknown";
+        // Account error text can contain account identifiers or upstream response bodies.
+        throw new InvalidOperationException($"{prefix} (App Server error {code}).");
     }
 
     private static long? GetNullableInt64(JsonElement value, string propertyName) =>
@@ -200,13 +280,13 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             ? property.GetInt64()
             : null;
 
-    private static CodexDailyUsage? ReadDailyBucket(JsonElement bucket)
+    private static CodexDailyUsage ReadDailyBucket(JsonElement bucket)
     {
         if (!bucket.TryGetProperty("startDate", out var dateValue)
-            || !DateOnly.TryParse(dateValue.GetString(), out var date)
+            || !DateOnly.TryParseExact(dateValue.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
             || !bucket.TryGetProperty("tokens", out var tokensValue))
         {
-            return null;
+            throw new FormatException("The daily usage bucket is malformed.");
         }
 
         return new CodexDailyUsage(date, tokensValue.GetInt64());
@@ -216,17 +296,19 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
     {
         var windows = new List<CodexRateLimitWindow>();
         if (result.TryGetProperty("rateLimitsByLimitId", out var limitsById)
-            && limitsById.ValueKind == JsonValueKind.Object)
+            && limitsById.ValueKind != JsonValueKind.Null)
         {
             foreach (var property in limitsById.EnumerateObject())
             {
                 ReadRateLimit(property.Name, property.Value, windows);
             }
         }
-        else if (result.TryGetProperty("rateLimits", out var historical)
-                 && historical.ValueKind == JsonValueKind.Object)
+        else
         {
-            ReadRateLimit("codex", historical, windows);
+            var historical = result.GetProperty("rateLimits");
+            var limitId = historical.TryGetProperty("limitId", out var value)
+                && value.ValueKind != JsonValueKind.Null ? value.GetString()! : "codex";
+            ReadRateLimit(limitId, historical, windows);
         }
 
         return windows;
@@ -253,23 +335,19 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
         ICollection<CodexRateLimitWindow> destination)
     {
         if (!limit.TryGetProperty(propertyName, out var window)
-            || window.ValueKind != JsonValueKind.Object
-            || !window.TryGetProperty("usedPercent", out var usedValue)
-            || usedValue.ValueKind != JsonValueKind.Number)
+            || window.ValueKind == JsonValueKind.Null)
         {
             return;
         }
 
         var duration = GetNullableInt64(window, "windowDurationMins");
-        DateTimeOffset? resetsAt = window.TryGetProperty("resetsAt", out var resetValue)
-            && resetValue.ValueKind == JsonValueKind.Number
-                ? DateTimeOffset.FromUnixTimeSeconds(resetValue.GetInt64())
-                : null;
+        var reset = GetNullableInt64(window, "resetsAt");
+        DateTimeOffset? resetsAt = reset.HasValue ? DateTimeOffset.FromUnixTimeSeconds(reset.Value) : null;
         destination.Add(new CodexRateLimitWindow(
             limitId,
             limitName,
             windowName,
-            usedValue.GetDouble(),
+            window.GetProperty("usedPercent").GetInt32(),
             duration,
             resetsAt));
     }

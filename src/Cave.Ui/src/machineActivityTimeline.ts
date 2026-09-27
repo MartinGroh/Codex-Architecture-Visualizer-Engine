@@ -1,4 +1,6 @@
+import { sharedGoal } from './goalPresentation'
 import type {
+  CodexGoalSnapshot,
   AgentActivity,
   AgentActivityPhase,
   AgentInstructionMarker,
@@ -40,7 +42,19 @@ export interface MachineActivityProjectTimeline {
   instructionId: string | null
   instructionAtUtc: string
   prompt: MachineActivityNarrative | null
+  goal: CodexGoalSnapshot | null
+  sharingEnabled: boolean
   lanes: MachineActivityLane[]
+}
+
+/** Both flow presentations use the same terminal milestone projection. */
+export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean): MachineActivityMilestone[] {
+  if (active) return lane.milestones
+  return [
+    ...lane.milestones.filter((milestone) => milestone.kind !== 'Phase'),
+    { id: `complete:${lane.agent.agentId}`, label: 'Complete', detail: 'Work completed',
+      observedAtUtc: lane.agent.updatedAtUtc, positionPercent: 100, kind: 'Complete' },
+  ]
 }
 
 /** Builds a comparable, evidence-only timeline for every currently active agent. */
@@ -81,9 +95,11 @@ export function buildMachineActivityTimelines(
 
     return {
       workspace,
+      goal: sharedGoal(conversation),
+      sharingEnabled: conversation.sharingEnabled,
       instructionId: activity.latestInstruction?.id ?? null,
       instructionAtUtc: activity.latestInstruction?.observedAtUtc ?? earliestStart,
-      prompt: findPrompt(conversation.messages, activity.latestInstruction),
+      prompt: findPrompt(conversation.sharingEnabled ? conversation.messages : [], activity.latestInstruction),
       lanes: agents.map((agent) => {
         const agentStartedAtMs = Date.parse(agent.startedAtUtc)
         const instructionAtMs = activity.latestInstruction === null
@@ -152,7 +168,7 @@ export function buildMachineActivityTimelines(
           durationPercent: clamp(durationMs / maxDurationMs * 100, 18, 100),
           milestones,
           completionSummary: findCompletionSummary(
-            conversation.messages,
+            conversation.sharingEnabled ? conversation.messages : [],
             activity.latestInstruction,
             agent,
           ),

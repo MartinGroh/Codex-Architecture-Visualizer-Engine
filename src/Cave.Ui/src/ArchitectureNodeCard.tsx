@@ -1,3 +1,4 @@
+import { agentDisplayName } from './agentIdentity'
 import { Fragment } from 'react'
 import {
   BookOpen,
@@ -99,7 +100,7 @@ export function ArchitectureNodeCard({
       {activeDecorations.length > 0 && (
         <div className="agent-badges" aria-label={`${activeDecorations.length} active agent${activeDecorations.length === 1 ? '' : 's'} associated with this node`}>
           {activeDecorations.map((decoration) => {
-            const agentName = displayAgentName(decoration.agent.agentType, decoration.agent.isSubagent)
+            const agentName = agentDisplayName(decoration.agent)
             const phase = decoration.state === 'Active' ? decoration.agent.phase : null
             const PhaseIcon = phase === null ? null : phaseIcons[phase]
             return (
@@ -172,12 +173,4 @@ export function ArchitectureNodeCard({
       <Handle type="source" position={Position.Right} />
     </article>
   )
-}
-
-function displayAgentName(agentType: string, isSubagent: boolean): string {
-  if (!isSubagent) {
-    return 'Main agent'
-  }
-
-  return agentType.trim() || 'Subagent'
 }

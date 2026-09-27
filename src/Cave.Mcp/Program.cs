@@ -23,6 +23,9 @@ builder.Services.AddSingleton<IGitDeltaProvider, NativeGitDeltaProvider>();
 builder.Services.AddSingleton<GitDeltaService>();
 builder.Services.AddSingleton<IAgentActivityStore, FileAgentActivityStore>();
 builder.Services.AddSingleton<IConversationStore, FileConversationStore>();
+builder.Services.AddSingleton<ICodexGoalProvider>(services => new CodexAppServerGoalProvider(
+    services.GetRequiredService<TimeProvider>(),
+    builder.Configuration["Cave:CodexCommand"]));
 builder.Services.AddSingleton<ICodexUsageProvider>(services => new CodexAppServerUsageProvider(
     services.GetRequiredService<TimeProvider>(),
     builder.Configuration["Cave:CodexCommand"]));

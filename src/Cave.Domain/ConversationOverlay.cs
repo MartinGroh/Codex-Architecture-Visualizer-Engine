@@ -171,6 +171,9 @@ public sealed record ConversationOverlay(
     ConversationControl Control,
     string? Error)
 {
+    /// <summary>Gets the optional exact-task native goal; null when sharing is disabled or no task is bound.</summary>
+    public CodexGoalSnapshot? Goal { get; init; }
+
     /// <summary>Gets the privacy-preserving default for a workspace.</summary>
     public static ConversationOverlay Disabled { get; } = new(
         SharingEnabled: false,

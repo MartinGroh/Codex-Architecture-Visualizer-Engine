@@ -38,17 +38,27 @@ export function MachinePageFrame({ className, children }: MachinePageFrameProps)
 
   useEffect(() => {
     const controller = new AbortController()
-    void readCaveInfo(controller.signal)
-      .then((next) => {
-        setInfo(next)
-        setInfoError(null)
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) {
-          setInfoError(reason instanceof Error ? reason.message : 'Codex usage is unavailable.')
-        }
-      })
-    return () => controller.abort()
+    let reading = false
+    const refresh = () => {
+      if (reading || controller.signal.aborted) return
+      reading = true
+      void readCaveInfo(controller.signal)
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setInfo(next)
+            setInfoError(null)
+          }
+        })
+        .catch((reason: unknown) => {
+          if (!controller.signal.aborted) {
+            setInfoError(reason instanceof Error ? reason.message : 'Codex usage is unavailable.')
+          }
+        })
+        .finally(() => { reading = false })
+    }
+    refresh()
+    const interval = window.setInterval(refresh, 60_000)
+    return () => { controller.abort(); window.clearInterval(interval) }
   }, [])
 
   return (

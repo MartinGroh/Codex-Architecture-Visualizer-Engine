@@ -1199,3 +1199,46 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 @media (prefers-reduced-motion: reduce) {
   .machine-agent-track__progress::after { display: none; }
 }
+
+/* Compact flow and current-work context use the existing shared snapshots. */
+.architecture-work-surface { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.architecture-work-surface > .canvas-layout { flex: 1; }
+.agent-main-goal { padding: 16px 18px; border-bottom: 1px solid var(--line); min-width: 0; }
+.agent-main-goal > strong { font-size: 14px; }
+.agent-main-goal p { margin: 7px 0; font-size: 14px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.agent-main-goal small { color: var(--text-soft); font-size: 12px; font-weight: 400; }
+.agent-flow-compact { padding: 0 18px 12px; }
+.agent-flow-compact__agent { border-bottom: 1px solid var(--line); }
+.agent-flow-compact__agent:last-child { border-bottom: 0; }
+.agent-flow-compact__agent > summary { display: flex; align-items: flex-start; gap: 12px; padding: 16px 0; min-height: 44px; cursor: pointer; list-style: none; }
+.agent-flow-compact__agent > summary::-webkit-details-marker { display: none; }
+.agent-flow-compact__agent > summary:focus-visible, .architecture-work-context > summary:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+.agent-flow-compact__caption { display: grid; gap: 5px; min-width: 0; flex: 1; font-size: 15px; }
+.agent-flow-compact__caption small { color: var(--text-soft); font-size: 12px; }
+.agent-flow-compact__caption > span { overflow-wrap: anywhere; line-height: 1.5; color: var(--text); }
+.agent-flow-compact__chevron { flex: 0 0 auto; margin-top: 7px; }
+.agent-flow-compact__agent[open] .agent-flow-compact__chevron { transform: rotate(90deg); }
+.agent-flow-compact__detail { padding: 0 0 16px 44px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-flow-compact__detail p { white-space: pre-wrap; }
+.agent-flow-compact__detail ol { display: grid; gap: 12px; margin: 16px 0; padding-left: 20px; }
+.agent-flow-compact__detail li span, .agent-flow-compact__detail li time { display: block; color: var(--text-soft); }
+.agent-flow-compact__detail li time { font-size: 12px; }
+.architecture-work-context { margin: 0 18px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); flex-shrink: 0; }
+.architecture-work-context > summary { padding: 10px 14px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.architecture-work-context > summary span { display: inline-block; max-width: min(65vw, 700px); vertical-align: bottom; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: 8px; font-weight: 400; color: var(--text-soft); }
+.architecture-work-context__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-height: 190px; overflow: auto; border-top: 1px solid var(--line); }
+.architecture-work-context .agent-main-goal { border-bottom: 0; }
+.architecture-work-context ul { list-style: none; margin: 0; padding: 12px 18px; display: grid; gap: 10px; }
+.architecture-work-context li { min-width: 0; display: grid; gap: 4px; font-size: 14px; overflow-wrap: anywhere; }
+.architecture-work-context li small, .architecture-work-context li span { color: var(--text-soft); font-weight: 400; }
+@media (max-width: 760px) {
+  .machine-activity-layout-toggle button { min-height: 44px; }
+  .machine-project-flow__actions { flex-wrap: wrap; justify-content: flex-end; }
+  .machine-project-flow > header > div:first-child { min-width: 0; }
+  .machine-project-flow > header small { overflow-wrap: anywhere; }
+  .agent-flow-compact { padding-inline: 14px; }
+  .agent-main-goal { padding-inline: 14px; }
+  .architecture-work-context { margin-inline: 10px; }
+  .architecture-work-context__content { grid-template-columns: minmax(0, 1fr); max-height: 230px; }
+  .architecture-work-context > summary { min-height: 44px; }
+}

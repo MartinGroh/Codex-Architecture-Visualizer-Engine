@@ -30,10 +30,19 @@ export function InfoPanel({
           <p className="panel-error">{error}</p>
         ) : usage === undefined ? (
           <p>Loading account usage…</p>
-        ) : usage.status === 'Unavailable' || usage.summary === null ? (
+        ) : usage.status === 'Unavailable' ? (
           <p className="panel-error">{usage.error ?? 'Codex account usage is unavailable.'}</p>
         ) : (
           <>
+            {usage.error !== null && <p className="panel-error" role="status">{usage.error}</p>}
+            {usage.ordinaryUsageAllowed === false && <p>Included Codex usage is currently blocked.</p>}
+            {usage.rateLimits.length > 0 && <dl className="usage-grid" aria-label="Account quota windows">
+              {usage.rateLimits.map((window) => <div key={`${window.limitId}:${window.window}`}>
+                <dt>{window.limitName ?? window.limitId} · {window.window}{window.windowDurationMinutes === null ? '' : ` · ${window.windowDurationMinutes} minutes`}</dt>
+                <dd>{window.usedPercent === null ? 'Unavailable' : `${window.usedPercent}% used`}</dd>
+              </div>)}
+            </dl>}
+            {usage.summary === null ? <p>Token activity is unavailable.</p> : <>
             <dl className="usage-grid">
               <div><dt>Lifetime tokens</dt><dd>{formatCount(usage.summary.lifetimeTokens)}</dd></div>
               <div><dt>Peak day</dt><dd>{formatCount(usage.summary.peakDailyTokens)}</dd></div>
@@ -41,6 +50,7 @@ export function InfoPanel({
               <div><dt>Longest streak</dt><dd>{formatCount(usage.summary.longestStreakDays, ' days')}</dd></div>
               <div><dt>Longest turn</dt><dd>{formatDuration(usage.summary.longestRunningTurnSeconds)}</dd></div>
             </dl>
+            </>}
             <div className="usage-days">
               {usage.daily.slice(-14).map((day) => {
                 const peak = Math.max(1, ...usage.daily.slice(-14).map((item) => item.tokens))

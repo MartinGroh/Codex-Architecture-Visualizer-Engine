@@ -129,6 +129,7 @@ export interface AgentActivity {
   summary: string | null
   hasObservedActivity: boolean
   hasDeclaredScope: boolean
+  summaryEvidence?: 'Observed' | 'Declared' | null
   startedAtUtc: string
   updatedAtUtc: string
 }
@@ -213,7 +214,26 @@ export interface ConversationControl {
   error: string | null
 }
 
+export interface CodexGoal {
+  objective: string
+  status: 'Active' | 'Paused' | 'Blocked' | 'UsageLimited' | 'BudgetLimited' | 'Complete'
+  tokenBudget: number | null
+  tokensUsed: number
+  timeUsedSeconds: number
+  createdAt: number
+  updatedAt: number
+}
+
+export interface CodexGoalSnapshot {
+  status: 'Ready' | 'Unavailable'
+  sessionId: string
+  goal: CodexGoal | null
+  retrievedAtUtc: string
+  error: string | null
+}
+
 export interface ConversationOverlay {
+  goal?: CodexGoalSnapshot | null
   sharingEnabled: boolean
   status: ConversationSourceStatus
   messages: ConversationMessage[]
@@ -283,6 +303,7 @@ export interface CodexRateLimitWindow {
 }
 
 export interface CodexUsageSnapshot {
+  ordinaryUsageAllowed?: boolean | null
   status: CodexUsageStatus
   summary: CodexUsageSummary | null
   daily: CodexDailyUsage[]

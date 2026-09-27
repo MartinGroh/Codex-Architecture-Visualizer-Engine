@@ -1,3 +1,6 @@
+import { MainGoal } from './AgentWorkContext'
+import { AgentFlowCompact } from './AgentFlowCompact'
+import { agentDisplayName, agentFocusLabel } from './agentIdentity'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
@@ -20,6 +23,7 @@ import { connectArchitectureFeed } from './api'
 import { MachinePageFrame } from './MachinePageFrame'
 import {
   buildMachineActivityTimelines,
+  visibleLaneMilestones,
   type MachineActivityLane,
   type MachineActivityProjectTimeline,
 } from './machineActivityTimeline'
@@ -29,6 +33,8 @@ import { useWorkspaceOverview } from './useWorkspaceOverview'
 const clockRefreshMs = 1_000
 const machineActivityLayoutKey = 'cave.machine-activity.layout'
 type MachineActivityLayout = 'grid' | 'list'
+type MachineActivityView = 'timeline' | 'compact'
+const machineActivityViewKey = 'cave.machine-activity.view'
 
 /** Shows the current work streams across every active machine workspace. */
 export function MachineActivityPage() {
@@ -46,6 +52,7 @@ export function MachineActivityPage() {
   const [lastActiveUpdates, setLastActiveUpdates] = useState<Record<string, LiveArchitectureSnapshot>>({})
   const [feedErrors, setFeedErrors] = useState<Record<string, string>>({})
   const [layout, setLayout] = useState<MachineActivityLayout>(readMachineActivityLayout)
+  const [view, setView] = useState<MachineActivityView>(readMachineActivityView)
   const [nowMs, setNowMs] = useState(Date.now)
 
   useEffect(() => {
@@ -164,6 +171,11 @@ export function MachineActivityPage() {
     }
   }
 
+  const selectView = (nextView: MachineActivityView) => {
+    setView(nextView)
+    try { window.localStorage.setItem(machineActivityViewKey, nextView) } catch { /* Optional preference. */ }
+  }
+
   return (
     <MachinePageFrame className="machine-activity-page">
       <section className="dashboard-content machine-activity-content">
@@ -173,10 +185,14 @@ export function MachineActivityPage() {
               <a className="machine-activity-back" href="/"><ArrowLeft size={14} /> Projects</a>
               <span className="dashboard-kicker"><Route size={14} /> Active work across this machine</span>
               <h1>Agent flow</h1>
-              <p>Each project prompt is a root; agent lanes show comparable work time and objective CAVE milestones.</p>
+              <p>Follow each project’s main goal and agent focus. Open a timeline for observed work details.</p>
             </div>
             <div className="machine-activity-heading__actions">
-              <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
+              <div className="machine-activity-layout-toggle" role="group" aria-label="Agent flow view">
+                <button type="button" aria-pressed={view === 'timeline'} className={view === 'timeline' ? 'is-active' : ''} onClick={() => selectView('timeline')}><Route size={14} /> Timeline</button>
+                <button type="button" aria-pressed={view === 'compact'} className={view === 'compact' ? 'is-active' : ''} onClick={() => selectView('compact')}><List size={14} /> Compact</button>
+              </div>
+              {view === 'timeline' && <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
                 <button
                   type="button"
                   className={layout === 'grid' ? 'is-active' : ''}
@@ -195,7 +211,7 @@ export function MachineActivityPage() {
                 >
                   <List size={14} /> List
                 </button>
-              </div>
+              </div>}
               <button type="button" onClick={() => void refresh()} disabled={isLoading}>
                 <RefreshCw size={15} className={isLoading ? 'is-spinning' : ''} /> Refresh
               </button>
@@ -232,7 +248,7 @@ export function MachineActivityPage() {
             <a href="/">Open project overview</a>
           </div>
         ) : (
-          <div className={`machine-activity-projects machine-activity-projects--${layout}`}>
+          <div className={`machine-activity-projects machine-activity-projects--${view === 'compact' ? 'list' : layout}`}>
             {visibleWorkspaces.map((workspace) => {
               const timeline = timelines.find((item) => item.workspace.workspaceId === workspace.workspaceId)
               const isActive = workspace.activeAgentCount > 0
@@ -248,6 +264,7 @@ export function MachineActivityPage() {
                 <ActivityProjectFlow
                   key={workspace.workspaceId}
                   timeline={timeline}
+                  view={view}
                   nowMs={nowMs}
                   active={isActive}
                   onDismiss={() => dismissCompletedProject(workspace.workspaceId)}
@@ -286,11 +303,13 @@ function ActivityProjectLoading({
 }
 
 function ActivityProjectFlow({
+  view,
   timeline,
   nowMs,
   active,
   onDismiss,
 }: {
+  view: MachineActivityView
   timeline: MachineActivityProjectTimeline
   nowMs: number
   active: boolean
@@ -306,6 +325,7 @@ function ActivityProjectFlow({
         <ProjectFlowActions workspace={timeline.workspace} active={active} onDismiss={onDismiss} />
       </header>
 
+      <MainGoal goal={timeline.goal} sharingEnabled={timeline.sharingEnabled} />
       <div className="machine-prompt-root">
         <span><GitCommitHorizontal size={17} /></span>
         <div>
@@ -335,11 +355,11 @@ function ActivityProjectFlow({
         </div>
       </div>
 
-      <div className="machine-agent-lanes">
+      {view === 'compact' ? <AgentFlowCompact lanes={timeline.lanes} active={active} /> : <div className="machine-agent-lanes">
         {timeline.lanes.map((lane) => (
           <AgentTimelineLane key={lane.agent.agentId} lane={lane} nowMs={nowMs} active={active} />
         ))}
-      </div>
+      </div>}
     </section>
   )
 }
@@ -382,19 +402,7 @@ function AgentTimelineLane({
 }) {
   const { agent } = lane
   const phase = agent.phase ?? 'Working'
-  const milestones = active
-    ? lane.milestones
-    : [
-        ...lane.milestones.filter((milestone) => milestone.kind !== 'Phase'),
-        {
-          id: `complete:${agent.agentId}`,
-          label: 'Complete',
-          detail: 'Work completed',
-          observedAtUtc: agent.updatedAtUtc,
-          positionPercent: 100,
-          kind: 'Complete' as const,
-        },
-      ]
+  const milestones = visibleLaneMilestones(lane, active)
   const completionText = lane.completionSummary?.text
     ?? agent.summary
     ?? 'The agent completed without a shared final summary.'
@@ -403,11 +411,11 @@ function AgentTimelineLane({
       <div className="machine-agent-lane__identity">
         <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} size={35} />
         <span>
-          <strong>{agent.isSubagent ? agent.agentType.trim() || 'Subagent' : 'Main agent'}</strong>
+          <strong>{agentDisplayName(agent)}</strong>
           <small>{active ? phase : 'Done'} · {formatDuration(lane.durationMs)}</small>
         </span>
         <div className="machine-agent-lane__action">
-          <small>{active ? 'Current action' : 'Last observed action'}</small>
+          <small>{active ? agentFocusLabel(agent) : 'Last focus / action'}</small>
           <p>{agent.summary ?? 'Active without a mapped summary.'}</p>
         </div>
       </div>
@@ -503,4 +511,12 @@ function formatClock(value: string): string {
   return Number.isNaN(date.getTime())
     ? 'Unknown time'
     : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function readMachineActivityView(): MachineActivityView {
+  try {
+    const saved = window.localStorage.getItem(machineActivityViewKey)
+    if (saved === 'compact' || saved === 'timeline') return saved
+  } catch { /* Optional preference. */ }
+  return window.matchMedia?.('(max-width: 760px)').matches ? 'compact' : 'timeline'
 }

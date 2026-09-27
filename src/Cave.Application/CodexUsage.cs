@@ -5,10 +5,10 @@ namespace Cave.Application;
 /// </summary>
 public enum CodexUsageStatus
 {
-    /// <summary>Current account usage was read successfully.</summary>
+    /// <summary>At least one current account usage source was read successfully; diagnostics identify any unavailable source.</summary>
     Ready,
 
-    /// <summary>The local Codex App Server or its account usage data was unavailable.</summary>
+    /// <summary>Neither token activity nor quota could be read from the local Codex App Server.</summary>
     Unavailable,
 }
 
@@ -54,19 +54,21 @@ public sealed record CodexRateLimitWindow(
 /// <summary>
 /// Carries account usage independently from workspace architecture truth.
 /// </summary>
-/// <param name="Status">Whether usage is available.</param>
+/// <param name="Status">Whether at least one account usage source was read successfully.</param>
 /// <param name="Summary">Aggregate account statistics, when available.</param>
 /// <param name="Daily">The most recent bounded daily token buckets.</param>
 /// <param name="RateLimits">Current App Server rate-limit windows.</param>
 /// <param name="RetrievedAtUtc">The time CAVE read the App Server response.</param>
-/// <param name="Error">A safe diagnostic, or <see langword="null"/> when ready.</param>
+/// <param name="Error">A safe diagnostic for unavailable sources, including a partial read, or null when both reads succeeded.</param>
+/// <param name="OrdinaryUsageAllowed">Backend permission for ordinary included usage, or null when unavailable. Quota percentages do not determine permission.</param>
 public sealed record CodexUsageSnapshot(
     CodexUsageStatus Status,
     CodexUsageSummary? Summary,
     IReadOnlyList<CodexDailyUsage> Daily,
     IReadOnlyList<CodexRateLimitWindow> RateLimits,
     DateTimeOffset RetrievedAtUtc,
-    string? Error);
+    string? Error,
+    bool? OrdinaryUsageAllowed = null);
 
 /// <summary>
 /// Reads account usage from the canonical local Codex control plane.

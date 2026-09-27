@@ -159,6 +159,24 @@ afterEach(() => {
 })
 
 describe('MachineActivityPage', () => {
+  it('defaults to compact on mobile and opens timeline details by tapping an agent', async () => {
+    vi.mocked(window.matchMedia).mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() } as unknown as MediaQueryList)
+    overviewState = { ...overviewState, workspaces: [activeWorkspace] }
+    const view = render(<MachineActivityPage />)
+    await waitFor(() => expect(connectArchitectureFeed).toHaveBeenCalledOnce())
+    await act(async () => feedUpdate?.(activeUpdate))
+    expect(screen.getByRole('button', { name: 'Compact' }).getAttribute('aria-pressed')).toBe('true')
+    const disclosure = view.container.querySelector('.agent-flow-compact__agent')!
+    expect(disclosure.hasAttribute('open')).toBe(false)
+    fireEvent.click(disclosure.querySelector('summary')!)
+    expect(disclosure.hasAttribute('open')).toBe(true)
+    expect(screen.getByRole('list', { name: 'Main agent observed work timeline' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(window.localStorage.getItem('cave.machine-activity.view')).toBe('timeline')
+    view.unmount()
+    render(<MachineActivityPage />)
+    expect(screen.getByRole('button', { name: 'Timeline' }).getAttribute('aria-pressed')).toBe('true')
+  })
   it('keeps the machine overview separate, shows usage, and explains the quiet state', async () => {
     render(<MachineActivityPage />)
 

@@ -29,9 +29,11 @@ $protection = [ordered] @{
     required_pull_request_reviews = [ordered] @{
         # Personal repositories must omit dismissal_restrictions; GitHub reserves it for organizations.
         dismiss_stale_reviews = $true
-        require_code_owner_reviews = $true
-        require_last_push_approval = $true
-        required_approving_review_count = 1
+        # The sole maintainer cannot approve their own PR. Keep PRs mandatory;
+        # restore separate reviews before adding writers (see BRANCH_PROTECTION.md).
+        require_code_owner_reviews = $false
+        require_last_push_approval = $false
+        required_approving_review_count = 0
     }
     restrictions = $null
     required_linear_history = $true

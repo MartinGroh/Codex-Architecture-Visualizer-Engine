@@ -38,6 +38,9 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python -m unittest discover -s plugins/cave/scripts -p "test_*.py"
+      - name: Test portable Agent Flow C/C++ client
+        shell: pwsh
+        run: ./resources/agent-flow-light/embedded/test.ps1
       - name: Validate repository plugin metadata
         shell: pwsh
         run: ./scripts/validate-plugin-metadata.ps1

@@ -391,7 +391,25 @@ public sealed class WorkspaceGraphMonitor : IAsyncDisposable
         left.SharingEnabled == right.SharingEnabled
         && left.Status == right.Status
         && left.Messages.SequenceEqual(right.Messages)
+        && ControlEquals(left.Control, right.Control)
+        && GoalEquals(left.Goal, right.Goal)
         && string.Equals(left.Error, right.Error, StringComparison.Ordinal);
+
+    private static bool GoalEquals(CodexGoalSnapshot? left, CodexGoalSnapshot? right) =>
+        left is null || right is null
+            ? left is null && right is null
+            : left.Status == right.Status
+                && left.SessionId == right.SessionId
+                && Equals(left.Goal, right.Goal)
+                && left.Error == right.Error;
+
+    private static bool ControlEquals(ConversationControl left, ConversationControl right) =>
+        left.SessionId == right.SessionId
+        && left.TurnId == right.TurnId
+        && left.State == right.State
+        && left.CanSend == right.CanSend
+        && left.Deliveries.SequenceEqual(right.Deliveries)
+        && left.Error == right.Error;
 
     private static bool NodeActivityEquals(AgentNodeActivity left, AgentNodeActivity right) =>
         left.AgentId == right.AgentId

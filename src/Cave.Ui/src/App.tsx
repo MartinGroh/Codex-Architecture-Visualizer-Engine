@@ -1,3 +1,5 @@
+import { AgentWorkContext } from './AgentWorkContext'
+import { agentDisplayName } from './agentIdentity'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
@@ -1238,6 +1240,10 @@ function ArchitectureApp({
               </section>
             )}
 
+            <div className="architecture-work-surface">
+            {snapshot !== null && graphMode !== 'Changes' && (
+              <AgentWorkContext conversation={snapshot.conversation} agents={activeAgents} />
+            )}
             <div className={`canvas-layout ${showDetailPanel ? 'canvas-layout--detail-open' : ''}`}>
           <section
             ref={canvasFrame}
@@ -1389,6 +1395,7 @@ function ArchitectureApp({
               onClose={() => setDetailPanelOpen(false)}
             />
           )}
+            </div>
             </div>
           </>
         )}
@@ -1557,7 +1564,7 @@ function DetailPanel({
                         />
                         <span>
                           <strong>
-                            {agent.isSubagent ? agent.agentType : 'Main agent'}
+                            {agentDisplayName(agent)}
                             <i>{agent.state}{agent.state === 'Active' && agent.phase !== null ? ` · ${agent.phase}` : ''}</i>
                           </strong>
                           <small>{agent.summary ?? 'No work summary supplied.'}</small>

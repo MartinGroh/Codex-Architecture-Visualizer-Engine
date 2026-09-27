@@ -68,7 +68,11 @@ public sealed class DemoConversationStore(TimeProvider timeProvider) : IConversa
                     IsStreaming: false,
                     now.AddMinutes(-2)),
             ],
-            ConversationControl.Unavailable,
+            ConversationControl.Unavailable with
+            {
+                SessionId = "demo-session",
+                Error = "The fixed CAVE demo is not connected to a real Codex task.",
+            },
             Error: null));
     }
 

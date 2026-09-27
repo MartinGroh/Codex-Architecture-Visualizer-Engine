@@ -92,6 +92,12 @@ public sealed record AgentActivity(
     DateTimeOffset UpdatedAtUtc)
 {
     /// <summary>
+    /// Gets the application-supplied presentation name, or null before presentation enrichment.
+    /// The stable agent identity remains authoritative; names may repeat.
+    /// </summary>
+    public string? DisplayName { get; init; }
+
+    /// <summary>
     /// Gets the provenance of the event supplying current lifecycle state and phase, or null when unknown.
     /// Historical observed/declared flags do not establish this provenance.
     /// </summary>

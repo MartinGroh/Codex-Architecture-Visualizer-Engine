@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "background": "#17191F",
+  "foreground": "#F2F3F7",
+  "muted": "#8A909E",
+  "phases": {
+    "Thinking": "#8B72F4",
+    "Reading": "#4D94DB",
+    "Editing": "#D7913B",
+    "Validating": "#48A684",
+    "Working": "#37A6A2",
+    "Idle": "#8A909E"
+  },
+  "note": "Suggested static client palette. Always show a phase/state label as well as color; do not require animation."
+}

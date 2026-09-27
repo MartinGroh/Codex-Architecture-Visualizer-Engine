@@ -2,6 +2,7 @@ using Cave.Application;
 using Cave.Domain;
 using Cave.Infrastructure.Activity;
 using Cave.Infrastructure.Conversation;
+using Cave.Infrastructure.Demo;
 using Cave.Infrastructure.Live;
 using Cave.Infrastructure.Sample;
 using Cave.Infrastructure.Workspaces;
@@ -45,7 +46,7 @@ public sealed class CaveToolsLiveTests
                 new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 activityStore,
-                new FileConversationStore(),
+                new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(timeProvider), timeProvider),
                 timeProvider);
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, timeProvider)
                 .Create(workspaceRoot);
@@ -89,7 +90,7 @@ public sealed class CaveToolsLiveTests
                 new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 activityStore,
-                new FileConversationStore(),
+                new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(timeProvider), timeProvider),
                 timeProvider);
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, timeProvider)
                 .Create(workspaceRoot);
@@ -149,7 +150,7 @@ public sealed class CaveToolsLiveTests
                 new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
-                conversationStore,
+                new WorkspaceConversationService(conversationStore, new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
                 TimeProvider.System);
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System)
                 .Create(workspaceRoot);
@@ -186,7 +187,7 @@ public sealed class CaveToolsLiveTests
                 new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
-                new FileConversationStore(),
+                new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
                 TimeProvider.System);
             var factory = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System);
             await using var registry = new WorkspaceGraphMonitorRegistry(
@@ -242,7 +243,7 @@ public sealed class CaveToolsLiveTests
                 new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
-                new FileConversationStore(),
+                new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
                 TimeProvider.System);
             var factory = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System);
             await using var registry = new WorkspaceGraphMonitorRegistry(
@@ -272,6 +273,116 @@ public sealed class CaveToolsLiveTests
         {
             Directory.Delete(workspaceRoot, recursive: true);
         }
+    }
+
+    /// <summary>Native goal content changes publish through the canonical live feed without file changes.</summary>
+    [Fact]
+    public async Task MonitorPublishesGoalChangesButIgnoresRetrievalTimestampOnly()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "cave-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var conversations = new MutableConversationStore
+            {
+                Overlay = new ConversationOverlay(true, ConversationSourceStatus.Ready, [],
+                    ConversationControl.Unavailable with { SessionId = "task-a" }, null),
+            };
+            var goals = new MutableGoalProvider();
+            var service = new ArchitectureSnapshotService(new SampleSemanticIndex(),
+                new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
+                new FileAgentActivityStore(TimeProvider.System),
+                new WorkspaceConversationService(conversations, goals, TimeProvider.System), TimeProvider.System);
+            await using var monitor = new WorkspaceGraphMonitorFactory(service, TimeProvider.System).Create(workspaceRoot);
+            var initial = await monitor.GetCurrentAsync(CancellationToken.None);
+            goals.Result = goals.Result with { RetrievedAtUtc = DateTimeOffset.UnixEpoch.AddSeconds(16) };
+            var sameGoal = await monitor.GetCurrentAsync(CancellationToken.None);
+            Assert.Equal(initial.Version, sameGoal.Version);
+
+            goals.Result = goals.Result with { Goal = goals.Result.Goal! with { TokensUsed = 25 } };
+            var changed = await monitor.WaitForUpdateAsync(initial.Version, TimeSpan.FromSeconds(1), CancellationToken.None);
+            Assert.True(changed.Version > initial.Version);
+            Assert.True(changed.ConversationChanged);
+            Assert.False(changed.ActivityChanged);
+            Assert.Empty(changed.ChangedPaths);
+            Assert.Equal(25L, changed.Snapshot.Conversation.Goal?.Goal?.TokensUsed);
+
+            conversations.Overlay = conversations.Overlay with { SharingEnabled = false };
+            var disabled = await monitor.GetCurrentAsync(CancellationToken.None);
+            Assert.True(disabled.ConversationChanged);
+            Assert.Null(disabled.Snapshot.Conversation.Goal);
+        }
+        finally { Directory.Delete(workspaceRoot, recursive: true); }
+    }
+
+    /// <summary>Exact task/control changes remain observable even with no shared conversation or goal.</summary>
+    [Fact]
+    public async Task MonitorPublishesControlIdentityAndDeliveryChangesWhileSharingDisabled()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "cave-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var conversations = new MutableConversationStore
+            {
+                Overlay = ConversationOverlay.Disabled with
+                {
+                    Control = ConversationControl.Unavailable with { SessionId = "task-a" },
+                },
+            };
+            var service = new ArchitectureSnapshotService(new SampleSemanticIndex(),
+                new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
+                new FileAgentActivityStore(TimeProvider.System),
+                new WorkspaceConversationService(conversations, new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
+                TimeProvider.System);
+            await using var monitor = new WorkspaceGraphMonitorFactory(service, TimeProvider.System).Create(workspaceRoot);
+            var initial = await monitor.GetCurrentAsync(CancellationToken.None);
+            conversations.Overlay = conversations.Overlay with
+            {
+                Control = new ConversationControl("task-b", "turn-b", ConversationControlState.Queued, true,
+                    [new ConversationDelivery("message-b", "task-b", null, ConversationDeliveryState.Queued,
+                        DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, null)], null),
+            };
+            var switched = await monitor.GetCurrentAsync(CancellationToken.None);
+            Assert.True(switched.Version > initial.Version);
+            Assert.True(switched.ConversationChanged);
+            Assert.Equal("task-b", switched.Snapshot.Conversation.Control.SessionId);
+            Assert.Null(switched.Snapshot.Conversation.Goal);
+
+            var queued = Assert.Single(conversations.Overlay.Control.Deliveries);
+            conversations.Overlay = conversations.Overlay with
+            {
+                Control = conversations.Overlay.Control with
+                {
+                    Deliveries = [queued with { State = ConversationDeliveryState.Completed }],
+                },
+            };
+            var completed = await monitor.GetCurrentAsync(CancellationToken.None);
+            Assert.True(completed.Version > switched.Version);
+            Assert.Equal(ConversationDeliveryState.Completed,
+                Assert.Single(completed.Snapshot.Conversation.Control.Deliveries).State);
+        }
+        finally { Directory.Delete(workspaceRoot, recursive: true); }
+    }
+
+    private sealed class MutableGoalProvider : ICodexGoalProvider
+    {
+        internal CodexGoalSnapshot Result { get; set; } = new(CodexGoalSourceStatus.Ready, "task-a",
+            new CodexGoal("Shared workspace goal", CodexGoalStatus.Active, null, 0, 0, 123, 456),
+            DateTimeOffset.UnixEpoch, null);
+        public Task<CodexGoalSnapshot> GetAsync(string sessionId, CancellationToken cancellationToken) =>
+            Task.FromResult(Result);
+    }
+
+    private sealed class MutableConversationStore : IConversationStore
+    {
+        internal ConversationOverlay Overlay { get; set; } = ConversationOverlay.Disabled;
+        public Task<ConversationOverlay> ReadAsync(string workspaceRoot, CancellationToken cancellationToken) =>
+            Task.FromResult(Overlay);
+        public Task SetSharingAsync(string workspaceRoot, bool enabled, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+        public Task UpsertAsync(string workspaceRoot, ConversationMessage message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class EmptyGitDeltaProvider : IGitDeltaProvider

@@ -14,7 +14,7 @@
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@xyflow/react": "^12.11.3",
     "elkjs": "^0.12.0",
-    "lucide-react": "^1.31.0",
+    "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",

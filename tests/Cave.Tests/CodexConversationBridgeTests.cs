@@ -118,15 +118,21 @@ public sealed class CodexConversationBridgeTests : IDisposable
             IsActive: false,
             DateTimeOffset.UtcNow);
         using var bridge = CreateBridge(conversations, new StubTaskLocator(binding), runner);
+        // This test covers consumption of a durable queue. Finish enqueueing before
+        // starting the worker so Queued cannot race the stub's immediate completion.
+        var queued = await bridge.QueueAsync(
+            _workspaceRoot,
+            binding.SessionId,
+            "Continue from the remote browser.",
+            CancellationToken.None);
+        var persisted = await conversations.ReadAsync(_workspaceRoot, CancellationToken.None);
+        Assert.Equal(queued.MessageId, Assert.Single(persisted.Control.Deliveries).MessageId);
+        Assert.Equal(ConversationControlState.Queued, persisted.Control.State);
+
         using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var background = bridge.RunAsync(stopping.Token);
         try
         {
-            var queued = await bridge.QueueAsync(
-                _workspaceRoot,
-                binding.SessionId,
-                "Continue from the remote browser.",
-                CancellationToken.None);
             await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
             ConversationOverlay overlay;

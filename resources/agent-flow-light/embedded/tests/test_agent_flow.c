@@ -77,7 +77,10 @@ static void bounds_tests(void) {
     memset(long_text,'x',161); long_text[161]='\0'; snprintf(nested,sizeof(nested),"\"workspaceName\":\"%s\"", "");
     /* Build directly: the permitted 160-unit text followed by one extra unit. */
     strcpy(input,"\"workspaceName\":\""); strcat(input,long_text); strcat(input,"\""); replace(empty_ready,"\"workspaceName\":\"Demo\"",input); rejected(changed,CAVE_FLOW_TOO_LARGE);
-    for(i=0;i<33;++i) nested[i]='['; nested[33]='0'; for(i=34;i<67;++i) nested[i]=']'; nested[67]='\0';
+    for(i=0;i<33;++i) nested[i]='[';
+    nested[33]='0';
+    for(i=34;i<67;++i) nested[i]=']';
+    nested[67]='\0';
     snprintf(input,sizeof(input),"\"future\":%s,\"schemaVersion\":1",nested); replace(empty_ready,"\"schemaVersion\":1",input); rejected(changed,CAVE_FLOW_TOO_LARGE);
     /* Repeating a full valid row checks the array bound, not only body length. */
     load("tests/fixture.json");
@@ -90,7 +93,8 @@ static void bounds_tests(void) {
 typedef struct { unsigned calls, renders, statuses; cave_flow_result result; unsigned status; size_t reported_size; bool cancel_inside; const char *response; char path[1200]; } fake_transport;
 static cave_flow_result get(void *context,const char *path,char *target,size_t cap,size_t *n,unsigned *status,const volatile bool *cancelled) {
     fake_transport *f=(fake_transport *)context; const char *response=f->response!=NULL?f->response:empty_ready; size_t len=strlen(response); (void)cancelled; ++f->calls; strcpy(f->path,path); CHECK(len<=cap); memcpy(target,response,len); *n=f->reported_size!=0?f->reported_size:len; *status=f->status;
-    if(f->cancel_inside) example.cancelled=true; return f->result;
+    if(f->cancel_inside) example.cancelled=true;
+    return f->result;
 }
 static void render(void *context,const cave_flow_snapshot *s) { fake_transport *f=(fake_transport *)context; ++f->renders; CHECK(s->schema_version==1); }
 static void status(void *context,cave_flow_result result) { fake_transport *f=(fake_transport *)context; ++f->statuses; CHECK(result!=CAVE_FLOW_OK); }

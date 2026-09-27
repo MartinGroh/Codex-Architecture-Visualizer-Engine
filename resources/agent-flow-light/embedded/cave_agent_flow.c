@@ -96,10 +96,14 @@ static bool unsigned32(reader *r, uint32_t *out) { int64_t value; if (!integer64
 static bool skip(reader *r) {
     unsigned char c; space(r); if (r->p >= r->n) return fail(r, CAVE_FLOW_MALFORMED); c = r->s[r->p];
     if (c == '"') return string_value(r, NULL, 0, 0, NULL);
-    if (c == 't') return literal(r, "true"); if (c == 'f') return literal(r, "false"); if (c == 'n') return literal(r, "null");
+    if (c == 't') return literal(r, "true");
+    if (c == 'f') return literal(r, "false");
+    if (c == 'n') return literal(r, "null");
     if (c == '{' || c == '[') {
         unsigned char close = c == '{' ? '}' : ']'; bool object = c == '{';
-        if (++r->depth > 32) return fail(r, CAVE_FLOW_TOO_LARGE); ++r->p; space(r);
+        if (++r->depth > 32) return fail(r, CAVE_FLOW_TOO_LARGE);
+        ++r->p;
+        space(r);
         if (r->p < r->n && r->s[r->p] == close) { ++r->p; --r->depth; return true; }
         for (;;) { if (object && (!string_value(r, NULL, 0, 0, NULL) || !take(r, ':'))) return false; if (!skip(r)) return false; space(r); if (r->p < r->n && r->s[r->p] == close) { ++r->p; --r->depth; return true; } if (!take(r, ',')) return false; }
     }
@@ -190,8 +194,8 @@ static bool goal(reader *r, cave_flow_goal *g) {
         }
         if (!object_next(r,&done)) return false;
     }
-    return required(r,seen,8) && ((!g->has_token_budget || g->token_budget > 0)
-        && g->tokens_used >= 0 && g->time_used_seconds >= 0 || fail(r,CAVE_FLOW_MALFORMED));
+    return required(r,seen,8) && (((!g->has_token_budget || g->token_budget > 0)
+        && g->tokens_used >= 0 && g->time_used_seconds >= 0) || fail(r,CAVE_FLOW_MALFORMED));
 }
 static bool main_goal(reader *r, cave_flow_main_goal *g) {
     static const char *const keys[] = { "status","goal","retrievedAtUtc","error" };
@@ -211,7 +215,9 @@ static bool main_goal(reader *r, cave_flow_main_goal *g) {
     return required(r,seen,4) && (!g->has_goal || g->status == CAVE_FLOW_GOAL_READY || fail(r,CAVE_FLOW_MALFORMED));
 }
 static bool agents(reader *r, cave_flow_snapshot *s) {
-    if (!take(r,'[')) return false; space(r); if (r->p < r->n && r->s[r->p] == ']') { ++r->p; return true; }
+    if (!take(r,'[')) return false;
+    space(r);
+    if (r->p < r->n && r->s[r->p] == ']') { ++r->p; return true; }
     for (;;) { if (s->agent_count >= CAVE_FLOW_MAX_AGENTS) return fail(r,CAVE_FLOW_TOO_LARGE); if (!agent(r,&s->agents[s->agent_count])) return false; ++s->agent_count; space(r); if (r->p < r->n && r->s[r->p] == ']') { ++r->p; return true; } if (!take(r,',')) return false; }
 }
 static bool snapshot(reader *r, cave_flow_snapshot *s) {
@@ -265,7 +271,8 @@ cave_flow_result cave_flow_poll(cave_flow_http_get http_get, void *context, cons
         if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='-' || c=='_' || c=='.' || c=='~') path[n++]=(char)c;
         else { path[n++]='%'; path[n++]=digits[c>>4]; path[n++]=digits[c&15u]; }
     }
-    if (i==0) return CAVE_FLOW_BAD_ARGUMENT; path[n]='\0';
+    if (i==0) return CAVE_FLOW_BAD_ARGUMENT;
+    path[n]='\0';
     result=http_get(context,path,body,capacity,&length,&status,cancelled);
     if (cancelled!=NULL && *cancelled) return CAVE_FLOW_CANCELLED;
     if (result!=CAVE_FLOW_OK) return result;

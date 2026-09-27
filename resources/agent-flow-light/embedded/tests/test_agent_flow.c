@@ -21,6 +21,32 @@ static void rejected(const char *json, cave_flow_result expected) { cave_flow_re
 static size_t load(const char *path) {
     FILE *file=fopen(path,"rb"); size_t n; CHECK(file!=NULL); n=fread(input,1,sizeof(input)-1u,file); CHECK(!ferror(file)); CHECK(feof(file)); fclose(file); input[n]='\0'; return n;
 }
+/* Fixture mutations use LF regardless of Git's checkout settings. Raw JSON is
+ * parsed before normalization, and both wire line endings are checked below. */
+static void normalize_fixture_lines(char *text) {
+    char *read=text, *write=text;
+    while (*read!='\0') {
+        if (*read=='\r' && read[1]=='\n') ++read;
+        *write++=*read++;
+    }
+    *write='\0';
+}
+static void line_ending_tests(void) {
+    size_t i, p=0, lines=0, n;
+    normalize_fixture_lines(input);
+    CHECK(parse(input)==CAVE_FLOW_OK);
+    n=strlen(input);
+    for(i=0;i<n;++i) if(input[i]=='\n') ++lines;
+    CHECK(n+lines<sizeof(changed));
+    for(i=0;i<n;++i) {
+        if(input[i]=='\n') changed[p++]='\r';
+        changed[p++]=input[i];
+    }
+    changed[p]='\0';
+    CHECK(parse(changed)==CAVE_FLOW_OK);
+    normalize_fixture_lines(changed);
+    CHECK(strcmp(input,changed)==0);
+}
 static void fixture_tests(const char *path) {
     size_t n=load(path); CHECK(cave_flow_parse(input,n,&scratch,&published)==CAVE_FLOW_OK); CHECK(published.agent_count==3);
     CHECK(published.source_mode==CAVE_FLOW_DEMO); CHECK(published.agents[0].has_current_focus); CHECK(published.agents[0].focus_evidence==CAVE_FLOW_DECLARED);
@@ -30,6 +56,7 @@ static void fixture_tests(const char *path) {
     CHECK(published.agents[2].has_current_focus && published.agents[2].current_focus[0]=='\0');
     CHECK(published.main_goal.has_goal && !published.main_goal.goal.has_token_budget); CHECK(published.main_goal.goal.tokens_used==0);
     CHECK(published.main_goal.goal.created_at==INT64_MIN && published.main_goal.goal.updated_at==INT64_MAX);
+    line_ending_tests();
     replace(input,"\"tokenBudget\": null","\"tokenBudget\": 1"); CHECK(parse(changed)==CAVE_FLOW_OK); CHECK(published.main_goal.goal.has_token_budget && published.main_goal.goal.token_budget==1);
     replace(input,"\"tokenBudget\": null","\"tokenBudget\": 0"); rejected(changed,CAVE_FLOW_MALFORMED);
     replace(input,"\"tokenBudget\": null","\"tokenBudget\": -1"); rejected(changed,CAVE_FLOW_MALFORMED);
@@ -84,8 +111,10 @@ static void bounds_tests(void) {
     snprintf(input,sizeof(input),"\"future\":%s,\"schemaVersion\":1",nested); replace(empty_ready,"\"schemaVersion\":1",input); rejected(changed,CAVE_FLOW_TOO_LARGE);
     /* Repeating a full valid row checks the array bound, not only body length. */
     load("tests/fixture.json");
-    { const char *start=strstr(input,"    {\n      \"agentId\""); const char *end=strstr(start,"    }"); char row[2048]; size_t row_length=(size_t)(end+5-start), count, p=0;
-      CHECK(start!=NULL && end!=NULL && row_length<sizeof(row)); memcpy(row,start,row_length); row[row_length]='\0';
+    normalize_fixture_lines(input);
+    { const char *start=strstr(input,"    {\n      \"agentId\""); const char *end; char row[2048]; size_t row_length, count, p=0;
+      CHECK(start!=NULL); end=strstr(start,"    }"); CHECK(end!=NULL); row_length=(size_t)(end+5-start);
+      CHECK(row_length<sizeof(row)); memcpy(row,start,row_length); row[row_length]='\0';
       changed[p++]='['; for(count=0;count<33;++count) { if(count!=0) changed[p++]=','; memcpy(changed+p,row,row_length); p+=row_length; } changed[p++]=']'; changed[p]='\0';
       memcpy(input,changed,p+1u); replace(empty_ready,"[]",input); rejected(changed,CAVE_FLOW_TOO_LARGE);
     }

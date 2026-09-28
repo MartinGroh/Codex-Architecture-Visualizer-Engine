@@ -328,33 +328,39 @@ public sealed class CodexConversationBridgeTests : IDisposable
         using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var background = bridge.RunAsync(stopping.Token);
 
-        ConversationOverlay recovered;
-        do
+        try
         {
-            await Task.Delay(25, stopping.Token);
-            recovered = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            ConversationOverlay recovered;
+            do
+            {
+                await Task.Delay(25, stopping.Token);
+                recovered = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            }
+            while (recovered.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Queued));
+
+            var recoveredDelivery = Assert.Single(recovered.Control.Deliveries);
+            Assert.Contains("will retry", recoveredDelivery.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.False(runner.Started.Task.IsCompleted);
+
+            locator.Binding = locator.Binding with { IsActive = false };
+            await runner.Started.Task.WaitAsync(stopping.Token);
+
+            ConversationOverlay completed;
+            do
+            {
+                await Task.Delay(25, stopping.Token);
+                completed = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            }
+            while (completed.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
+
+            Assert.Equal("Recover the message that failed before turn start.", runner.Text);
         }
-        while (recovered.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Queued));
-
-        var recoveredDelivery = Assert.Single(recovered.Control.Deliveries);
-        Assert.Contains("will retry", recoveredDelivery.Error, StringComparison.OrdinalIgnoreCase);
-        Assert.False(runner.Started.Task.IsCompleted);
-
-        locator.Binding = locator.Binding with { IsActive = false };
-        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
-
-        ConversationOverlay completed;
-        do
+        finally
         {
-            await Task.Delay(25, stopping.Token);
-            completed = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+            // CONSTRAINT: join the bridge before fixture cleanup even when an assertion times out.
+            stopping.Cancel();
+            await background;
         }
-        while (completed.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
-
-        Assert.Equal("Recover the message that failed before turn start.", runner.Text);
-
-        stopping.Cancel();
-        await background;
     }
 
     /// <summary>

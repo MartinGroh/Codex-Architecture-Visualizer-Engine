@@ -62,12 +62,13 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task InfoEndpointPublishesCodexUsage()
     {
-        using var client = CreateSampleFactory().WithWebHostBuilder(builder =>
+        using var customizedFactory = CreateSampleFactory().WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<ICodexUsageProvider>();
                 services.AddSingleton<ICodexUsageProvider>(new StubUsageProvider());
-            })).CreateClient();
+            }));
+        using var client = customizedFactory.CreateClient();
 
         using var response = await client.GetAsync("/api/info", CancellationToken.None);
         response.EnsureSuccessStatusCode();
@@ -109,12 +110,13 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     public async Task ConversationMessageEndpointQueuesAgainstExactTask()
     {
         var control = new StubConversationControl();
-        using var client = CreateSampleFactory().WithWebHostBuilder(builder =>
+        using var customizedFactory = CreateSampleFactory().WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IConversationControl>();
                 services.AddSingleton<IConversationControl>(control);
-            })).CreateClient();
+            }));
+        using var client = customizedFactory.CreateClient();
         var workspaceId = MachineWorkspaceCatalogStore.CreateWorkspaceId(_workspaceRoot);
 
         using var response = await client.PostAsJsonAsync(
@@ -137,12 +139,13 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     public async Task NodeMemoEndpointRunsTemporarySideChatAgainstExactTask()
     {
         var control = new StubConversationControl();
-        using var client = CreateSampleFactory().WithWebHostBuilder(builder =>
+        using var customizedFactory = CreateSampleFactory().WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IConversationControl>();
                 services.AddSingleton<IConversationControl>(control);
-            })).CreateClient();
+            }));
+        using var client = customizedFactory.CreateClient();
         var workspaceId = MachineWorkspaceCatalogStore.CreateWorkspaceId(_workspaceRoot);
 
         using var response = await client.PostAsJsonAsync(
@@ -275,10 +278,10 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task WorkspaceEndpointDoesNotInferAProjectFromHostLocation()
     {
-        using var client = factory.WithWebHostBuilder(builder => builder
+        using var customizedFactory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("Cave:SemanticProvider", "Sample")
-            .UseSetting("Cave:WorkspaceCatalogRoot", Path.Combine(_catalogRoot, "unscoped")))
-            .CreateClient();
+            .UseSetting("Cave:WorkspaceCatalogRoot", Path.Combine(_catalogRoot, "unscoped")));
+        using var client = customizedFactory.CreateClient();
 
         using var response = await client.GetAsync("/api/workspaces", CancellationToken.None);
         response.EnsureSuccessStatusCode();
@@ -308,12 +311,13 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     {
         // CONSTRAINT: GitHub pull-request checkouts are detached and have no upstream.
         // This host-composition test explicitly compares with HEAD; production still requires its configured baseline.
-        using var client = CreateSampleFactory().WithWebHostBuilder(builder => builder
+        using var customizedFactory = CreateSampleFactory().WithWebHostBuilder(builder => builder
             .ConfigureTestServices(services =>
             {
                 services.RemoveAll<GitBaselineRequest>();
                 services.AddSingleton(new GitBaselineRequest(GitBaselineKind.Head, null));
-            })).CreateClient();
+            }));
+        using var client = customizedFactory.CreateClient();
 
         var workspaceId = MachineWorkspaceCatalogStore.CreateWorkspaceId(_workspaceRoot);
         using var response = await client.GetAsync(
@@ -341,11 +345,11 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task DemoModePublishesOnlySyntheticEvidence()
     {
-        using var client = factory.WithWebHostBuilder(builder => builder
+        using var customizedFactory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("Cave:DemoMode", "true")
             .UseSetting("Cave:WorkspaceRoot", _workspaceRoot)
-            .UseSetting("Cave:WorkspaceCatalogRoot", Path.Combine(_catalogRoot, "demo")))
-            .CreateClient();
+            .UseSetting("Cave:WorkspaceCatalogRoot", Path.Combine(_catalogRoot, "demo")));
+        using var client = customizedFactory.CreateClient();
 
         var workspaceId = MachineWorkspaceCatalogStore.CreateWorkspaceId(_workspaceRoot);
         using var snapshotResponse = await client.GetAsync(

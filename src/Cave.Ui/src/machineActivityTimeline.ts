@@ -25,6 +25,7 @@ export interface MachineActivityMilestone {
 
 export interface MachineActivityLane {
   agent: AgentActivity
+  active: boolean
   durationMs: number
   durationPercent: number
   milestones: MachineActivityMilestone[]
@@ -52,12 +53,12 @@ export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean
   if (active) return lane.milestones
   return [
     ...lane.milestones.filter((milestone) => milestone.kind !== 'Phase'),
-    { id: `complete:${lane.agent.agentId}`, label: 'Complete', detail: 'Work completed',
+    { id: `complete:${lane.agent.agentId}`, label: 'Complete', detail: lane.completionSummary?.text ?? lane.agent.lastObservedActivity ?? lane.agent.summary ?? 'No work detail was observed',
       observedAtUtc: lane.agent.updatedAtUtc, positionPercent: 100, kind: 'Complete' },
   ]
 }
 
-/** Builds a comparable, evidence-only timeline for every currently active agent. */
+/** Builds comparable evidence-only timelines, retaining finished work for at most ten minutes. */
 export function buildMachineActivityTimelines(
   sources: MachineActivitySource[],
   nowMs: number,
@@ -68,8 +69,9 @@ export function buildMachineActivityTimelines(
       : Date.parse(update.snapshot.activity.latestInstruction.observedAtUtc)
     const endAtMs = timelineEndMs(workspace, update, nowMs)
     return update.snapshot.activity.agents
-      .filter((agent) => agent.state === 'Active')
-      .map((agent) => ({ agent, instructionAtMs, endAtMs }))
+      .filter((agent) => isVisibleAgent(agent, workspace, nowMs))
+      .map((agent) => ({ agent, instructionAtMs,
+        endAtMs: agent.state === 'Active' && workspace.activeAgentCount > 0 ? endAtMs : Date.parse(agent.updatedAtUtc) }))
   })
   const maxDurationMs = Math.max(
     1,
@@ -82,10 +84,7 @@ export function buildMachineActivityTimelines(
   return sources.map(({ workspace, update }) => {
     const { activity, conversation, graph } = update.snapshot
     const endAtMs = timelineEndMs(workspace, update, nowMs)
-    const agents = activity.agents
-      .filter((agent) => agent.state === 'Active')
-      .sort((left, right) => Number(left.isSubagent) - Number(right.isSubagent)
-        || Date.parse(left.startedAtUtc) - Date.parse(right.startedAtUtc))
+    const agents = orderAgentTree(activity.agents.filter((agent) => isVisibleAgent(agent, workspace, nowMs)))
     const earliestStart = agents.reduce(
       (earliest, agent) => Date.parse(agent.startedAtUtc) < Date.parse(earliest)
         ? agent.startedAtUtc
@@ -101,12 +100,14 @@ export function buildMachineActivityTimelines(
       instructionAtUtc: activity.latestInstruction?.observedAtUtc ?? earliestStart,
       prompt: findPrompt(conversation.sharingEnabled ? conversation.messages : [], activity.latestInstruction),
       lanes: agents.map((agent) => {
+        const agentEndMs = agent.state === 'Active' && workspace.activeAgentCount > 0
+          ? endAtMs : Date.parse(agent.updatedAtUtc)
         const agentStartedAtMs = Date.parse(agent.startedAtUtc)
         const instructionAtMs = activity.latestInstruction === null
           ? agentStartedAtMs
           : Date.parse(activity.latestInstruction.observedAtUtc)
         const startedAtMs = Math.max(agentStartedAtMs, instructionAtMs)
-        const durationMs = Math.max(0, endAtMs - startedAtMs)
+        const durationMs = Math.max(0, agentEndMs - startedAtMs)
         const nodeNames = new Map(graph.nodes.map((node) => [node.id, node.name]))
         const architectureSteps = activity.nodes
           .filter((node) => node.agentId === agent.agentId)
@@ -164,6 +165,7 @@ export function buildMachineActivityTimelines(
 
         return {
           agent,
+          active: agent.state === 'Active' && workspace.activeAgentCount > 0,
           durationMs,
           durationPercent: clamp(durationMs / maxDurationMs * 100, 18, 100),
           milestones,
@@ -176,6 +178,21 @@ export function buildMachineActivityTimelines(
       }),
     }
   }).filter((project) => project.lanes.length > 0)
+}
+
+function isVisibleAgent(agent: AgentActivity, workspace: WorkspaceOverview, nowMs: number): boolean {
+  if (agent.state === 'Active' && workspace.activeAgentCount > 0) return true
+  const age = nowMs - Date.parse(agent.updatedAtUtc)
+  return Number.isFinite(age) && age >= 0 && age < 10 * 60_000
+}
+
+function orderAgentTree(agents: AgentActivity[]): AgentActivity[] {
+  const byStart = (left: AgentActivity, right: AgentActivity) =>
+    Date.parse(left.startedAtUtc) - Date.parse(right.startedAtUtc)
+  const roots = agents.filter((agent) => !agent.isSubagent).sort(byStart)
+  const children = agents.filter((agent) => agent.isSubagent).sort(byStart)
+  return [...roots.flatMap((root) => [root, ...children.filter((child) => child.parentAgentId === root.agentId)]),
+    ...children.filter((child) => !roots.some((root) => child.parentAgentId === root.agentId))]
 }
 
 function findPrompt(

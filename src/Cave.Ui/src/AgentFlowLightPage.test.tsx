@@ -85,23 +85,46 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
 
 describe('AgentFlowLightPage', () => {
+  it('keeps a completed agent briefly and allows immediate visual dismissal', async () => {
+    window.history.replaceState(null, '', '/activity/light?workspace=first')
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-28T08:09:00Z'))
+    vi.mocked(readAgentFlowLight).mockImplementation(async () => {
+      const result = feed('first')
+      result.agents[0].state = 'Completed'
+      result.agents[0].phase = null
+      return result
+    })
+    render(<AgentFlowLightPage />)
+    expect(await screen.findByRole('link', { name: 'View flow as list' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'View flow as list' }).getAttribute('href')).toContain('workspace=first&agent=')
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss Main agent' }))
+    expect(screen.queryByRole('link', { name: 'View flow as list' })).toBeNull()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Project' }), { target: { value: 'all' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Project' }), { target: { value: 'first' } })
+    expect(await screen.findByText('Keep the architecture clear')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'View flow as list' })).toBeNull()
+  })
+
   it('uses the light feed and shows the goal separately from declared agent focus', async () => {
     render(<AgentFlowLightPage />)
 
-    expect(await screen.findByText('Keep the architecture clear')).toBeTruthy()
-    expect(screen.getByText('Improve the viewer')).toBeTruthy()
-    expect(screen.getByText('Declared focus')).toBeTruthy()
+    expect(await screen.findAllByText('Keep the architecture clear')).toHaveLength(2)
+    expect(screen.getAllByText('Improve the viewer')).toHaveLength(2)
+    expect(screen.getAllByText('Declared focus')).toHaveLength(2)
     expect(screen.getByRole('link', { name: 'Full agent flow' }).getAttribute('href')).toBe('/activity')
     expect(readAgentFlowLight).toHaveBeenCalledWith('first', expect.any(AbortSignal))
-    expect(window.location.search).toBe('?workspace=first')
+    expect(readAgentFlowLight).toHaveBeenCalledWith('second', expect.any(AbortSignal))
+    expect(window.location.search).toBe('?workspace=all')
   })
 
   it('clears a shared goal when the selected project changes or the feed fails', async () => {
+    window.history.replaceState(null, '', '/activity/light?workspace=first')
     vi.mocked(readAgentFlowLight).mockImplementation(async (workspaceId) => feed(workspaceId, workspaceId === 'first' ? 'Ready' : 'Private'))
     render(<AgentFlowLightPage />)
     expect(await screen.findByText('Keep the architecture clear')).toBeTruthy()
@@ -133,6 +156,7 @@ describe('AgentFlowLightPage', () => {
   })
 
   it('does not switch to a different project when the chosen project leaves the catalog', async () => {
+    window.history.replaceState(null, '', '/activity/light?workspace=first')
     const { rerender } = render(<AgentFlowLightPage />)
     expect(await screen.findByText('Keep the architecture clear')).toBeTruthy()
     expect(window.location.search).toBe('?workspace=first')

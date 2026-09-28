@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Cave.Domain;
 
 namespace Cave.Application;
@@ -52,7 +50,7 @@ public sealed class WorkspaceAgentFlowService(
         var conversation = await conversations.ReadAsync(workspace.WorkspaceRoot, cancellationToken)
             .ConfigureAwait(false);
         var agents = currentActivity.Agents.Select(agent => new WorkspaceAgentFlowAgent(
-            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.AgentId))).ToLowerInvariant(),
+            AgentDisplayNames.PublicId(agent.AgentId),
             AgentDisplayNames.Get(agent.AgentId, agent.IsSubagent),
             agent.AgentType,
             agent.IsSubagent,
@@ -65,7 +63,11 @@ public sealed class WorkspaceAgentFlowService(
             agent.StartedAtUtc,
             agent.UpdatedAtUtc,
             agent.Evidence,
-            agent.SummaryEvidence)).ToArray();
+            agent.SummaryEvidence)
+        {
+            ParentAgentId = agent.ParentAgentId is null ? null : AgentDisplayNames.PublicId(agent.ParentAgentId),
+            LastObservedActivity = agent.LastObservedActivity,
+        }).ToArray();
 
         return new WorkspaceAgentFlowSnapshot(1, currentActivity.WorkspaceId, currentActivity.WorkspaceName,
             sourceMode, currentActivity.GeneratedAtUtc, currentActivity.SourceUpdatedAtUtc,
@@ -164,7 +166,14 @@ public sealed record WorkspaceAgentFlowAgent(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     AgentActivityEvidenceKind? Evidence,
-    AgentActivityEvidenceKind? SummaryEvidence);
+    AgentActivityEvidenceKind? SummaryEvidence)
+{
+    /// <summary>The opaque key of the exact observed parent session, when known.</summary>
+    public string? ParentAgentId { get; init; }
+
+    /// <summary>The last observed work action, excluding terminal lifecycle markers.</summary>
+    public string? LastObservedActivity { get; init; }
+}
 
 /// <summary>Contains main-goal availability without exposing the exact-task binding or raw diagnostics.</summary>
 /// <param name="Status">Private, unbound, ready or unavailable; Ready with null Goal means no goal.</param>

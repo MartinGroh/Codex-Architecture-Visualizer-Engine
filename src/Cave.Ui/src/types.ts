@@ -122,6 +122,9 @@ export type AgentActivitySourceStatus = 'Unobserved' | 'Ready' | 'Degraded'
 
 export interface AgentActivity {
   agentId: string
+  publicId?: string | null
+  parentAgentId?: string | null
+  lastObservedActivity?: string | null
   displayName?: string | null
   agentType: string
   isSubagent: boolean
@@ -296,6 +299,8 @@ export interface AgentFlowLightSnapshot {
 
 export interface AgentFlowLightAgent {
   agentId: string
+  parentAgentId?: string | null
+  lastObservedActivity?: string | null
   displayName: string
   agentType: string
   isSubagent: boolean

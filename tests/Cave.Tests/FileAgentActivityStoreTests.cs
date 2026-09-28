@@ -567,6 +567,7 @@ public sealed class FileAgentActivityStoreTests
                 kind = "ScopeDeclared",
                 occurredAtUtc = declaredAt,
                 agentId = "agent-sub",
+                sessionId = "parent-session",
                 agentType = "implementation",
                 isSubagent = true,
                 workspaceRoot,
@@ -594,9 +595,26 @@ public sealed class FileAgentActivityStoreTests
                 paths = Array.Empty<string>(),
                 summary = "Subagent completed",
             };
+            var worked = new
+            {
+                schemaVersion = 1,
+                eventId = "subagent-work",
+                kind = "PostToolUse",
+                occurredAtUtc = declaredAt.AddSeconds(15),
+                agentId = "agent-sub",
+                sessionId = "parent-session",
+                isSubagent = true,
+                workspaceRoot,
+                toolName = "Bash",
+                paths = Array.Empty<string>(),
+                summary = "Validated the activity indicator tests",
+            };
             await File.WriteAllTextAsync(
                 Path.Combine(directory, "202608171200000000000-scope-active.json"),
                 JsonSerializer.Serialize(declaration));
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, "202608171200150000000-subagent-work.json"),
+                JsonSerializer.Serialize(worked));
             await File.WriteAllTextAsync(
                 Path.Combine(directory, "202608171200300000000-subagent-stop.json"),
                 JsonSerializer.Serialize(stopped));
@@ -608,6 +626,9 @@ public sealed class FileAgentActivityStoreTests
             var agent = Assert.Single(overlay.Agents);
             Assert.Equal(AgentWorkState.Completed, agent.State);
             Assert.Equal(declaredAt.AddSeconds(30), agent.UpdatedAtUtc);
+            Assert.Equal("Implementing activity indicators", agent.Summary);
+            Assert.Equal("Validated the activity indicator tests", agent.LastObservedActivity);
+            Assert.Equal("session:parent-session", agent.ParentAgentId);
         }
         finally
         {
@@ -651,7 +672,8 @@ public sealed class FileAgentActivityStoreTests
             Assert.Equal("session-1:turn-2", overlay.LatestInstruction.Id);
             Assert.Equal(observedAt, overlay.LatestInstruction.ObservedAtUtc);
             var agent = Assert.Single(overlay.Agents);
-            Assert.Equal("New instruction received", agent.Summary);
+            Assert.Null(agent.Summary);
+            Assert.Null(agent.LastObservedActivity);
             Assert.Equal(AgentActivityPhase.Thinking, agent.Phase);
         }
         finally

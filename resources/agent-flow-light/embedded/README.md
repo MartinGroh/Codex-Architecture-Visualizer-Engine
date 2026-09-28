@@ -37,6 +37,8 @@ void app_tick_flow(uint32_t monotonic_ms)
 
 Render the bounded rows using `display_name`; `agent_id` is only an external correlation key. CAVE supplies the canonical name, so the firmware must not recompute or invent it. Preserve `evidence`, `summary_evidence`, and `focus_evidence` labels. A declared focus is not observed behavior or a structured native subgoal.
 
+When `has_parent_agent_id`, group a child below the row whose `agent_id` matches `parent_agent_id`. If that row is absent from the bounded response, keep the child visibly ungrouped. `last_observed_activity` reports a work action separately from declared focus; terminal hooks alone do not explain what was finished. The optional fields are absent in older version-1 responses. Keep finished rows at most ten minutes after `updated_at_utc`, and permit earlier local dismissal.
+
 Render a goal only when `main_goal.status == CAVE_FLOW_GOAL_READY && main_goal.has_goal`. `Ready` with `has_goal == false` means the exact task has no goal. `Private`, `Unbound`, and `Unavailable` are distinct source states and have no goal. The parser rejects a response exposing a goal under those states.
 
 **On any failed poll, `show_status` must immediately clear previously displayed goal text and mark retained activity stale/unavailable.** The published snapshot stays unchanged for atomicity; that does not authorize rendering old shared text as current. Do not fabricate `Private` or any other backend status when disconnected. Treat cancellation as an intentional stop and clear the display as appropriate. A later successful private/no-goal response replaces and clears the old snapshot.
@@ -50,8 +52,8 @@ All storage is caller-owned. No library or polling-example function allocates he
 | Storage | Default capacity |
 | --- | ---: |
 | HTTP response body | 262,144 bytes (256 KiB) |
-| One snapshot, measured by the host test | 56,416 bytes |
-| Example object: body + scratch + published + scheduling/callbacks, host measurement | 375,040 bytes |
+| One snapshot, measured by the host test | 73,952 bytes |
+| Example object: body + scratch + published + scheduling/callbacks, host measurement | 410,112 bytes |
 | Agents | 32 |
 | Goal UTF-8 text, including NUL | 6,145 bytes |
 | Each 160 UTF-16-unit text field, including NUL | 481 bytes |

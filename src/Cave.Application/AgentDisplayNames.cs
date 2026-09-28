@@ -1,10 +1,16 @@
 using Cave.Domain;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Cave.Application;
 
 /// <summary>Owns stable presentation names shared by browser snapshots and external Agent Flow clients.</summary>
 public static class AgentDisplayNames
 {
+    /// <summary>Returns a stable opaque SHA256 key for external agent correlation.</summary>
+    public static string PublicId(string agentId) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agentId))).ToLowerInvariant();
+
     // CONSTRAINT: single names are intentional. The requested pool contains 48 female and 16 male
     // names. Names are presentation only; collisions never merge or replace authoritative IDs.
     private static readonly string[] Names =
@@ -51,6 +57,7 @@ public static class AgentDisplayNames
             Agents = activity.Agents.Select(agent => agent with
             {
                 DisplayName = Get(agent.AgentId, agent.IsSubagent),
+                PublicId = PublicId(agent.AgentId),
             }).ToArray(),
         };
     }

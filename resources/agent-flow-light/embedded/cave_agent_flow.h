@@ -37,6 +37,10 @@ typedef enum { CAVE_FLOW_GOAL_ACTIVE, CAVE_FLOW_GOAL_PAUSED, CAVE_FLOW_GOAL_BLOC
 /* Presence flags preserve null separately from empty text and numeric zero. */
 typedef struct {
     char agent_id[65];
+    bool has_parent_agent_id;
+    char parent_agent_id[65];
+    bool has_last_observed_activity;
+    char last_observed_activity[CAVE_FLOW_TEXT_BYTES];
     char display_name[CAVE_FLOW_NAME_BYTES];
     char agent_type[CAVE_FLOW_ROLE_BYTES];
     bool is_subagent;

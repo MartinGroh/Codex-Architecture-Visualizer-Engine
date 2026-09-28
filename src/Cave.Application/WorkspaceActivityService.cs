@@ -43,7 +43,11 @@ public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, 
                 agent.StartedAtUtc,
                 agent.UpdatedAtUtc,
                 agent.Evidence,
-                agent.SummaryEvidence))
+                agent.SummaryEvidence)
+            {
+                ParentAgentId = agent.ParentAgentId is null ? null : RequireIdentity(agent.ParentAgentId),
+                LastObservedActivity = Bound(agent.LastObservedActivity, 160),
+            })
             .ToArray();
         var latest = activity.Agents.Select(agent => (DateTimeOffset?)agent.UpdatedAtUtc)
             .Append(activity.LatestInstruction?.ObservedAtUtc)
@@ -103,7 +107,7 @@ public sealed record WorkspaceActivitySnapshot(
 /// <summary>Provides one privacy-minimized agent row for an external display.</summary>
 /// <param name="AgentId">The stable identity, never truncated or rewritten.</param>
 /// <param name="AgentType">The type or role, limited to 64 UTF-16 characters.</param>
-/// <param name="IsSubagent">Whether evidence identifies a child agent; no parent relationship is inferred.</param>
+/// <param name="IsSubagent">Whether evidence identifies a child agent; exact observed parent identity is optional.</param>
 /// <param name="State">The canonical lifecycle state, including the existing active lease.</param>
 /// <param name="Phase">The current work phase, or null when inactive or unknown.</param>
 /// <param name="Summary">The work summary, limited to 160 UTF-16 characters.</param>
@@ -121,4 +125,11 @@ public sealed record WorkspaceActivityAgent(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     AgentActivityEvidenceKind? Evidence,
-    AgentActivityEvidenceKind? SummaryEvidence);
+    AgentActivityEvidenceKind? SummaryEvidence)
+{
+    /// <summary>The exact parent session identity for an observed subagent, when known.</summary>
+    public string? ParentAgentId { get; init; }
+
+    /// <summary>The last observed work action, excluding terminal lifecycle markers.</summary>
+    public string? LastObservedActivity { get; init; }
+}

@@ -691,6 +691,13 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 .machine-agent-lanes { display: grid; gap: 8px; padding: 14px 18px 18px 50px; }
 .machine-agent-lane { --lane-accent: var(--teal); position: relative; display: grid; grid-template-areas: 'identity classification' 'track track' 'completion completion'; grid-template-columns: minmax(260px, 1fr) auto; align-items: start; gap: 12px 18px; min-height: 124px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--lane-accent) 23%, var(--line)); border-radius: 13px; background: color-mix(in srgb, var(--lane-accent) 3%, var(--surface)); }
 .machine-agent-lane.is-complete { --lane-accent: var(--teal); background: color-mix(in srgb, var(--teal) 2%, var(--surface)); }
+.machine-agent-lane.is-main-agent { border-color: color-mix(in srgb, var(--violet) 38%, var(--line)); }
+.machine-activity-project-select { display: grid; gap: 4px; color: var(--text-muted); font-size: 10px; }
+.machine-activity-project-select select { max-width: 230px; min-height: 34px; padding: 0 9px; color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.machine-agent-lane.is-subagent { margin-left: 22px; }
+.machine-agent-lane__identity strong a { color: inherit; text-decoration-color: color-mix(in srgb, var(--violet) 55%, transparent); text-underline-offset: 3px; }
+.machine-agent-lane__identity strong a:hover { color: var(--violet); }
+.machine-agent-empty { margin: 0; padding: 16px 20px; color: var(--text-muted); font-size: 12px; }
 .machine-agent-lane::before { position: absolute; top: 50%; right: 100%; width: 20px; height: 1px; content: ''; background: color-mix(in srgb, var(--lane-accent) 50%, var(--line)); }
 .machine-agent-lane.phase-editing { --lane-accent: #d7913b; }
 .machine-agent-lane.phase-thinking { --lane-accent: #8b72f4; }
@@ -734,7 +741,7 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 .machine-agent-milestone.is-first:hover > .machine-agent-milestone__popover, .machine-agent-milestone.is-first:focus > .machine-agent-milestone__popover { transform: translate(0, 0); }
 .machine-agent-milestone.is-last > .machine-agent-milestone__popover { transform: translate(-100%, 4px); }
 .machine-agent-milestone.is-last:hover > .machine-agent-milestone__popover, .machine-agent-milestone.is-last:focus > .machine-agent-milestone__popover { transform: translate(-100%, 0); }
-.machine-completion-summary { grid-area: completion; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 9px; padding-top: 12px; color: var(--teal); border-top: 1px solid color-mix(in srgb, var(--teal) 22%, var(--line)); }
+.machine-completion-summary { grid-area: completion; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: start; gap: 9px; padding-top: 12px; color: var(--teal); border-top: 1px solid color-mix(in srgb, var(--teal) 22%, var(--line)); }
 .machine-completion-summary > div { display: grid; gap: 4px; }
 .machine-completion-summary small { color: var(--teal); font-size: 9px; font-weight: 720; letter-spacing: .08em; text-transform: uppercase; }
 .machine-completion-summary p { display: -webkit-box; margin: 0; color: var(--text-soft); font-size: 11px; line-height: 1.5; white-space: pre-wrap; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
@@ -1232,6 +1239,9 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 .architecture-work-context li { min-width: 0; display: grid; gap: 4px; font-size: 14px; overflow-wrap: anywhere; }
 .architecture-work-context li small, .architecture-work-context li span { color: var(--text-soft); font-weight: 400; }
 @media (max-width: 760px) {
+  .machine-activity-heading__actions { flex-wrap: wrap; justify-content: flex-start; }
+  .machine-activity-project-select { flex: 1 0 100%; }
+  .machine-activity-project-select select { width: 100%; max-width: none; }
   .machine-activity-layout-toggle button { min-height: 44px; }
   .machine-project-flow__actions { flex-wrap: wrap; justify-content: flex-end; }
   .machine-project-flow > header > div:first-child { min-width: 0; }

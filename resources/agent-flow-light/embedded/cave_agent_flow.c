@@ -147,11 +147,11 @@ static bool object_next(reader *r, bool *done) { space(r); *done = r->p < r->n &
 static bool required(reader *r, uint32_t seen, size_t count) { return seen == ((UINT32_C(1) << count)-1u) || fail(r,CAVE_FLOW_MALFORMED); }
 
 static bool agent(reader *r, cave_flow_agent *a) {
-    static const char *const keys[] = { "agentId","displayName","agentType","isSubagent","state","phase","summary","currentFocus","focusEvidence","startedAtUtc","updatedAtUtc","evidence","summaryEvidence" };
+    static const char *const keys[] = { "agentId","displayName","agentType","isSubagent","state","phase","summary","currentFocus","focusEvidence","startedAtUtc","updatedAtUtc","evidence","summaryEvidence","parentAgentId","lastObservedActivity" };
     uint32_t seen = 0; bool done; size_t k, i;
     if (!object_start(r,&done)) return false;
     while (!done) {
-        if (!object_key(r,keys,13,&k) || !seen_key(r,&seen,k,13)) return false;
+        if (!object_key(r,keys,15,&k) || !seen_key(r,&seen,k,15)) return false;
         switch (k) {
         case 0: if (!text(r,a->agent_id,sizeof(a->agent_id),64,NULL)) return false; if (strlen(a->agent_id) != 64) return fail(r,CAVE_FLOW_MALFORMED); for (i=0;i<64;++i) if (!((a->agent_id[i]>='0' && a->agent_id[i]<='9') || (a->agent_id[i]>='a' && a->agent_id[i]<='f'))) return fail(r,CAVE_FLOW_MALFORMED); break;
         case 1: if (!text(r,a->display_name,sizeof(a->display_name),32,NULL)) return false; break;
@@ -166,11 +166,14 @@ static bool agent(reader *r, cave_flow_agent *a) {
         case 10: if (!date(r,a->updated_at_utc,NULL)) return false; break;
         case 11: ENUM(r,evidence,a->evidence,cave_flow_evidence,true); break;
         case 12: ENUM(r,evidence,a->summary_evidence,cave_flow_evidence,true); break;
+        case 13: if (!text(r,a->parent_agent_id,sizeof(a->parent_agent_id),64,&a->has_parent_agent_id)) return false;
+            if (a->has_parent_agent_id) { if (strlen(a->parent_agent_id) != 64) return fail(r,CAVE_FLOW_MALFORMED); for (i=0;i<64;++i) if (!((a->parent_agent_id[i]>='0' && a->parent_agent_id[i]<='9') || (a->parent_agent_id[i]>='a' && a->parent_agent_id[i]<='f'))) return fail(r,CAVE_FLOW_MALFORMED); } break;
+        case 14: if (!text(r,a->last_observed_activity,sizeof(a->last_observed_activity),160,&a->has_last_observed_activity)) return false; break;
         default: if (!skip(r)) return false; break;
         }
         if (!object_next(r,&done)) return false;
     }
-    return required(r,seen,13) && ((a->has_current_focus == (a->has_summary && a->summary_evidence == CAVE_FLOW_DECLARED)
+    return required(r,seen & ((UINT32_C(1) << 13)-1u),13) && ((a->has_current_focus == (a->has_summary && a->summary_evidence == CAVE_FLOW_DECLARED)
         && (a->has_current_focus
             ? a->focus_evidence == CAVE_FLOW_DECLARED && strcmp(a->current_focus,a->summary) == 0
             : a->focus_evidence == CAVE_FLOW_NO_EVIDENCE)) || fail(r,CAVE_FLOW_MALFORMED));

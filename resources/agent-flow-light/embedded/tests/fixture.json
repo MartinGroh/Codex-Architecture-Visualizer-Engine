@@ -11,6 +11,8 @@
   "agents": [
     {
       "agentId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parentAgentId": null,
+      "lastObservedActivity": "Validated the JSON contract",
       "displayName": "Main agent",
       "agentType": "agent",
       "isSubagent": false,
@@ -26,6 +28,8 @@
     },
     {
       "agentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "parentAgentId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "lastObservedActivity": "Reviewed Unicode handling",
       "displayName": "Chlo\u00eb \ud83d\udd0e",
       "agentType": "reviewer",
       "isSubagent": true,

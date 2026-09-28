@@ -39,20 +39,24 @@ const machineActivityViewKey = 'cave.machine-activity.view'
 /** Shows the current work streams across every active machine workspace. */
 export function MachineActivityPage() {
   const { workspaces, diagnostics, error, isLoading, refresh } = useWorkspaceOverview()
+  const requestedWorkspaceId = new URLSearchParams(window.location.search).get('workspace')
+  const requestedAgentId = new URLSearchParams(window.location.search).get('agent')
   const activeWorkspaces = useMemo(() => workspaces.filter((workspace) => (
     workspace.isAvailable && workspace.activeAgentCount > 0
   )), [workspaces])
   const activeWorkspaceIdList = useMemo(
-    () => activeWorkspaces.map((workspace) => workspace.workspaceId),
-    [activeWorkspaces],
+    () => appendWorkspaceIds(activeWorkspaces.map((workspace) => workspace.workspaceId),
+      workspaces.filter((workspace) => workspace.isAvailable && workspace.workspaceId === requestedWorkspaceId)
+        .map((workspace) => workspace.workspaceId)),
+    [activeWorkspaces, requestedWorkspaceId, workspaces],
   )
   const activeWorkspaceIds = activeWorkspaceIdList.join('|')
   const [retainedWorkspaceIds, setRetainedWorkspaceIds] = useState<string[]>([])
   const [updates, setUpdates] = useState<Record<string, LiveArchitectureSnapshot>>({})
-  const [lastActiveUpdates, setLastActiveUpdates] = useState<Record<string, LiveArchitectureSnapshot>>({})
   const [feedErrors, setFeedErrors] = useState<Record<string, string>>({})
+  const [dismissedAgents, setDismissedAgents] = useState<string[]>([])
   const [layout, setLayout] = useState<MachineActivityLayout>(readMachineActivityLayout)
-  const [view, setView] = useState<MachineActivityView>(readMachineActivityView)
+  const [view, setView] = useState<MachineActivityView>(() => requestedAgentId ? 'compact' : readMachineActivityView())
   const [nowMs, setNowMs] = useState(Date.now)
 
   useEffect(() => {
@@ -94,9 +98,6 @@ export function MachineActivityPage() {
         (update) => {
           if (disposed) return
           setUpdates((current) => ({ ...current, [workspaceId]: update }))
-          if (update.snapshot.activity.agents.some((agent) => agent.state === 'Active')) {
-            setLastActiveUpdates((current) => ({ ...current, [workspaceId]: update }))
-          }
           setFeedErrors((current) => {
             if (!(workspaceId in current)) return current
             const next = { ...current }
@@ -128,26 +129,15 @@ export function MachineActivityPage() {
 
   const sources = useMemo(() => visibleWorkspaces.flatMap((workspace) => {
     const latestUpdate = updates[workspace.workspaceId]
-    const activityUpdate = latestUpdate?.snapshot.activity.agents.some((agent) => agent.state === 'Active')
-      ? latestUpdate
-      : lastActiveUpdates[workspace.workspaceId] ?? latestUpdate
-    if (activityUpdate === undefined) return []
-
-    const update = latestUpdate === undefined || latestUpdate === activityUpdate
-      ? activityUpdate
-      : {
-          ...activityUpdate,
-          snapshot: {
-            ...activityUpdate.snapshot,
-            conversation: latestUpdate.snapshot.conversation,
-          },
-        }
-    return [{ workspace, update }]
-  }), [lastActiveUpdates, updates, visibleWorkspaces])
+    return latestUpdate === undefined ? [] : [{ workspace, update: latestUpdate }]
+  }), [updates, visibleWorkspaces])
   const timelines = useMemo(
     () => buildMachineActivityTimelines(sources, nowMs),
     [nowMs, sources],
   )
+  const displayWorkspaces = visibleWorkspaces.filter((workspace) =>
+    (requestedWorkspaceId === null || requestedWorkspaceId === workspace.workspaceId)
+    && (workspace.activeAgentCount > 0 || timelines.some((item) => item.workspace.workspaceId === workspace.workspaceId)))
   const activeAgentCount = activeWorkspaces.reduce(
     (total, workspace) => total + workspace.activeAgentCount,
     0,
@@ -159,9 +149,10 @@ export function MachineActivityPage() {
   const dismissCompletedProject = (workspaceId: string) => {
     setRetainedWorkspaceIds((current) => current.filter((item) => item !== workspaceId))
     setUpdates((current) => omitWorkspace(current, workspaceId))
-    setLastActiveUpdates((current) => omitWorkspace(current, workspaceId))
     setFeedErrors((current) => omitWorkspace(current, workspaceId))
   }
+  const dismissAgent = (workspaceId: string, agentId: string, updatedAtUtc: string) =>
+    setDismissedAgents((keys) => [...keys, `${workspaceId}:${agentId}:${updatedAtUtc}`])
   const selectLayout = (nextLayout: MachineActivityLayout) => {
     setLayout(nextLayout)
     try {
@@ -189,6 +180,14 @@ export function MachineActivityPage() {
               <a className="machine-activity-back" href="/activity/light">Open Agent Flow Light</a>
             </div>
             <div className="machine-activity-heading__actions">
+              <label className="machine-activity-project-select">Project
+                <select value={requestedWorkspaceId ?? ''} onChange={(event) => { window.location.href = event.target.value
+                  ? `/activity?workspace=${encodeURIComponent(event.target.value)}` : '/activity' }}>
+                  <option value="">All active projects</option>
+                  {workspaces.filter((workspace) => workspace.isAvailable).map((workspace) =>
+                    <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>)}
+                </select>
+              </label>
               <div className="machine-activity-layout-toggle" role="group" aria-label="Agent flow view">
                 <button type="button" aria-pressed={view === 'timeline'} className={view === 'timeline' ? 'is-active' : ''} onClick={() => selectView('timeline')}><Route size={14} /> Timeline</button>
                 <button type="button" aria-pressed={view === 'compact'} className={view === 'compact' ? 'is-active' : ''} onClick={() => selectView('compact')}><List size={14} /> Compact</button>
@@ -241,7 +240,7 @@ export function MachineActivityPage() {
 
         {isLoading && workspaces.length === 0 ? (
           <div className="dashboard-empty"><span className="loading-orbit"><Route size={22} /></span>Reading active work…</div>
-        ) : visibleWorkspaces.length === 0 ? (
+        ) : displayWorkspaces.length === 0 ? (
           <div className="dashboard-empty machine-activity-empty">
             <Clock3 size={28} />
             <strong>No agents are working right now.</strong>
@@ -250,7 +249,7 @@ export function MachineActivityPage() {
           </div>
         ) : (
           <div className={`machine-activity-projects machine-activity-projects--${view === 'compact' ? 'list' : layout}`}>
-            {visibleWorkspaces.map((workspace) => {
+            {displayWorkspaces.map((workspace) => {
               const timeline = timelines.find((item) => item.workspace.workspaceId === workspace.workspaceId)
               const isActive = workspace.activeAgentCount > 0
               return timeline === undefined ? (
@@ -264,10 +263,16 @@ export function MachineActivityPage() {
               ) : (
                 <ActivityProjectFlow
                   key={workspace.workspaceId}
-                  timeline={timeline}
+                  timeline={requestedAgentId === null ? timeline : {
+                    ...timeline,
+                    lanes: timeline.lanes.filter((lane) => lane.agent.publicId === requestedAgentId),
+                  }}
                   view={view}
                   nowMs={nowMs}
                   active={isActive}
+                  selectedAgentId={requestedAgentId}
+                  onDismissAgent={(agentId, updatedAtUtc) => dismissAgent(workspace.workspaceId, agentId, updatedAtUtc)}
+                  dismissedAgents={dismissedAgents}
                   onDismiss={() => dismissCompletedProject(workspace.workspaceId)}
                 />
               )
@@ -308,14 +313,22 @@ function ActivityProjectFlow({
   timeline,
   nowMs,
   active,
+  selectedAgentId,
+  dismissedAgents,
+  onDismissAgent,
   onDismiss,
 }: {
   view: MachineActivityView
   timeline: MachineActivityProjectTimeline
   nowMs: number
   active: boolean
+  selectedAgentId: string | null
+  dismissedAgents: string[]
+  onDismissAgent: (agentId: string, updatedAtUtc: string) => void
   onDismiss: () => void
 }) {
+  const lanes = timeline.lanes.filter((lane) =>
+    lane.active || !dismissedAgents.includes(`${timeline.workspace.workspaceId}:${lane.agent.agentId}:${lane.agent.updatedAtUtc}`))
   return (
     <section className={`machine-project-flow ${active ? '' : 'is-complete'}`}>
       <header>
@@ -356,9 +369,11 @@ function ActivityProjectFlow({
         </div>
       </div>
 
-      {view === 'compact' ? <AgentFlowCompact lanes={timeline.lanes} active={active} /> : <div className="machine-agent-lanes">
-        {timeline.lanes.map((lane) => (
-          <AgentTimelineLane key={lane.agent.agentId} lane={lane} nowMs={nowMs} active={active} />
+      {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
+      {view === 'compact' ? <AgentFlowCompact lanes={lanes} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
+        {lanes.map((lane) => (
+          <AgentTimelineLane key={lane.agent.agentId} lane={lane} workspaceId={timeline.workspace.workspaceId} nowMs={nowMs} active={lane.active}
+            onDismiss={() => onDismissAgent(lane.agent.agentId, lane.agent.updatedAtUtc)} />
         ))}
       </div>}
     </section>
@@ -394,30 +409,35 @@ function ProjectFlowActions({
 
 function AgentTimelineLane({
   lane,
+  workspaceId,
   nowMs,
   active,
+  onDismiss,
 }: {
   lane: MachineActivityLane
+  workspaceId: string
   nowMs: number
   active: boolean
+  onDismiss: () => void
 }) {
   const { agent } = lane
   const phase = agent.phase ?? 'Working'
   const milestones = visibleLaneMilestones(lane, active)
   const completionText = lane.completionSummary?.text
+    ?? agent.lastObservedActivity
     ?? agent.summary
-    ?? 'The agent completed without a shared final summary.'
+    ?? 'No work detail was observed before completion.'
   return (
-    <article className={`machine-agent-lane phase-${phase.toLowerCase()} ${active ? '' : 'is-complete'}`}>
+    <article className={`machine-agent-lane phase-${phase.toLowerCase()} ${active ? '' : 'is-complete'} ${agent.isSubagent ? 'is-subagent' : 'is-main-agent'}`}>
       <div className="machine-agent-lane__identity">
         <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} size={35} />
         <span>
-          <strong>{agentDisplayName(agent)}</strong>
+          <strong>{agent.publicId ? <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(agent.publicId)}`}>{agentDisplayName(agent)}</a> : agentDisplayName(agent)}</strong>
           <small>{active ? phase : 'Done'} · {formatDuration(lane.durationMs)}</small>
         </span>
         <div className="machine-agent-lane__action">
           <small>{active ? agentFocusLabel(agent) : 'Last focus / action'}</small>
-          <p>{agent.summary ?? 'Active without a mapped summary.'}</p>
+          <p>{agent.summary ?? agent.lastObservedActivity ?? 'No work detail was observed.'}</p>
         </div>
       </div>
 
@@ -461,6 +481,7 @@ function AgentTimelineLane({
             <p>{completionText}{lane.completionSummary?.isTruncated === true ? ' …' : ''}</p>
           </div>
           <time>{formatClock(lane.completionSummary?.occurredAtUtc ?? agent.updatedAtUtc)}</time>
+          <button type="button" className="machine-project-flow__dismiss" onClick={onDismiss} aria-label={`Dismiss ${agentDisplayName(agent)}`}><Check size={14} /> Done</button>
         </section>
       )}
     </article>

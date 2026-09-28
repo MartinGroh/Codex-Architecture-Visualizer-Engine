@@ -9,6 +9,9 @@ namespace Cave.Tests;
 /// </summary>
 public sealed class CodexConversationBridgeTests : IDisposable
 {
+    // CI runs these disk-backed polling tests alongside other host tests. Keep a bounded
+    // cancellation deadline that tolerates slow runner scheduling without changing assertions.
+    private static readonly TimeSpan BridgeTestDeadline = TimeSpan.FromSeconds(30);
     private readonly string _workspaceRoot = Directory.CreateTempSubdirectory("cave-chat-bridge-").FullName;
 
     /// <summary>Verifies that stale browser state can never target another Codex task.</summary>
@@ -129,7 +132,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
         Assert.Equal(queued.MessageId, Assert.Single(persisted.Control.Deliveries).MessageId);
         Assert.Equal(ConversationControlState.Queued, persisted.Control.State);
 
-        using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
         try
         {
@@ -190,7 +193,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
             IsActive: true,
             DateTimeOffset.UtcNow));
         using var bridge = CreateBridge(conversations, locator, runner);
-        using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
 
         try
@@ -246,7 +249,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
         var runner = new BusyThenSucceedTurnRunner(
             () => locator.Binding = locator.Binding with { IsActive = true });
         using var bridge = CreateBridge(conversations, locator, runner);
-        using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
 
         var queued = await bridge.QueueAsync(
@@ -325,7 +328,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
             conversations,
             locator,
             runner);
-        using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
 
         try
@@ -378,7 +381,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
             DateTimeOffset.UtcNow));
         var interruptedRunner = new BlockingTurnRunner();
         using (var firstBridge = CreateBridge(conversations, locator, interruptedRunner))
-        using (var firstStop = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+        using (var firstStop = new CancellationTokenSource(BridgeTestDeadline))
         {
             var firstBackground = firstBridge.RunAsync(firstStop.Token);
             await firstBridge.QueueAsync(
@@ -399,7 +402,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
 
         var completingRunner = new StubTurnRunner();
         using var secondBridge = CreateBridge(conversations, locator, completingRunner);
-        using var secondStop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var secondStop = new CancellationTokenSource(BridgeTestDeadline);
         var secondBackground = secondBridge.RunAsync(secondStop.Token);
         await completingRunner.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
 
@@ -474,7 +477,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
                 IsActive: false,
                 DateTimeOffset.UtcNow)),
             runner);
-        using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
 
         ConversationOverlay overlay;

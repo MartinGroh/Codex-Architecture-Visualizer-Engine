@@ -1,0 +1,56 @@
+.agent-flow-light-page { min-height: 100dvh; height: 100dvh; overflow-y: auto; color: var(--text); background: radial-gradient(circle at 50% -8%, color-mix(in srgb, var(--violet) 15%, transparent), transparent 37%), var(--bg); }
+.agent-flow-light-content { width: min(900px, calc(100% - 48px)); margin: 0 auto; padding: 46px 0 80px; }
+.agent-flow-light-heading { display: grid; gap: 20px; margin-bottom: 28px; }
+.agent-flow-light-heading__row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.agent-flow-light-heading h1 { margin: 0; font-size: clamp(30px, 4vw, 44px); font-weight: 610; letter-spacing: -.035em; }
+.agent-flow-light-heading p { max-width: 55ch; margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
+.agent-flow-light-full-link { display: inline-flex; flex: none; align-items: center; gap: 8px; min-height: 42px; padding: 0 13px; color: var(--violet); font-size: 11px; font-weight: 650; text-decoration: none; border: 1px solid color-mix(in srgb, var(--violet) 28%, var(--line)); border-radius: 10px; background: var(--violet-soft); }
+.agent-flow-light-full-link:hover { background: color-mix(in srgb, var(--violet) 18%, var(--surface)); }
+.agent-flow-light-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.agent-flow-light-toolbar label { color: var(--text-soft); font-size: 11px; font-weight: 650; }
+.agent-flow-light-toolbar select { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; color: var(--text); font: inherit; font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
+.agent-flow-light-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 13px; color: var(--text-soft); cursor: pointer; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.agent-flow-light-toolbar button:hover:not(:disabled) { color: var(--text); background: var(--surface-hover); }
+.agent-flow-light-toolbar button:disabled { cursor: default; opacity: .5; }
+.agent-flow-light-toolbar select:focus-visible, .agent-flow-light-toolbar button:focus-visible, .agent-flow-light-full-link:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.agent-flow-light-state, .agent-flow-light-no-agents { padding: 30px 20px; color: var(--text-muted); text-align: center; border: 1px dashed var(--line-strong); border-radius: 13px; background: var(--surface-subtle); }
+.agent-flow-light-stack { display: grid; gap: 24px; }
+.agent-flow-light-status { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 18px; padding: 11px 0; color: var(--text-muted); font-size: 11px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.agent-flow-light-status time, .agent-flow-light-agent time { font-variant-numeric: tabular-nums; }
+.agent-flow-light-source { color: var(--teal); font-weight: 700; }
+.agent-flow-light-source.is-demo { color: var(--violet); }
+.agent-flow-light-goal { padding: 24px 27px 27px; border-radius: 15px; background: color-mix(in srgb, var(--violet) 8%, var(--surface)); }
+.agent-flow-light-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.agent-flow-light-section-heading h2 { margin: 0; color: var(--text); font-size: 16px; font-weight: 680; }
+.agent-flow-light-section-heading span { color: var(--text-muted); font-size: 10px; }
+.agent-flow-light-goal-state { color: var(--violet) !important; font-weight: 700; }
+.agent-flow-light-objective { margin: 0; color: var(--text); font-size: clamp(17px, 2.6vw, 24px); font-weight: 540; line-height: 1.35; overflow-wrap: anywhere; }
+.agent-flow-light-goal-empty { margin: 0; color: var(--text-soft); font-size: 13px; line-height: 1.55; }
+.agent-flow-light-goal small { display: block; margin-top: 10px; color: var(--text-muted); font-size: 10px; }
+.agent-flow-light-agents { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.agent-flow-light-agent { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 17px 18px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
+.agent-flow-light-agent.is-active { border-color: color-mix(in srgb, var(--teal) 30%, var(--line)); }
+.agent-flow-light-agent__body { min-width: 0; }
+.agent-flow-light-agent__identity { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+.agent-flow-light-agent__identity strong { color: var(--text); font-size: 15px; }
+.agent-flow-light-agent__identity span { color: var(--teal); font-size: 10px; font-weight: 650; }
+.agent-flow-light-agent:not(.is-active) .agent-flow-light-agent__identity span { color: var(--text-muted); }
+.agent-flow-light-agent__body small { color: var(--text-muted); font-size: 9px; font-weight: 680; letter-spacing: .04em; text-transform: uppercase; }
+.agent-flow-light-agent__body p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-flow-light-agent > time { color: var(--text-muted); font-size: 10px; }
+@media (max-width: 600px) {
+  .agent-flow-light-page .dashboard-topbar { min-height: 60px; padding: 0 11px; }
+  .agent-flow-light-content { width: calc(100% - 24px); padding: 24px 0 50px; }
+  .agent-flow-light-heading { gap: 12px; margin-bottom: 19px; }
+  .agent-flow-light-heading__row { align-items: start; flex-direction: column; gap: 14px; }
+  .agent-flow-light-heading h1 { font-size: 29px; }
+  .agent-flow-light-heading p { font-size: 11px; }
+  .agent-flow-light-full-link { min-height: 42px; }
+  .agent-flow-light-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .agent-flow-light-toolbar label { grid-column: 1 / -1; }
+  .agent-flow-light-toolbar button { padding: 0 12px; }
+  .agent-flow-light-stack { gap: 18px; }
+  .agent-flow-light-goal { padding: 19px 18px 21px; }
+  .agent-flow-light-agent { grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 14px; }
+  .agent-flow-light-agent > time { grid-column: 2; margin-top: -4px; }
+}

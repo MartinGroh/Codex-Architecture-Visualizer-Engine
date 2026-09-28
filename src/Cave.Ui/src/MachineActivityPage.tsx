@@ -186,6 +186,7 @@ export function MachineActivityPage() {
               <span className="dashboard-kicker"><Route size={14} /> Active work across this machine</span>
               <h1>Agent flow</h1>
               <p>Follow each project’s main goal and agent focus. Open a timeline for observed work details.</p>
+              <a className="machine-activity-back" href="/activity/light">Open Agent Flow Light</a>
             </div>
             <div className="machine-activity-heading__actions">
               <div className="machine-activity-layout-toggle" role="group" aria-label="Agent flow view">

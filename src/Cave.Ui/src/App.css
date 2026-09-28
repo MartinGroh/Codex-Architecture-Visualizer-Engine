@@ -855,7 +855,7 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
   .dashboard-content { width: min(100% - 28px, 1180px); padding: 36px 0 54px; }
   .dashboard-heading { align-items: flex-start; flex-direction: column; }
   .dashboard-heading h1 { font-size: 32px; }
-  .dashboard-heading__actions { width: 100%; }
+  .dashboard-heading__actions { flex-wrap: wrap; width: 100%; }
   .settings-content { width: min(100% - 28px, 1080px); padding: 36px 0 54px; }
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .settings-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); }

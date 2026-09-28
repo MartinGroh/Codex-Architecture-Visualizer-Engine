@@ -63,7 +63,7 @@ flowchart LR
     SharedWork --> Projection
     Compact --> LightFlow["WorkspaceAgentFlowService"]
     SharedWork --> LightFlow
-    LightFlow --> LightApi["GET /api/agent-flow\nnative apps + devices"]
+    LightFlow --> LightApi["GET /api/agent-flow\nlight browser view + native devices"]
     Projection --> Snapshot["Architecture snapshot"]
     Snapshot --> API["HTTP + SSE"]
     Snapshot --> Tools["MCP tools + app polling"]
@@ -148,5 +148,7 @@ The user requested a dedicated API and resource pack for other apps, including S
 The Light feed hashes original agent IDs into full lowercase SHA256 row keys, preserving stable correlation without exposing native task IDs. Those keys cannot address a Codex task and do not replace canonical event identities. It returns no root paths, chat messages, graph, Git data, account identity, guessed per-agent goals or token attribution. Source errors become fixed safe diagnostics on this external transport; the original canonical sources retain their diagnostic evidence. Existing workspace conversation sharing governs main-goal text.
 
 `resources/agent-flow-light` owns the portable schema, synthetic fixture, client guide, static assets, Node polling example, and fixed-buffer C client. Host embeds those source resources and the root MIT license at build time, serves the exact schema at `/api/agent-flow/schema`, and packages only embedded resources into `/api/agent-flow/resources`. No arbitrary filesystem path is accepted and no runtime source directory is required after publish. Clients need no browser. The C example owns parsing and bounded polling, while the consuming n6 app owns its HTTP, RTOS, graphics, board configuration, and firmware delivery. Host-compiler tests verify the portable parser; they do not establish on-device compatibility or deployment health.
+
+The standalone React UI also exposes `/activity/light` for phone browsers. It selects an opaque workspace from the machine catalog and polls the same `/api/agent-flow` contract with one request in flight, without requesting a semantic graph or duplicating activity or goal projection. A failed feed read clears previously shared goal text. The full `/activity` timeline remains a separate view over the canonical snapshot/SSE stream.
 
 Account token activity and rate-limit reads are independent requests in the existing App Server usage adapter. A successful source is retained when the other fails; `Ready` with a diagnostic reports partial availability, while both failed sources remain `Unavailable`. Null fields remain unknown, including `ordinaryUsageAllowed`; zero usage is a reported value. The usage spotlight identifies the limiting included Codex window and respects the backend permission result. Shared machine pages refresh account information every 60 seconds with cancellation and no overlapping requests. Completed unavailable responses render diagnostics rather than remaining labeled as loading.

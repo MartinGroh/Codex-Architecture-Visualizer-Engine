@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   connectArchitectureFeed,
+  readAgentFlowLight,
   createBrowserHostBridge,
   createCodexHostBridge,
   rehookMcpFeed,
@@ -139,6 +140,28 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   FakeEventSource.instances = []
+})
+
+describe('Agent Flow Light transport', () => {
+  it('reads only the selected workspace with no caching and rejects a mismatched response', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: async () => ({ schemaVersion: 1, workspaceId: 'workspace one', agents: [], mainGoal: { status: 'Private', goal: null } }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+
+    await expect(readAgentFlowLight('workspace one', controller.signal)).resolves.toMatchObject({ workspaceId: 'workspace one' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/agent-flow?workspace=workspace%20one', {
+      headers: { Accept: 'application/json' }, cache: 'no-store', signal: controller.signal,
+    })
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ schemaVersion: 1, workspaceId: 'another', agents: [], mainGoal: { status: 'Ready', goal: null } }),
+    } as Response)
+    await expect(readAgentFlowLight('workspace one')).rejects.toThrow('incompatible')
+  })
 })
 
 describe('connectArchitectureFeed browser recovery', () => {

@@ -118,6 +118,8 @@ Codex 0.157 integration checks and the supported public-chat text formats are do
 
 `GET /api/agent-flow?workspace=<catalog-id>` returns bounded agent status, stable first names, declared focus, and the opt-in shared main goal without loading a semantic graph. Download its portable JSON schema, assets, polling example, and fixed-buffer C client from `GET /api/agent-flow/resources`.
 
+Phone browsers can open `/activity/light` on the CAVE viewer for a focused view of that same feed. Choose a project on the page; `/activity` remains the fuller timeline view. The light browser page and native clients share the API rather than separate activity or goal logic.
+
 See the [Agent Flow Light resource pack](resources/agent-flow-light/README.md) and [STM32N6 integration notes](resources/agent-flow-light/embedded/README.md). Board transport, display wiring, and firmware verification belong to the consuming application.
 
 ### Repository checks

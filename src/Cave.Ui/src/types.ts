@@ -279,6 +279,44 @@ export interface WorkspaceOverviewSnapshot {
   errors: string[]
 }
 
+/** Bounded read projection shared with native Agent Flow Light clients. */
+export interface AgentFlowLightSnapshot {
+  schemaVersion: 1
+  workspaceId: string
+  workspaceName: string
+  sourceMode: 'Live' | 'Demo'
+  generatedAtUtc: string
+  sourceUpdatedAtUtc: string | null
+  sourceStatus: AgentActivitySourceStatus
+  error: string | null
+  totalAgentCount: number
+  agents: AgentFlowLightAgent[]
+  mainGoal: AgentFlowLightMainGoal
+}
+
+export interface AgentFlowLightAgent {
+  agentId: string
+  displayName: string
+  agentType: string
+  isSubagent: boolean
+  state: AgentWorkState
+  phase: AgentActivityPhase | null
+  summary: string | null
+  currentFocus: string | null
+  focusEvidence: 'Declared' | null
+  startedAtUtc: string
+  updatedAtUtc: string
+  evidence: AgentActivityEvidenceKind | null
+  summaryEvidence: AgentActivityEvidenceKind | null
+}
+
+export interface AgentFlowLightMainGoal {
+  status: 'Private' | 'Unbound' | 'Ready' | 'Unavailable'
+  goal: (CodexGoal & { isTruncated: boolean }) | null
+  retrievedAtUtc: string | null
+  error: string | null
+}
+
 export type CodexUsageStatus = 'Ready' | 'Unavailable'
 
 export interface CodexUsageSummary {

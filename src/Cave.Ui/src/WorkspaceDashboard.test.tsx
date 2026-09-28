@@ -75,6 +75,7 @@ describe('WorkspaceDashboard', () => {
     expect(project.classList.contains('phase-editing')).toBe(true)
     expect(project.querySelector('.agent-avatar--editing')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Agent flow' }).getAttribute('href')).toBe('/activity')
+    expect(screen.getByRole('link', { name: 'Agent Flow Light' }).getAttribute('href')).toBe('/activity/light')
     expect(screen.getByRole('link', { name: 'Open machine settings' }).getAttribute('href')).toBe('/settings/service-probes')
     expect(screen.getByRole('link', { name: 'Open CAVE workspace overview' }).getAttribute('href')).toBe('/')
     expect(screen.getByText('Live on NORWEGIANWOOD')).toBeTruthy()

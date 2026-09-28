@@ -7,6 +7,7 @@ import {
   FolderOpen,
   RefreshCw,
   Route,
+  Smartphone,
   UsersRound,
 } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
@@ -28,6 +29,7 @@ export function WorkspaceDashboard() {
           </div>
           <div className="dashboard-heading__actions">
             <a href="/activity"><Route size={15} /> Agent flow</a>
+            <a href="/activity/light"><Smartphone size={15} /> Agent Flow Light</a>
             <button type="button" onClick={() => void refresh()} disabled={isLoading}>
               <RefreshCw size={15} className={isLoading ? 'is-spinning' : ''} /> Refresh
             </button>

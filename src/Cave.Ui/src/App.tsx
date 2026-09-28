@@ -128,6 +128,7 @@ import type {
 } from './types'
 import { WorkspaceDashboard } from './WorkspaceDashboard'
 import { MachineActivityPage } from './MachineActivityPage'
+import { AgentFlowLightPage } from './AgentFlowLightPage'
 import { SettingsPage } from './SettingsPage'
 import { WorkspaceRailCatalog } from './WorkspaceRail'
 import { UsageSpotlight } from './UsageSpotlight'
@@ -1779,6 +1780,9 @@ function ErrorState({ message }: { message: string }) {
 function App() {
   const isEmbedded = window.parent !== window
   const selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace')?.trim() || null
+  if (!isEmbedded && window.location.pathname === '/activity/light') {
+    return <AgentFlowLightPage />
+  }
   if (!isEmbedded && selectedWorkspaceId === null && window.location.pathname.startsWith('/settings')) {
     return <SettingsPage />
   }

@@ -2,6 +2,7 @@ import { App } from '@modelcontextprotocol/ext-apps'
 import type {
   CaveToolResult,
   CaveInfoSnapshot,
+  AgentFlowLightSnapshot,
   ConversationDelivery,
   LiveArchitectureSnapshot,
   WorkspaceOverviewSnapshot,
@@ -89,6 +90,28 @@ export async function readWorkspaceOverview(signal?: AbortSignal): Promise<Works
   }
 
   return (await response.json()) as WorkspaceOverviewSnapshot
+}
+
+/** Reads only the bounded device feed; this route never requests a semantic graph. */
+export async function readAgentFlowLight(workspaceId: string, signal?: AbortSignal): Promise<AgentFlowLightSnapshot> {
+  const response = await fetch(`/api/agent-flow?workspace=${encodeURIComponent(workspaceId)}`, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+    signal,
+  })
+  if (!response.ok) {
+    throw new Error(`Agent Flow Light request failed with status ${response.status}.`)
+  }
+
+  const snapshot: unknown = await response.json()
+  if (typeof snapshot !== 'object' || snapshot === null
+    || !('schemaVersion' in snapshot) || snapshot.schemaVersion !== 1
+    || !('workspaceId' in snapshot) || snapshot.workspaceId !== workspaceId
+    || !('agents' in snapshot) || !Array.isArray(snapshot.agents)
+    || !('mainGoal' in snapshot) || typeof snapshot.mainGoal !== 'object' || snapshot.mainGoal === null) {
+    throw new Error('The Agent Flow Light response is incompatible with this viewer.')
+  }
+  return snapshot as AgentFlowLightSnapshot
 }
 
 /** Builds the trusted local/Tailscale browser bridge to the host machine's exact Codex task. */

@@ -13,6 +13,10 @@ updates:
           - react-dom
           - "@types/react"
           - "@types/react-dom"
+    ignore:
+      # CI and the supported local toolchain use Node 24; newer types claim APIs it cannot run.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: nuget
     directory: /
     schedule:

@@ -45,7 +45,7 @@ The demo is the fastest path to a useful CAVE screen. It is an explicit composit
 
 - Windows 10 or 11 and PowerShell 7.
 - [.NET SDK 10.0.303](global.json), or a compatible stable 10.0 patch.
-- Node.js 24 or another version supported by the checked-in frontend toolchain.
+- Node.js 24.15 or later in the 24 LTS line, or another version supported by the checked-in frontend toolchain.
 
 ### 2. Clone and start
 

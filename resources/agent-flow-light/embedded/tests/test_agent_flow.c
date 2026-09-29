@@ -50,6 +50,9 @@ static void line_ending_tests(void) {
 static void fixture_tests(const char *path) {
     size_t n=load(path); CHECK(cave_flow_parse(input,n,&scratch,&published)==CAVE_FLOW_OK); CHECK(published.agent_count==3);
     CHECK(published.source_mode==CAVE_FLOW_DEMO); CHECK(published.agents[0].has_current_focus); CHECK(published.agents[0].focus_evidence==CAVE_FLOW_DECLARED);
+    CHECK(!published.agents[0].has_parent_agent_id && published.agents[0].has_last_observed_activity);
+    CHECK(strcmp(published.agents[0].last_observed_activity,"Validated the JSON contract")==0);
+    CHECK(published.agents[1].has_parent_agent_id && strcmp(published.agents[1].parent_agent_id,published.agents[0].agent_id)==0);
     CHECK(strcmp(published.agents[1].display_name,"Chlo\xc3\xab \xf0\x9f\x94\x8e")==0);
     CHECK(strchr(published.agents[1].summary,'\n')!=NULL); CHECK(!published.agents[1].has_current_focus);
     CHECK(published.agents[2].has_summary && published.agents[2].summary[0]=='\0'); CHECK(published.agents[2].phase==CAVE_FLOW_NO_PHASE);
@@ -75,6 +78,7 @@ static void fixture_tests(const char *path) {
     replace(input,"\\u00eb","\\udc00"); rejected(changed,CAVE_FLOW_MALFORMED);
     replace(input,"2026-09-27T12:00:00.0000000+00:00","2026-02-30T12:00:00Z"); rejected(changed,CAVE_FLOW_MALFORMED);
     replace(input,"\"agentId\": \"a","\"agentId\": \"A"); rejected(changed,CAVE_FLOW_MALFORMED);
+    replace(input,"\"parentAgentId\": \"a","\"parentAgentId\": \"A"); rejected(changed,CAVE_FLOW_MALFORMED);
 }
 static void empty_and_unknown_tests(void) {
     CHECK(parse(empty_ready)==CAVE_FLOW_OK); CHECK(published.agent_count==0 && published.total_agent_count==0); CHECK(!published.main_goal.has_goal); CHECK(published.main_goal.status==CAVE_FLOW_GOAL_READY); CHECK(!published.has_source_updated_at);

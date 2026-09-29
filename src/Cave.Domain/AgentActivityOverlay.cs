@@ -107,6 +107,15 @@ public sealed record AgentActivity(
     /// Gets the provenance of the displayed work summary, which can differ from the latest lifecycle event.
     /// </summary>
     public AgentActivityEvidenceKind? SummaryEvidence { get; init; }
+
+    /// <summary>The exact observed parent session identity for a subagent, when known.</summary>
+    public string? ParentAgentId { get; init; }
+
+    /// <summary>The last meaningful observed work action, excluding lifecycle-only hooks.</summary>
+    public string? LastObservedActivity { get; init; }
+
+    /// <summary>A privacy-preserving external correlation key supplied by Application.</summary>
+    public string? PublicId { get; init; }
 }
 
 /// <summary>

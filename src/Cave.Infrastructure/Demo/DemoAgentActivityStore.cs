@@ -32,7 +32,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-7),
-                now) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
+                now) { SummaryEvidence = AgentActivityEvidenceKind.Declared, LastObservedActivity = "Edited graph projection" },
             new AgentActivity(
                 "demo-reviewer",
                 "Review agent",
@@ -43,7 +43,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-4),
-                now.AddSeconds(-5)) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
+                now.AddSeconds(-5)) { SummaryEvidence = AgentActivityEvidenceKind.Declared, ParentAgentId = "demo-main", LastObservedActivity = "Validated snapshot contracts" },
             new AgentActivity(
                 "demo-docs",
                 "Documentation agent",
@@ -54,7 +54,7 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasObservedActivity: true,
                 HasDeclaredScope: true,
                 now.AddMinutes(-3),
-                now.AddSeconds(-11)) { SummaryEvidence = AgentActivityEvidenceKind.Declared },
+                now.AddSeconds(-11)) { SummaryEvidence = AgentActivityEvidenceKind.Declared, ParentAgentId = "demo-main", LastObservedActivity = "Reviewed plugin guidance" },
         };
 
         var nodes = new[]

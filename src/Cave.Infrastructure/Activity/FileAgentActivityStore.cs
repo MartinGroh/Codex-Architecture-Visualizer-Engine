@@ -772,11 +772,17 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
     private sealed class AgentAccumulator(string agentId, DateTimeOffset startedAt)
     {
         private ActivityEvent? _latestObserved;
+        private ActivityEvent? _lastWorkObserved;
         private ActivityEvent? _latestDeclared;
+        private string? _parentSessionId;
         private DateTimeOffset _startedAt = startedAt;
 
         public void Apply(ActivityEvent activityEvent)
         {
+            if (activityEvent.IsSubagent is true && !string.IsNullOrWhiteSpace(activityEvent.SessionId))
+            {
+                _parentSessionId = activityEvent.SessionId.Trim();
+            }
             if (activityEvent.OccurredAtUtc < _startedAt)
             {
                 _startedAt = activityEvent.OccurredAtUtc;
@@ -789,6 +795,12 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
             else
             {
                 _latestObserved = activityEvent;
+                // Terminal hooks report lifecycle, not what the agent accomplished.
+                // Keep the last actual work observation for the presentation summary.
+                if (!IsLifecycleOnly(activityEvent.Kind))
+                {
+                    _lastWorkObserved = activityEvent;
+                }
             }
         }
 
@@ -812,7 +824,7 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 latest.IsSubagent ?? latest.AgentId is not null,
                 state,
                 state == AgentWorkState.Active ? ResolvePhase(latest) : null,
-                NullIfWhiteSpace(_latestDeclared?.Summary) ?? ObservedSummary(_latestObserved),
+                NullIfWhiteSpace(_latestDeclared?.Summary) ?? ObservedSummary(_lastWorkObserved),
                 _latestObserved is not null,
                 _latestDeclared is not null,
                 _startedAt,
@@ -823,7 +835,9 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                     : AgentActivityEvidenceKind.Observed,
                 SummaryEvidence = NullIfWhiteSpace(_latestDeclared?.Summary) is not null
                     ? AgentActivityEvidenceKind.Declared
-                    : _latestObserved is not null ? AgentActivityEvidenceKind.Observed : null,
+                    : _lastWorkObserved is not null ? AgentActivityEvidenceKind.Observed : null,
+                ParentAgentId = _parentSessionId is null ? null : $"session:{_parentSessionId}",
+                LastObservedActivity = ObservedSummary(_lastWorkObserved),
             };
         }
 
@@ -908,6 +922,15 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 _ => activityEvent.ToolName is null ? activityEvent.Kind : $"Using {activityEvent.ToolName}",
             };
         }
+
+        private static bool IsLifecycleOnly(string kind) =>
+            kind.Equals("UserPromptSubmit", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("SessionStart", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("SessionEnd", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("SubagentStart", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("SubagentStop", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("Stop", StringComparison.OrdinalIgnoreCase)
+            || kind.Equals("Interrupt", StringComparison.OrdinalIgnoreCase);
 
         private static ActivityEvent? Latest(ActivityEvent? left, ActivityEvent? right) =>
             left is null || (right is not null && right.OccurredAtUtc >= left.OccurredAtUtc) ? right : left;

@@ -27,7 +27,7 @@ public sealed class AgentDisplayNamesTests
         Assert.All(names, name => Assert.Matches("^[A-Z][a-z]+$", name));
     }
 
-    /// <summary>Verifies enrichment preserves identity, ordering, source status and independently declared focus.</summary>
+    /// <summary>Verifies enrichment adds only presentation identity while preserving observed evidence.</summary>
     [Fact]
     public void EnrichmentChangesOnlyPresentationName()
     {
@@ -44,8 +44,9 @@ public sealed class AgentDisplayNamesTests
         var result = AgentDisplayNames.Apply(original);
         Assert.Equal(original.SourceStatus, result.SourceStatus);
         var enriched = Assert.Single(result.Agents);
-        Assert.Equal(agent, enriched with { DisplayName = null });
+        Assert.Equal(agent, enriched with { DisplayName = null, PublicId = null });
         Assert.Equal(AgentDisplayNames.Get("child", true), enriched.DisplayName);
+        Assert.Equal(AgentDisplayNames.PublicId("child"), enriched.PublicId);
         Assert.Null(agent.DisplayName);
     }
 }

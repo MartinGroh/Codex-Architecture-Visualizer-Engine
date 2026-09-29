@@ -1786,7 +1786,7 @@ function App() {
   if (!isEmbedded && selectedWorkspaceId === null && window.location.pathname.startsWith('/settings')) {
     return <SettingsPage />
   }
-  if (!isEmbedded && selectedWorkspaceId === null && window.location.pathname === '/activity') {
+  if (!isEmbedded && window.location.pathname === '/activity') {
     return <MachineActivityPage />
   }
 

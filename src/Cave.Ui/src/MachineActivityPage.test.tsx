@@ -104,6 +104,8 @@ let overviewState: ReturnType<typeof useWorkspaceOverview>
 let feedUpdate: ((update: LiveArchitectureSnapshot) => void) | null
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/activity')
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-08-23T10:06:00Z'))
   const storedValues = new Map<string, string>()
   vi.stubGlobal('localStorage', {
     getItem: vi.fn((key: string) => storedValues.get(key) ?? null),
@@ -154,11 +156,26 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
 
 describe('MachineActivityPage', () => {
+  it('opens a finished agent from the light feed as an ordered list', async () => {
+    window.history.replaceState(null, '', '/activity?workspace=workspace-1&agent=opaque-agent-key')
+    overviewState = { ...overviewState, workspaces: [{ ...activeWorkspace, activeAgentCount: 0 }] }
+    const completed = structuredClone(activeUpdate)
+    completed.snapshot.activity.agents[0].state = 'Completed'
+    completed.snapshot.activity.agents[0].publicId = 'opaque-agent-key'
+    render(<MachineActivityPage />)
+    await waitFor(() => expect(connectArchitectureFeed).toHaveBeenCalledOnce())
+    await act(async () => feedUpdate?.(completed))
+    expect(screen.getByRole('button', { name: 'Compact' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('list', { name: 'Main agent observed work timeline' })).toBeTruthy()
+    expect(screen.getByText('Complete')).toBeTruthy()
+  })
+
   it('defaults to compact on mobile and opens timeline details by tapping an agent', async () => {
     vi.mocked(window.matchMedia).mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() } as unknown as MediaQueryList)
     overviewState = { ...overviewState, workspaces: [activeWorkspace] }
@@ -194,7 +211,7 @@ describe('MachineActivityPage', () => {
 
     await waitFor(() => expect(connectArchitectureFeed).toHaveBeenCalledOnce())
     await act(async () => feedUpdate?.(activeUpdate))
-    expect(await screen.findByText('Architecture Engine')).toBeTruthy()
+    expect((await screen.findAllByText('Architecture Engine')).length).toBeGreaterThan(0)
 
     overviewState = {
       ...overviewState,
@@ -214,7 +231,7 @@ describe('MachineActivityPage', () => {
     fireEvent.click(clear)
 
     expect(await screen.findByText('No agents are working right now.')).toBeTruthy()
-    expect(screen.queryByText('Architecture Engine')).toBeNull()
+    expect(view.container.querySelector('.machine-project-flow')).toBeNull()
   })
 
   it('renders concise labels for every visible timeline milestone', async () => {
@@ -294,6 +311,6 @@ describe('MachineActivityPage', () => {
     await act(async () => feedUpdate?.(completedUpdate))
 
     expect(await screen.findByText('Completed summary')).toBeTruthy()
-    expect(screen.getByText('The stable layout and readable timeline are now verified.')).toBeTruthy()
+    expect(screen.getAllByText('The stable layout and readable timeline are now verified.').length).toBeGreaterThan(0)
   })
 })

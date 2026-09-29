@@ -1,17 +1,18 @@
-import { ChevronRight } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
 import { agentDisplayName, agentFocusLabel } from './agentIdentity'
 import { visibleLaneMilestones, type MachineActivityLane } from './machineActivityTimeline'
 
 /** Uses the same observed lanes as the full flow, with touch and keyboard disclosure. */
-export function AgentFlowCompact({ lanes, active }: { lanes: MachineActivityLane[]; active: boolean }) {
+export function AgentFlowCompact({ lanes, openAgentId, onDismiss }: { lanes: MachineActivityLane[]; openAgentId?: string | null; onDismiss: (agentId: string, updatedAtUtc: string) => void }) {
   return (
     <div className="agent-flow-compact" aria-label="Agent goals and timeline details">
       {lanes.map((lane) => {
         const { agent } = lane
+        const active = lane.active
         const name = agentDisplayName(agent)
         return (
-          <details className="agent-flow-compact__agent" key={agent.agentId}>
+          <details className="agent-flow-compact__agent" key={agent.agentId} open={openAgentId === agent.agentId ? true : undefined}>
             <summary>
               <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} size={32} />
               <span className="agent-flow-compact__caption">
@@ -32,7 +33,8 @@ export function AgentFlowCompact({ lanes, active }: { lanes: MachineActivityLane
                   </li>
                 ))}
               </ol>
-              {!active && <p><strong>Completed summary</strong><br />{lane.completionSummary?.text ?? agent.summary ?? 'No final summary was shared.'}{lane.completionSummary?.isTruncated ? ' …' : ''}</p>}
+              {!active && <><p><strong>Completed summary</strong><br />{lane.completionSummary?.text ?? agent.lastObservedActivity ?? agent.summary ?? 'No work detail was observed.'}{lane.completionSummary?.isTruncated ? ' …' : ''}</p>
+                <button type="button" className="machine-project-flow__dismiss" onClick={() => onDismiss(agent.agentId, agent.updatedAtUtc)}><Check size={14} /> Done</button></>}
             </div>
           </details>
         )

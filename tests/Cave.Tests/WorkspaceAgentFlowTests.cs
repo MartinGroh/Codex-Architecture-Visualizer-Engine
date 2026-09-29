@@ -33,6 +33,8 @@ public sealed class WorkspaceAgentFlowTests
             UpdatedAtUtc = Now.AddSeconds(index),
             AgentType = new string('r', 100),
             Summary = new string('s', 200),
+            ParentAgentId = index == 39 ? "session:parent-task" : null,
+            LastObservedActivity = index == 39 ? "Validated the device feed" : null,
         }).ToArray();
         var activity = new RecordingActivityStore(new(agents, [], [], null, [], "C:\\private\\workspace: raw source error")
         {
@@ -59,6 +61,8 @@ public sealed class WorkspaceAgentFlowTests
         Assert.Null(first.FocusEvidence);
         Assert.Equal(AgentActivityEvidenceKind.Observed, first.Evidence);
         Assert.Equal(AgentActivityEvidenceKind.Observed, first.SummaryEvidence);
+        Assert.Equal(AgentDisplayNames.PublicId("session:parent-task"), first.ParentAgentId);
+        Assert.Equal("Validated the device feed", first.LastObservedActivity);
         var declared = result.Agents[1];
         Assert.Equal(declared.Summary, declared.CurrentFocus);
         Assert.Equal(AgentActivityEvidenceKind.Declared, declared.FocusEvidence);
@@ -70,6 +74,7 @@ public sealed class WorkspaceAgentFlowTests
         Assert.Empty(activity.Graph.Relations);
         var json = JsonSerializer.Serialize(result, JsonOptions);
         Assert.DoesNotContain("session:native-task", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("session:parent-task", json, StringComparison.Ordinal);
         Assert.DoesNotContain("C:\\private", json, StringComparison.Ordinal);
         Assert.DoesNotContain("PRIVATE_CHAT_MESSAGE", json, StringComparison.Ordinal);
         Assert.DoesNotContain("raw source error", json, StringComparison.Ordinal);

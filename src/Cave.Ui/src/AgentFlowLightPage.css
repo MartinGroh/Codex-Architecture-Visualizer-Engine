@@ -38,6 +38,19 @@
 .agent-flow-light-agent__body small { color: var(--text-muted); font-size: 9px; font-weight: 680; letter-spacing: .04em; text-transform: uppercase; }
 .agent-flow-light-agent__body p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .agent-flow-light-agent > time { color: var(--text-muted); font-size: 10px; }
+.agent-flow-light-projects { display: grid; gap: 24px; }
+.agent-flow-light-project { display: grid; gap: 18px; padding: 22px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface-subtle); }
+.agent-flow-light-project__header, .agent-flow-light-project__header > div, .agent-flow-light-project__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.agent-flow-light-project__header { justify-content: space-between; }
+.agent-flow-light-project__header h2 { margin: 0; font-size: 20px; }
+.agent-flow-light-project__header span { color: var(--text-muted); font-size: 11px; }
+.agent-flow-light-project__actions button, .agent-flow-light-agent__trailing button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; color: var(--text-soft); cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.agent-flow-light-project__actions button:hover, .agent-flow-light-agent__trailing button:hover { color: var(--text); background: var(--surface-hover); }
+.agent-flow-light-tree { display: grid; gap: 16px; }
+.agent-flow-light-children { margin-left: 22px; padding-left: 19px; border-left: 2px solid color-mix(in srgb, var(--violet) 34%, var(--line)); }
+.agent-flow-light-section-heading h3 { margin: 0; color: var(--text); font-size: 14px; }
+.agent-flow-light-agent__body a { display: inline-block; margin-top: 8px; color: var(--violet); font-size: 11px; }
+.agent-flow-light-agent__trailing { display: grid; justify-items: end; gap: 8px; color: var(--text-muted); font-size: 10px; }
 @media (max-width: 600px) {
   .agent-flow-light-page .dashboard-topbar { min-height: 60px; padding: 0 11px; }
   .agent-flow-light-content { width: calc(100% - 24px); padding: 24px 0 50px; }
@@ -53,4 +66,7 @@
   .agent-flow-light-goal { padding: 19px 18px 21px; }
   .agent-flow-light-agent { grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 14px; }
   .agent-flow-light-agent > time { grid-column: 2; margin-top: -4px; }
+  .agent-flow-light-project { padding: 15px; }
+  .agent-flow-light-children { margin-left: 9px; padding-left: 11px; }
+  .agent-flow-light-agent__trailing { grid-column: 2; justify-items: start; display: flex; align-items: center; }
 }

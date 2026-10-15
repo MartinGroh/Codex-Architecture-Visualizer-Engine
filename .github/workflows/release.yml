@@ -39,7 +39,7 @@ jobs:
       - name: Build, test, and package
         shell: pwsh
         run: ./scripts/package-release.ps1
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: cave-release-${{ github.sha }}
           path: artifacts/releases/*

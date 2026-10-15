@@ -55,6 +55,23 @@ internal static class CodexAppServerProcess
 
     private static string ResolveCodexCommand()
     {
+        var desktopCommand = Environment.GetEnvironmentVariable("CODEX_CLI_PATH");
+        if (!string.IsNullOrEmpty(desktopCommand))
+        {
+            // CONSTRAINT: Desktop supplies its own backend, which can differ from a
+            // separately installed CLI. Honor that selection and fail visibly if it
+            // is stale; switching to PATH would silently change the native protocol.
+            desktopCommand = desktopCommand.Trim();
+            if (!Path.IsPathFullyQualified(desktopCommand) || !File.Exists(desktopCommand))
+            {
+                throw new InvalidOperationException(
+                    "The Codex Desktop backend selected by CODEX_CLI_PATH is not an existing absolute executable path. "
+                    + "Relaunch CAVE from Codex Desktop or set Cave:CodexCommand explicitly.");
+            }
+
+            return desktopCommand;
+        }
+
         if (!OperatingSystem.IsWindows())
         {
             return "codex";

@@ -23,6 +23,8 @@ The hook contract carries public text, not a source-reference resolver. Citation
 
 The [official App Server documentation](https://learn.chatgpt.com/docs/app-server) remains the external contract. The generated schema was inspected locally under ignored `output/` rather than committed as a second protocol authority.
 
+All native adapters share executable selection: explicit `Cave:CodexCommand`, otherwise Desktop's `CODEX_CLI_PATH` when present, otherwise standalone PATH resolution. A present but invalid Desktop path reports a configuration error instead of silently selecting another installed version. These Desktop-launched native adapters do not require a separate CLI installation. The Desktop-provided backend and a standalone CLI may have different versions; a successful local handshake does not prove compatibility on another machine or with every experimental endpoint.
+
 - `agentMessage.text` and `item/agentMessage/delta.delta` are strings in 0.157.0. Rich attribution is decoded from those strings by the frontend, rather than assuming an undocumented attributed-text JSON envelope.
 - Main-task terminal activity includes interruption. A terminal observation releases the exact-task queue without creating a replacement task; subagent terminals do not release the main task.
 - Isolated node questions use the documented ephemeral fork options and experimental capability handshake. They exclude inherited turns where required and defer inherited goal continuation before starting the single requested memo turn.
@@ -38,3 +40,9 @@ The plugin hook definition now includes `Interrupt`. After installing an updated
 The owning tests cover decoded presentation, malformed/streaming inputs, code preservation, unsafe URL/HTML handling, task identity, terminal activity, request responses, isolated fork options and nullable usage. Run `pwsh ./scripts/verify.ps1` for the canonical build, tests, plugin validation, CodeGraph and live health/snapshot checks.
 
 Unit/process contract tests and a synthetic browser check do not establish that every Desktop capability is advertised on every host. Embedded sampling and messaging remain capability-detected. Authentication, interactive browser approvals, voice, and full parity with Codex's native rich UI remain outside this support claim. See [public readiness](../release/PUBLIC_READINESS.md) before publishing source or distributing a release.
+
+### Desktop backend selection check (2026-10-15)
+
+The local Desktop process supplied `CODEX_CLI_PATH` pointing to its bundled **0.162.0-alpha.17.2** backend, while the separately installed CLI reported **0.162.1**. Direct read-only probes of the Desktop backend accepted `initialize`, `account/usage/read`, and `account/rateLimits/read`. No task was resumed or changed. Seven focused tests cover Desktop selection without CLI PATH, a competing CLI, explicit override, invalid paths with visible unavailable results, and Windows command quoting. The full backend suite passed 220 tests; the unchanged frontend passed 202 tests and built successfully.
+
+This verifies local executable selection and the observed local native calls, not the laptop's rejection or an installed update there. Full plugin validation remains blocked by the missing installed `plugin-creator/scripts/validate_plugin.py`; the temporary host health/snapshot verification command was rejected by automatic approval review as blocked by policy. Do not bypass canonical validation or claim that the laptop has been repaired.

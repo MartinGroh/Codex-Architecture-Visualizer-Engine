@@ -22,7 +22,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
     /// Initializes the provider with the authoritative clock and an optional configured Codex command.
     /// </summary>
     /// <param name="timeProvider">The authoritative clock.</param>
-    /// <param name="codexCommand">An explicit Codex executable or command path, or <see langword="null"/> for PATH resolution.</param>
+    /// <param name="codexCommand">An explicit Codex executable or command path, or <see langword="null"/> to use the Desktop-provided backend when present, otherwise PATH resolution.</param>
     public CodexAppServerUsageProvider(TimeProvider timeProvider, string? codexCommand = null)
     {
         _timeProvider = timeProvider;

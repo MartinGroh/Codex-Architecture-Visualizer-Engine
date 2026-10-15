@@ -20,7 +20,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
 
     /// <summary>Creates a bounded, read-only provider with at most 32 exact-task cached results.</summary>
     /// <param name="timeProvider">The clock used for cache freshness and lookup timestamps.</param>
-    /// <param name="codexCommand">An explicit Codex command, or null for canonical PATH resolution.</param>
+    /// <param name="codexCommand">An explicit Codex command, or null to use the Desktop-provided backend when present, otherwise PATH resolution.</param>
     public CodexAppServerGoalProvider(TimeProvider timeProvider, string? codexCommand = null)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);

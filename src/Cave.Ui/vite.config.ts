@@ -1,10 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { viteSingleFile } from 'vite-plugin-singlefile'
+import { singleHtml } from './build/singleHtml.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), viteSingleFile()],
+  plugins: [react(), singleHtml()],
   build: {
     outDir: '../Cave.Host/wwwroot',
     emptyOutDir: true,

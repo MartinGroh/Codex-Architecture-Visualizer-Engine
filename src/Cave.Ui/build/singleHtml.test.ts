@@ -49,7 +49,7 @@ describe('singleHtml build contract', () => {
     expect(html).not.toMatch(/<script\b[^>]*\bsrc=|<link\b[^>]*rel="stylesheet"/i)
     expect(html.match(/<\/style>/gi)).toHaveLength(1)
     expect(html.match(/<\/script>/gi)).toHaveLength(1)
-    const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i)?.[1]
+    const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/i)?.[1]
     expect(script).toBeDefined()
     const modulePath = join(root, 'embedded.mjs')
     await writeFile(modulePath, script!)

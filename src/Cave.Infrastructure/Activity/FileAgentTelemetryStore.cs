@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cave.Application;
+using Cave.Infrastructure.Files;
 
 namespace Cave.Infrastructure.Activity;
 
@@ -74,7 +75,7 @@ public sealed class FileAgentTelemetryStore(string rootPath, TimeProvider timePr
                     await JsonSerializer.SerializeAsync(stream, new Document(1, next), Options, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
-                File.Move(temporary, destination, overwrite: true);
+                await AtomicFilePublisher.PublishAsync(temporary, destination, cancellationToken).ConfigureAwait(false);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }
@@ -84,7 +85,9 @@ public sealed class FileAgentTelemetryStore(string rootPath, TimeProvider timePr
     private static async Task<AgentTelemetryRecord?> ReadRecordAsync(string path, CancellationToken cancellationToken)
     {
         if (!File.Exists(path)) return null;
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
+        // Atomic replacement must remain legal while another process holds the previous snapshot.
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
+            4096, FileOptions.Asynchronous);
         if (stream.Length > 1_048_576) throw new InvalidDataException("Telemetry record exceeds its size limit.");
         var document = await JsonSerializer.DeserializeAsync<Document>(stream, Options, cancellationToken).ConfigureAwait(false);
         if (document is not { SchemaVersion: 1, Record: not null }) throw new InvalidDataException("Unsupported telemetry record.");

@@ -141,6 +141,60 @@ public sealed class AgentTelemetryTests
         finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 
+    /// <summary>Cancelling publication while a Windows reader holds the destination preserves the prior complete record.</summary>
+    [Fact]
+    public async Task CancelledContendedPublicationPreservesPriorRecord()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var root = Path.Combine(Path.GetTempPath(), "cave-telemetry-tests-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var store = new FileAgentTelemetryStore(root, TimeProvider.System);
+            await store.ObserveAsync([Observation("main", Now)], CancellationToken.None);
+            var path = Path.Combine(root, AgentDisplayNames.PublicId("main") + ".json");
+            var before = await File.ReadAllTextAsync(path);
+            await using (var blocking = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                using var stopping = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                    store.ObserveAsync([Observation("main", Now.AddSeconds(15))], stopping.Token));
+            }
+            Assert.Equal(before, await File.ReadAllTextAsync(path));
+            Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    /// <summary>Independent readers keep complete snapshots without denying an atomic observation update.</summary>
+    [Fact]
+    public async Task ConcurrentReadersDoNotBlockAtomicObservation()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "cave-telemetry-tests-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var writer = new FileAgentTelemetryStore(root, TimeProvider.System);
+            await writer.ObserveAsync([Observation("main", Now)], CancellationToken.None);
+            async Task ReadContinuously()
+            {
+                for (var index = 0; index < 100; index++)
+                {
+                    using var reader = new FileAgentTelemetryStore(root, TimeProvider.System);
+                    var read = await reader.ReadAsync(CancellationToken.None);
+                    Assert.Null(read.Error);
+                    Assert.Equal(100, Assert.Single(read.Records).Usage!.Single().TotalTokens);
+                }
+            }
+            async Task WriteContinuously()
+            {
+                for (var index = 1; index <= 100; index++)
+                    await writer.ObserveAsync([Observation("main", Now.AddSeconds(index))], CancellationToken.None);
+            }
+            await Task.WhenAll(ReadContinuously(), ReadContinuously(), ReadContinuously(), WriteContinuously());
+            Assert.Equal(Now.AddSeconds(100), Assert.Single((await writer.ReadAsync(CancellationToken.None)).Records).LastSampleAtUtc);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
     /// <summary>Null elements in a valid JSON envelope cannot crash all statistics or overwrite retained history.</summary>
     [Theory]
     [InlineData("usage")]

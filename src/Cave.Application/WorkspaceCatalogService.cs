@@ -7,9 +7,11 @@ namespace Cave.Application;
 /// </summary>
 /// <param name="catalogStore">The machine-local workspace catalog.</param>
 /// <param name="activityStore">The repository-local agent activity source.</param>
+/// <param name="telemetry">Cached configured metadata for the preferred active agent.</param>
 public sealed class WorkspaceCatalogService(
     IWorkspaceCatalogStore catalogStore,
-    IAgentActivityStore activityStore)
+    IAgentActivityStore activityStore,
+    AgentTelemetryService telemetry)
 {
     private static readonly ArchitectureGraph EmptyGraph = ArchitectureGraph.Create([], []);
 
@@ -79,6 +81,7 @@ public sealed class WorkspaceCatalogService(
             ? await activityStore.ReadAsync(entry.WorkspaceRoot, EmptyGraph, cancellationToken)
                 .ConfigureAwait(false)
             : AgentActivityOverlay.Empty;
+        activity = await telemetry.EnrichAsync(activity, cancellationToken).ConfigureAwait(false);
         var activeAgents = activity.Agents
             .Where(agent => agent.State == AgentWorkState.Active)
             .OrderBy(agent => agent.IsSubagent)
@@ -101,7 +104,7 @@ public sealed class WorkspaceCatalogService(
             currentAgent?.Phase,
             currentAgent?.Summary ?? latestAgent?.Summary,
             latestAgent?.UpdatedAtUtc,
-            activity.Error);
+            activity.Error) { CurrentAgentConfiguration = currentAgent?.Configuration };
     }
 }
 
@@ -132,7 +135,11 @@ public sealed record WorkspaceOverview(
     AgentActivityPhase? CurrentPhase,
     string? ActivitySummary,
     DateTimeOffset? LastActivityAtUtc,
-    string? ActivityError);
+    string? ActivityError)
+{
+    /// <summary>The preferred active agent's configured model and effort, when available.</summary>
+    public AgentModelConfiguration? CurrentAgentConfiguration { get; init; }
+}
 
 /// <summary>
 /// Carries the complete machine dashboard state.

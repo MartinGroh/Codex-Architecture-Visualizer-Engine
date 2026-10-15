@@ -123,7 +123,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
                     [],
                     []),
                 CancellationToken.None);
-            var service = new WorkspaceCatalogService(catalogStore, activityStore);
+            var service = new WorkspaceCatalogService(catalogStore, activityStore, TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
             var workspace = Assert.Single(snapshot.Workspaces);
@@ -162,7 +162,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
             var project = await catalogStore.RegisterAsync(projectRoot, CancellationToken.None);
             var service = new WorkspaceCatalogService(
                 catalogStore,
-                new FileAgentActivityStore(TimeProvider.System));
+                new FileAgentActivityStore(TimeProvider.System), TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
 
@@ -194,7 +194,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
             Directory.Delete(workspaceRoot, recursive: true);
             var service = new WorkspaceCatalogService(
                 catalogStore,
-                new FileAgentActivityStore(TimeProvider.System));
+                new FileAgentActivityStore(TimeProvider.System), TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
             var workspace = Assert.Single(snapshot.Workspaces);

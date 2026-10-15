@@ -14,6 +14,7 @@ import {
   type SemanticWorkspaceOperationResult,
 } from './semanticWorkspaceTypes'
 import { setEmbeddedHostTheme } from './theme'
+import { readAgentStatistics, type AgentStatisticsSnapshot, type StatisticsReader } from './agentStatistics'
 
 type UpdateHandler = (update: LiveArchitectureSnapshot) => void
 type ErrorHandler = (error: Error) => void
@@ -27,6 +28,7 @@ export interface CodexHostBridge {
   sampleMemo(prompt: string, expectedSessionId?: string): Promise<string>
   setConversationSharing(enabled: boolean): Promise<void>
   readInfo(): Promise<CaveInfoSnapshot>
+  readStatistics: StatisticsReader
   readSemanticWorkspace(): Promise<SemanticWorkspace>
   applySemanticBatch(batch: SemanticWorkspaceBatch): Promise<SemanticWorkspaceOperationResult>
   undoSemanticWorkspace(): Promise<SemanticWorkspaceOperationResult>
@@ -166,6 +168,9 @@ export function createBrowserHostBridge(workspaceId: string): CodexHostBridge {
     },
     async readInfo() {
       return readCaveInfo()
+    },
+    async readStatistics(taskId, signal) {
+      return readAgentStatistics(workspaceId, taskId, signal)
     },
     async readSemanticWorkspace() {
       const response = await fetch(`/api/semantic-workspace?workspace=${encodedWorkspaceId}`, {
@@ -487,6 +492,14 @@ export function createCodexHostBridge(
       const response = await app.callServerTool({ name: 'cave_get_info', arguments: {} })
       const result = readStructuredContent<CaveInfoSnapshot>(response)
       if (result === null) throw new Error('CAVE returned an invalid information payload.')
+      return result
+    },
+    async readStatistics(taskId, signal) {
+      signal?.throwIfAborted()
+      const response = await app.callServerTool({ name: 'cave_get_statistics', arguments: { workspacePath: initial.workspaceRoot, taskId } })
+      signal?.throwIfAborted()
+      const result = readStructuredContent<AgentStatisticsSnapshot>(response)
+      if (result === null || !Array.isArray(result.families)) throw new Error('CAVE returned invalid statistics.')
       return result
     },
     async readSemanticWorkspace() {

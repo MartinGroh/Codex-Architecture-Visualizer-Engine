@@ -8,7 +8,9 @@ public static class CaveRuntimeContract
     /// <summary>
     /// Gets the exact machine-viewer protocol version required by this CAVE build.
     /// </summary>
-    public const int ViewerProtocolVersion = 2;
+    // CONSTRAINT: protocol 3 requires retained statistics and agent configuration support;
+    // an older healthy listener cannot serve the new UI's read contract.
+    public const int ViewerProtocolVersion = 3;
 }
 
 /// <summary>

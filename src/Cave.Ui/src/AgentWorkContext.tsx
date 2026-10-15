@@ -1,5 +1,8 @@
 import { agentDisplayName, agentFocusLabel } from './agentIdentity'
 import { sharedGoal } from './goalPresentation'
+import { AgentModelLabel } from './AgentModel'
+import { AgentStatisticsPanel } from './AgentStatisticsPanel'
+import type { StatisticsReader } from './agentStatistics'
 import type { AgentActivity, CodexGoalSnapshot, ConversationOverlay } from './types'
 
 export function MainGoal({ goal, sharingEnabled }: { goal: CodexGoalSnapshot | null; sharingEnabled: boolean }) {
@@ -15,7 +18,8 @@ export function MainGoal({ goal, sharingEnabled }: { goal: CodexGoalSnapshot | n
   )
 }
 
-export function AgentWorkContext({ conversation, agents }: { conversation: ConversationOverlay; agents: AgentActivity[] }) {
+export function AgentWorkContext({ conversation, agents, workspaceId, statisticsReader }: { conversation: ConversationOverlay; agents: AgentActivity[];
+  workspaceId?: string | null; statisticsReader?: StatisticsReader }) {
   const goal = sharedGoal(conversation)
   return (
     <details className="architecture-work-context" open>
@@ -25,10 +29,16 @@ export function AgentWorkContext({ conversation, agents }: { conversation: Conve
         {agents.length === 0 ? <p>No agents are working right now.</p> : <ul>
           {agents.map((agent) => <li key={agent.agentId}>
             <strong title={`Display alias for ${agent.agentId}`}>{agentDisplayName(agent)} <small>· {agent.phase ?? 'Working'}</small></strong>
+            <AgentModelLabel configuration={agent.configuration} />
             <span>{agentFocusLabel(agent)}: {agent.summary ?? 'No focus has been declared yet.'}</span>
           </li>)}
         </ul>}
       </div>
+        {(workspaceId || statisticsReader) && <div className="architecture-work-context__statistics">
+          <AgentStatisticsPanel title="Project lifetime statistics" workspaceId={workspaceId} reader={statisticsReader} />
+          {[...new Set(agents.map(agent => agent.statisticsTaskId).filter((id): id is string => !!id))].map(taskId =>
+            <AgentStatisticsPanel key={taskId} title="Current task statistics" workspaceId={workspaceId} taskId={taskId} reader={statisticsReader} />)}
+        </div>}
     </details>
   )
 }

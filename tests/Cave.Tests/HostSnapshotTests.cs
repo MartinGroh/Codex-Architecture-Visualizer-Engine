@@ -362,7 +362,7 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
 
         Assert.Equal("cave-demo-1", snapshot.GetProperty("metadata").GetProperty("providerId").GetString());
         Assert.Equal(22, snapshot.GetProperty("graph").GetProperty("nodes").GetArrayLength());
-        Assert.Equal(3, snapshot.GetProperty("activity").GetProperty("agents").GetArrayLength());
+        Assert.Equal(4, snapshot.GetProperty("activity").GetProperty("agents").GetArrayLength());
         Assert.True(snapshot.GetProperty("conversation").GetProperty("sharingEnabled").GetBoolean());
         Assert.Equal(2, snapshot.GetProperty("conversation").GetProperty("messages").GetArrayLength());
         Assert.Equal("feature/semantic-focus", snapshot.GetProperty("git").GetProperty("worktree").GetProperty("branch").GetString());

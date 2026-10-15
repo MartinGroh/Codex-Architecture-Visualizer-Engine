@@ -55,6 +55,9 @@ public sealed class DemoAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 HasDeclaredScope: true,
                 now.AddMinutes(-3),
                 now.AddSeconds(-11)) { SummaryEvidence = AgentActivityEvidenceKind.Declared, ParentAgentId = "demo-main", LastObservedActivity = "Reviewed plugin guidance" },
+            new AgentActivity("demo-builder", "Build agent", true, AgentWorkState.Active, AgentActivityPhase.Working,
+                "Building portable client resources", true, true, now.AddMinutes(-2), now.AddSeconds(-4))
+                { SummaryEvidence = AgentActivityEvidenceKind.Declared, ParentAgentId = "demo-main", LastObservedActivity = "Built portable resources" },
         };
 
         var nodes = new[]

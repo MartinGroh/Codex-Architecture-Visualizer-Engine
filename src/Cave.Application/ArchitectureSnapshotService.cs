@@ -10,12 +10,14 @@ namespace Cave.Application;
 /// <param name="activityStore">The independent observed-activity and declared-scope store.</param>
 /// <param name="conversations">The shared opt-in conversation and exact-task goal policy.</param>
 /// <param name="timeProvider">The authoritative clock for snapshot timestamps.</param>
+/// <param name="telemetry">Cached observed configuration and retained task correlation.</param>
 public sealed class ArchitectureSnapshotService(
     ISemanticIndex semanticIndex,
     GitDeltaService gitDeltas,
     IAgentActivityStore activityStore,
     WorkspaceConversationService conversations,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    AgentTelemetryService telemetry)
 {
     /// <summary>
     /// Gets the current graph with source and freshness metadata.
@@ -40,7 +42,7 @@ public sealed class ArchitectureSnapshotService(
             .ConfigureAwait(false);
         var activity = await activityStore.ReadAsync(workspaceRoot, result.Graph, cancellationToken)
             .ConfigureAwait(false);
-        activity = AgentDisplayNames.Apply(activity);
+        activity = await telemetry.EnrichAsync(activity, cancellationToken).ConfigureAwait(false);
         var conversation = await conversations.ReadAsync(workspaceRoot, cancellationToken)
             .ConfigureAwait(false);
 
@@ -64,7 +66,7 @@ public sealed class ArchitectureSnapshotService(
 
         var activity = await activityStore.ReadAsync(workspaceRoot, current.Graph, cancellationToken)
             .ConfigureAwait(false);
-        activity = AgentDisplayNames.Apply(activity);
+        activity = await telemetry.EnrichAsync(activity, cancellationToken).ConfigureAwait(false);
         var conversation = await conversations.ReadAsync(workspaceRoot, cancellationToken)
             .ConfigureAwait(false);
         return current with { Activity = activity, Conversation = conversation };

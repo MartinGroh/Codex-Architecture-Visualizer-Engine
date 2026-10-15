@@ -246,7 +246,7 @@ function Start-InstalledCaveViewer {
         try {
             $runtime = Invoke-RestMethod -Uri "$viewerBaseUri/api/runtime" -TimeoutSec 2
             $health = Invoke-RestMethod -Uri "$viewerBaseUri/health" -TimeoutSec 2
-            if ($runtime.viewerProtocolVersion -eq 2 -and ([string] $health).Trim() -eq 'Healthy') {
+            if ($runtime.viewerProtocolVersion -eq 3 -and ([string] $health).Trim() -eq 'Healthy') {
                 Write-Host "Started compatible CAVE viewer process $($viewerProcess.Id) at $viewerBaseUri."
                 return
             }

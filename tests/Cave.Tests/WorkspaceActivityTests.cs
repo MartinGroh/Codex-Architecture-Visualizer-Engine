@@ -28,7 +28,7 @@ public sealed class WorkspaceActivityTests
         {
             SourceStatus = AgentActivitySourceStatus.Degraded,
         });
-        var service = new WorkspaceActivityService(store, new FixedClock());
+        var service = new WorkspaceActivityService(store, new FixedClock(), TestTelemetry.Create());
         var response = await service.ReadAsync(new("workspace", Path.GetTempPath(), Now), CancellationToken.None);
 
         Assert.Equal(1, response.SchemaVersion);
@@ -52,7 +52,7 @@ public sealed class WorkspaceActivityTests
     [Fact]
     public async Task ProjectionPreservesUnknownEvidenceAndEmptySource()
     {
-        var empty = new WorkspaceActivityService(new StubActivityStore(AgentActivityOverlay.Empty), new FixedClock());
+        var empty = new WorkspaceActivityService(new StubActivityStore(AgentActivityOverlay.Empty), new FixedClock(), TestTelemetry.Create());
         var response = await empty.ReadAsync(new("workspace", Path.GetTempPath(), Now), CancellationToken.None);
         Assert.Null(response.SourceUpdatedAtUtc);
         Assert.Equal(AgentActivitySourceStatus.Unobserved, response.SourceStatus);
@@ -60,7 +60,7 @@ public sealed class WorkspaceActivityTests
 
         var unknown = Agent("b", AgentWorkState.Active, Now) with { Evidence = null, SummaryEvidence = null };
         var store = new StubActivityStore(new([unknown, unknown with { AgentId = "a" }], [], [], null, [], null));
-        var tied = await new WorkspaceActivityService(store, new FixedClock())
+        var tied = await new WorkspaceActivityService(store, new FixedClock(), TestTelemetry.Create())
             .ReadAsync(new("workspace", Path.GetTempPath(), Now), CancellationToken.None);
         Assert.Equal(["a", "b"], tied.Agents.Select(agent => agent.AgentId));
         Assert.All(tied.Agents, agent => Assert.Null(agent.Evidence));
@@ -71,7 +71,7 @@ public sealed class WorkspaceActivityTests
     public async Task ProjectionRejectsOversizedIdentity()
     {
         var store = new StubActivityStore(new([Agent(new string('i', 129), AgentWorkState.Active, Now)], [], [], null, [], null));
-        await Assert.ThrowsAsync<InvalidDataException>(() => new WorkspaceActivityService(store, new FixedClock())
+        await Assert.ThrowsAsync<InvalidDataException>(() => new WorkspaceActivityService(store, new FixedClock(), TestTelemetry.Create())
             .ReadAsync(new("workspace", Path.GetTempPath(), Now), CancellationToken.None));
     }
 
@@ -82,7 +82,7 @@ public sealed class WorkspaceActivityTests
         using var source = new CancellationTokenSource();
         source.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new WorkspaceActivityService(new StubActivityStore(AgentActivityOverlay.Empty), new FixedClock())
+            new WorkspaceActivityService(new StubActivityStore(AgentActivityOverlay.Empty), new FixedClock(), TestTelemetry.Create())
                 .ReadAsync(new("workspace", Path.GetTempPath(), Now), source.Token));
     }
 

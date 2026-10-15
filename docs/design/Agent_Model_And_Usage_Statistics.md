@@ -56,3 +56,12 @@ Extend the established Operate surfaces and typography/colors; this is not a red
 ## Completion criteria
 
 The four model families and exact reasoning settings appear consistently on agent views; task, project and overall statistics agree; token availability and observed-time coverage are honest; refresh/restart never multiply usage; existing working behavior and unrelated local changes are preserved. Backend, frontend, transport and visible-state verification pass. Update Architecture.md and Codex_Compatibility.md alongside the implementation so the new owner and evidence boundaries remain discoverable.
+
+## Implementation verification (2026-10-15)
+
+- Implemented the read-only native adapter, atomic retained store, host collector, cached activity enrichment, scoped HTTP/private MCP projection, four family badges and effort labels, and shared statistics UI.
+- Release backend suite: 232 passing tests. Frontend: 212 passing tests, TypeScript/Vite build successful; lint succeeds with existing warnings. npm and NuGet vulnerability audits report no known vulnerabilities.
+- The activity hook suite passes 34 tests; hook-launcher and observation checks pass. The portable C/C++ client passes 222 checks with the additive metadata fixture. Repository plugin metadata and published Windows binaries validate. The original initialized workspace reports its CodeGraph index up to date; no index was created in the feature worktree.
+- An isolated synthetic host reports Healthy, viewer protocol 3, four correctly configured families and consistent schema-1 statistics. Desktop and phone captures were inspected; the UI detector returned no findings. Independent finish review identified cross-project descendants omitted from task statistics. The correction and regression test preserve project attribution while including the complete retained task tree; the reviewer scored that fix resolved.
+- A live metadata-only read of this exact task returns `gpt-6.1-sol` / `xhigh`, partial completed-turn duration and unavailable thread token groups. This does not prove token support for every task or account.
+- Local installation has not been applied: canonical installer preflight fails on missing Codex `plugin-creator` development helpers. The running instance and the original checkout's unrelated repair remain unchanged. A package validation is not an installed-runtime verification.

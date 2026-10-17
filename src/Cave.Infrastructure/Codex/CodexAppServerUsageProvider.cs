@@ -22,7 +22,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
     /// Initializes the provider with the authoritative clock and an optional configured Codex command.
     /// </summary>
     /// <param name="timeProvider">The authoritative clock.</param>
-    /// <param name="codexCommand">An explicit Codex executable or command path, or <see langword="null"/> for PATH resolution.</param>
+    /// <param name="codexCommand">An explicit Codex executable or command path, or <see langword="null"/> to use the Desktop-provided backend when present, otherwise PATH resolution.</param>
     public CodexAppServerUsageProvider(TimeProvider timeProvider, string? codexCommand = null)
     {
         _timeProvider = timeProvider;
@@ -57,7 +57,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             {
                 _cached = Unavailable(now, "Codex account usage timed out.");
             }
-            catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException
+            catch (Exception exception) when (exception is IOException or JsonException or TimeoutException or InvalidOperationException
                 or Win32Exception or ArgumentException or FormatException or KeyNotFoundException)
             {
                 _cached = Unavailable(now, $"Codex account usage is unavailable: {exception.Message}");
@@ -221,17 +221,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
         }
         finally
         {
-            try
-            {
-                process.StandardInput.Close();
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
         }
     }
 

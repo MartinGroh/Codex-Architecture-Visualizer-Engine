@@ -19,7 +19,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
 
     /// <summary>Creates a bounded, read-only provider with at most 32 exact-task cached results.</summary>
     /// <param name="timeProvider">The clock used for cache freshness and lookup timestamps.</param>
-    /// <param name="codexCommand">An explicit Codex command, or null for canonical PATH resolution.</param>
+    /// <param name="codexCommand">An explicit Codex command, or null to use the Desktop-provided backend when present, otherwise PATH resolution.</param>
     public CodexAppServerGoalProvider(TimeProvider timeProvider, string? codexCommand = null)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -67,7 +67,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
             {
                 result = Unavailable(sessionId, now, "The native Codex goal lookup timed out.");
             }
-            catch (Exception exception) when (exception is IOException or JsonException
+            catch (Exception exception) when (exception is IOException or JsonException or TimeoutException
                 or InvalidOperationException or Win32Exception or ArgumentException or FormatException or KeyNotFoundException)
             {
                 result = Unavailable(sessionId, now, $"The native Codex goal is unavailable: {exception.Message}");
@@ -138,17 +138,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
         }
         finally
         {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // The owned process may have exited between the identity check and kill.
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
 
             try
             {

@@ -7,11 +7,27 @@ using Cave.Domain;
 namespace Cave.Infrastructure.Codex;
 
 /// <summary>Reads only exact thread metadata, nullable usage groups and item-free turn durations.</summary>
-public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, string? codexCommand = null)
-    : IAgentTelemetrySource, IDisposable
+public sealed class CodexAppServerTelemetrySource : IAgentTelemetrySource, IDisposable
 {
+    private readonly TimeProvider _timeProvider;
+    private readonly string? _codexCommand;
+    private readonly Func<Process, Task> _stopProcess;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, AgentTelemetrySample> _cache = new(StringComparer.Ordinal);
+
+    /// <summary>Creates a bounded, read-only telemetry source using the canonical native process owner.</summary>
+    /// <param name="timeProvider">The authoritative clock for sample freshness.</param>
+    /// <param name="codexCommand">An explicit executable, or null for Desktop/PATH selection.</param>
+    public CodexAppServerTelemetrySource(TimeProvider timeProvider, string? codexCommand = null)
+        : this(timeProvider, codexCommand, CodexAppServerProcess.StopAsync) { }
+
+    // The cleanup seam permits safe fault injection; tests must not create an unkillable OS process.
+    internal CodexAppServerTelemetrySource(TimeProvider timeProvider, string? codexCommand, Func<Process, Task> stopProcess)
+    {
+        _timeProvider = timeProvider;
+        _codexCommand = codexCommand;
+        _stopProcess = stopProcess;
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<AgentTelemetrySample>> ReadAsync(
@@ -24,7 +40,7 @@ public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, str
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var now = timeProvider.GetUtcNow();
+            var now = _timeProvider.GetUtcNow();
             foreach (var key in _cache.Where(pair => now < pair.Value.RetrievedAtUtc
                          || now - pair.Value.RetrievedAtUtc >= TimeSpan.FromSeconds(15)).Select(pair => pair.Key).ToArray())
                 _cache.Remove(key);
@@ -38,6 +54,16 @@ public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, str
                     await ReadBatchAsync(missing, now, timeout.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
+                catch (TimeoutException)
+                {
+                    const string error = "Native agent metadata process cleanup failed.";
+                    foreach (var id in missing)
+                    {
+                        _cache[id] = _cache.TryGetValue(id, out var collected)
+                            ? collected with { Error = string.IsNullOrEmpty(collected.Error) ? error : $"{collected.Error} {error}" }
+                            : new(id, null, null, null, null, 0, false, now, error);
+                    }
+                }
                 catch (Exception exception) when (IsBoundaryFailure(exception)) { }
                 cancellationToken.ThrowIfCancellationRequested();
                 foreach (var id in missing)
@@ -58,7 +84,7 @@ public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, str
 
     private async Task ReadBatchAsync(string[] ids, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        using var process = new Process { StartInfo = CodexAppServerProcess.CreateStartInfo(codexCommand) };
+        using var process = new Process { StartInfo = CodexAppServerProcess.CreateStartInfo(_codexCommand) };
         if (!process.Start()) throw new InvalidOperationException("The metadata process could not start.");
         var drain = DrainAsync(process.StandardError, cancellationToken);
         try
@@ -172,8 +198,7 @@ public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, str
         }
         finally
         {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { }
+            await _stopProcess(process).ConfigureAwait(false);
             try { await drain.ConfigureAwait(false); }
             catch (Exception exception) when (exception is IOException or OperationCanceledException) { }
         }

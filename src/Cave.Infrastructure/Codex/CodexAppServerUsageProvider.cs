@@ -221,17 +221,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
         }
         finally
         {
-            try
-            {
-                process.StandardInput.Close();
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
         }
     }
 

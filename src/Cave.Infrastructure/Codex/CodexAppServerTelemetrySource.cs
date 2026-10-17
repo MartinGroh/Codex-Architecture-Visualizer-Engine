@@ -172,8 +172,7 @@ public sealed class CodexAppServerTelemetrySource(TimeProvider timeProvider, str
         }
         finally
         {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
             try { await drain.ConfigureAwait(false); }
             catch (Exception exception) when (exception is IOException or OperationCanceledException) { }
         }

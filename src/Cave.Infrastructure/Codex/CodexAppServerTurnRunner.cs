@@ -177,17 +177,7 @@ public sealed class CodexAppServerTurnRunner : ICodexTurnRunner
         }
         finally
         {
-            try
-            {
-                process.StandardInput.Close();
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
 
             try
             {
@@ -354,17 +344,7 @@ public sealed class CodexAppServerTurnRunner : ICodexTurnRunner
         }
         finally
         {
-            try
-            {
-                process.StandardInput.Close();
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
 
             try
             {

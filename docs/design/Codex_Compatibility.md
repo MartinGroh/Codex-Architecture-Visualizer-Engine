@@ -47,6 +47,10 @@ The local Desktop process supplied `CODEX_CLI_PATH` pointing to its bundled **0.
 
 This verifies local executable selection and the observed local native calls, not the laptop's rejection or an installed update there. Full plugin validation remains blocked by the missing installed `plugin-creator/scripts/validate_plugin.py`; the temporary host health/snapshot verification command was rejected by automatic approval review as blocked by policy. Do not bypass canonical validation or claim that the laptop has been repaired.
 
+### Native process exit check (2026-10-17)
+
+Windows CI exposed caller cancellation returning while the owned `cmd.exe` still held its command file. The shared process owner now requests tree termination and awaits the owned App Server's exit with an independent five-second cleanup deadline. Goal, usage, telemetry and both turn paths use that contract. A cleanup timeout remains an explicit failure. Regression cases cover running and naturally exited command processes, repeated cleanup, exclusive command-file access after return, and the existing caller-cancellation contract. The combined source passes 244 backend tests and 212 frontend tests/build locally; these checks do not establish an installed laptop repair.
+
 ## Configured models and statistics (2026-10-15)
 
 Verified against installed CLI **0.162.1**, its generated experimental TypeScript protocol under ignored `output/codex-protocol`, process-contract tests, and a live exact-task read-only probe:

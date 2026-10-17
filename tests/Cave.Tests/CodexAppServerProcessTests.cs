@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Cave.Domain;
 using Cave.Infrastructure.Codex;
 
@@ -7,7 +8,7 @@ namespace Cave.Tests;
 [CollectionDefinition("Codex command environment", DisableParallelization = true)]
 public sealed class CodexCommandEnvironmentDefinition;
 
-/// <summary>Verifies backend identity selection without launching or mutating a Codex task.</summary>
+/// <summary>Verifies backend identity selection and owned process cleanup without mutating a Codex task.</summary>
 [Collection("Codex command environment")]
 public sealed class CodexAppServerProcessTests : IDisposable
 {
@@ -98,6 +99,39 @@ public sealed class CodexAppServerProcessTests : IDisposable
 
         Assert.Equal(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", start.FileName);
         Assert.Equal($"/d /s /c \"\"{standalone}\" app-server\"", start.Arguments);
+    }
+
+    /// <summary>Cleanup joins a running or naturally exited process and releases its Windows command file.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StopJoinsOwnedProcessAndReleasesCommand(bool naturallyExited)
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        var command = CreateFile("owned process", "fake_codex.cmd");
+        var started = Path.Combine(Path.GetDirectoryName(command)!, "started.txt");
+        await File.WriteAllTextAsync(command, "@echo off\r\necho ready>\"%~dp0started.txt\"\r\n"
+            + (naturallyExited ? "exit /b 0\r\n" : ":wait\r\ngoto wait\r\n"));
+        using var process = new Process { StartInfo = CodexAppServerProcess.CreateStartInfo(command) };
+        Assert.True(process.Start());
+        try
+        {
+            using var startedTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (!File.Exists(started)) { await Task.Delay(10, startedTimeout.Token); }
+            if (naturallyExited) { await process.WaitForExitAsync(startedTimeout.Token); }
+
+            await CodexAppServerProcess.StopAsync(process);
+            await CodexAppServerProcess.StopAsync(process);
+
+            Assert.True(process.HasExited);
+            using var exclusive = new FileStream(command, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Assert.True(exclusive.CanWrite);
+        }
+        finally
+        {
+            if (!process.HasExited) { process.Kill(entireProcessTree: true); }
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     /// <summary>Restores inherited process configuration and removes only this fixture's files.</summary>

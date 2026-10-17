@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Cave.Infrastructure.Codex;
 
 /// <summary>
-/// Owns the canonical Codex App Server process launch and JSON-line write contract.
+/// Owns the canonical Codex App Server launch, JSON-line writes and bounded process cleanup.
 /// </summary>
 internal static class CodexAppServerProcess
 {
@@ -51,6 +51,36 @@ internal static class CodexAppServerProcess
         var json = JsonSerializer.Serialize(request);
         await process.StandardInput.WriteLineAsync(json.AsMemory(), cancellationToken).ConfigureAwait(false);
         await process.StandardInput.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Terminates only the owned process tree and joins its exit independently of request cancellation.</summary>
+    internal static async Task StopAsync(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // The owned process may exit between the identity check and termination.
+        }
+
+        // CONSTRAINT: Kill only requests termination. Returning before exit leaves
+        // Windows command files locked after cancellation, even after Process.Dispose.
+        // Cleanup needs its own deadline because the request token may already be cancelled.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
+        {
+            throw new InvalidOperationException(
+                "The owned Codex App Server did not exit within five seconds after termination.", exception);
+        }
     }
 
     private static string ResolveCodexCommand()

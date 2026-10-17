@@ -138,17 +138,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
         }
         finally
         {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // The owned process may have exited between the identity check and kill.
-            }
+            await CodexAppServerProcess.StopAsync(process).ConfigureAwait(false);
 
             try
             {

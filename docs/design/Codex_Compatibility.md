@@ -49,7 +49,7 @@ This verifies local executable selection and the observed local native calls, no
 
 ### Native process exit check (2026-10-17)
 
-Windows CI exposed caller cancellation returning while the owned `cmd.exe` still held its command file. The shared process owner now requests tree termination and awaits the owned App Server's exit with an independent five-second cleanup deadline. Goal, usage, telemetry and both turn paths use that contract. A cleanup timeout remains an explicit failure. Regression cases cover running and naturally exited command processes, repeated cleanup, exclusive command-file access after return, and the existing caller-cancellation contract. The combined source passes 244 backend tests and 212 frontend tests/build locally; these checks do not establish an installed laptop repair.
+Windows CI exposed caller cancellation returning while the owned `cmd.exe` still held its command file. The shared process owner now requests tree termination and awaits the owned App Server's exit with an independent five-second cleanup deadline. Goal, usage, telemetry and both turn paths use that contract. A cleanup timeout remains an explicit failure; telemetry preserves collected values and existing warnings while adding a safe cleanup diagnostic. Regression cases cover running and naturally exited command processes, repeated cleanup, exclusive command-file access after return, caller cancellation, and sanitized telemetry failure/cache behavior. The combined source passes 247 backend tests and 212 frontend tests/build locally; these checks do not establish an installed laptop repair.
 
 ## Configured models and statistics (2026-10-15)
 

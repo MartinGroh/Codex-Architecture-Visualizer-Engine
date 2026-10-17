@@ -7,6 +7,48 @@ namespace Cave.Tests;
 public sealed class CodexAppServerTelemetrySourceTests
 {
     private static readonly string[] ExpectedMethods = ["initialize", "initialized", "thread/read", "account/usage/read", "thread/turns/list"];
+
+    /// <summary>A cleanup failure retains collected values and cached safe diagnostics without exposing native text.</summary>
+    [Theory]
+    [InlineData("ready", true)]
+    [InlineData("foreignMetadata", false)]
+    [InlineData("oversized", false)]
+    public async Task CleanupTimeoutRemainsVisibleWithCollectedOrMissingData(string mode, bool configuration)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var root = CreateRoot();
+        try
+        {
+            var stops = 0;
+            var command = await CreateServerAsync(root, mode);
+            using var source = new CodexAppServerTelemetrySource(TimeProvider.System, command, async process =>
+            {
+                await CodexAppServerProcess.StopAsync(process);
+                stops++;
+                throw new TimeoutException("private-account@example.test must not appear in telemetry");
+            });
+
+            var sample = Assert.Single(await source.ReadAsync(["task-a"], CancellationToken.None));
+
+            Assert.Equal(configuration, sample.Configuration is not null);
+            Assert.Contains("cleanup failed", sample.Error, StringComparison.Ordinal);
+            Assert.DoesNotContain("private", sample.Error, StringComparison.OrdinalIgnoreCase);
+            if (configuration)
+            {
+                Assert.Equal("gpt-6.1-sol", sample.Configuration!.Model);
+                Assert.Equal("gpt-5.6-terra", Assert.Single(sample.Usage!).Model);
+                Assert.Equal(1_000, sample.CompletedDurationMs);
+                Assert.True(sample.DurationComplete);
+            }
+            if (mode == "foreignMetadata")
+                Assert.StartsWith("Native agent metadata is unavailable.", sample.Error, StringComparison.Ordinal);
+
+            Assert.Same(sample, Assert.Single(await source.ReadAsync(["task-a"], CancellationToken.None)));
+            Assert.Equal(1, stops);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     /// <summary>Own metadata and historical usage stay distinct; cache hits make no extra native requests.</summary>
     [Fact]
     public async Task ReadsExactMetadataUsageAndDurationsWithoutTakingTaskOwnership()

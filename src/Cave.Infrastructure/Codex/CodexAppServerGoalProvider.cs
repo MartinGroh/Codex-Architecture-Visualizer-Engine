@@ -67,7 +67,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
             {
                 result = Unavailable(sessionId, now, "The native Codex goal lookup timed out.");
             }
-            catch (Exception exception) when (exception is IOException or JsonException
+            catch (Exception exception) when (exception is IOException or JsonException or TimeoutException
                 or InvalidOperationException or Win32Exception or ArgumentException or FormatException or KeyNotFoundException)
             {
                 result = Unavailable(sessionId, now, $"The native Codex goal is unavailable: {exception.Message}");

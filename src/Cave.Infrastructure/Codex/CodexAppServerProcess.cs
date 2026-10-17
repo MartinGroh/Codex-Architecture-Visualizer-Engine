@@ -78,7 +78,7 @@ internal static class CodexAppServerProcess
         }
         catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
         {
-            throw new InvalidOperationException(
+            throw new TimeoutException(
                 "The owned Codex App Server did not exit within five seconds after termination.", exception);
         }
     }

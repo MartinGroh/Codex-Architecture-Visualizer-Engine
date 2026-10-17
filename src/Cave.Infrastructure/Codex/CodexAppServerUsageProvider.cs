@@ -57,7 +57,7 @@ public sealed class CodexAppServerUsageProvider : ICodexUsageProvider, IDisposab
             {
                 _cached = Unavailable(now, "Codex account usage timed out.");
             }
-            catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException
+            catch (Exception exception) when (exception is IOException or JsonException or TimeoutException or InvalidOperationException
                 or Win32Exception or ArgumentException or FormatException or KeyNotFoundException)
             {
                 _cached = Unavailable(now, $"Codex account usage is unavailable: {exception.Message}");

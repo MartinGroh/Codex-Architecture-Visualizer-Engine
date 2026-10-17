@@ -366,7 +366,10 @@ function Get-CaveMarketplaceRegistrationPlan {
 
 function Assert-CaveMarketplaceCommandResult {
     param($Result, [string] $Name, [string] $Root, [switch] $Add)
-    if ($Result.marketplaceName -cne $Name -or (Resolve-CaveMarketplaceRoot $Result.installedRoot) -ne $Root -or
+    # CONSTRAINT: Desktop can return installedRoot:null when removing a local source
+    # because no managed Git checkout was deleted. The subsequent listing proves removal.
+    if ($Result.marketplaceName -cne $Name -or -not $Result.Contains('installedRoot') -or
+        (($Add -or $null -ne $Result.installedRoot) -and (Resolve-CaveMarketplaceRoot $Result.installedRoot) -ne $Root) -or
         ($Add -and $Result.alreadyAdded -isnot [bool])) {
         throw "Codex marketplace command did not confirm '$Name' at '$Root'."
     }
@@ -416,6 +419,9 @@ function Set-CaveMarketplaceRegistration {
             $removalAttempted = $true
             $removed = Invoke-CaveMarketplaceCommand $Executable @('plugin', 'marketplace', 'remove', $Plan.Name, '--json') $CommandRunner
             Assert-CaveMarketplaceCommandResult $removed $Plan.Name $Plan.PreviousRoot
+            if ($null -ne (Get-CaveRegisteredMarketplaceRoot $Executable $Plan.Name $CommandRunner)) {
+                throw 'Codex marketplace list still contains the source after removal.'
+            }
         }
         $added = Invoke-CaveMarketplaceCommand $Executable @('plugin', 'marketplace', 'add', $Plan.TargetRoot, '--json') $CommandRunner
         # alreadyAdded is informational, never evidence that the requested root was registered.

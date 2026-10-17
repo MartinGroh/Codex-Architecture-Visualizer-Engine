@@ -177,8 +177,9 @@ try {
         $registrationState.Mutations.Add($command)
         if ($command -eq 'plugin marketplace remove') {
             $old = $registrationState.Root
-            $registrationState.Root = $null
+            if ($registrationState.Mode -ne 'RemoveNoop') { $registrationState.Root = $null }
             if ($registrationState.Mode -eq 'RemoveFailure') { throw 'simulated remove failure after applying' }
+            if ($registrationState.Mode -in @('RemoveNull', 'RemoveNoop')) { return @{ marketplaceName = 'personal'; installedRoot = $null } }
             return @{ marketplaceName = 'personal'; installedRoot = $old }
         }
         if ($command -eq 'plugin marketplace add') {
@@ -226,7 +227,13 @@ try {
     $recovery = Restore-CaveMarketplaceSource -Executable simulated -Plan $plan -CommandRunner $runner
     Assert-Equal $registrationState.Root $previousRepository 'Downstream installation failure restores previous registration.'
     Assert-Equal ($recovery.StartsWith('Previous source restored:')) $true 'Downstream rollback confirms restoration.'
-    foreach ($failureMode in @('WrongAlreadyAdded', 'WrongList', 'AddFailure', 'RemoveFailure', 'RollbackFailure')) {
+    $registrationState.Mode = 'RemoveNull'
+    $registrationState.Mutations.Clear()
+    $plan = Get-CaveMarketplaceRegistrationPlan @planArguments -ReplaceMarketplaceSource
+    Set-CaveMarketplaceRegistration -Executable simulated -Plan $plan -CommandRunner $runner
+    Assert-Equal $registrationState.Root $fixtureRoot 'Local removal with null managed checkout root confirms the new registration.'
+    Assert-Equal ($registrationState.Mutations -join ',') 'plugin marketplace remove,plugin marketplace add' 'Null local removal receipt still requires exact source re-listing.'
+    foreach ($failureMode in @('WrongAlreadyAdded', 'WrongList', 'AddFailure', 'RemoveFailure', 'RemoveNoop', 'RollbackFailure')) {
         $registrationState.Root = $previousRepository
         $registrationState.Mode = $failureMode
         $registrationState.Mutations.Clear()

@@ -30,6 +30,8 @@ The `+codex.<14 digits>` installation suffix advances from UTC time or the previ
 
 Current launchers and delivery checks request `/api/runtime?viewerProtocolVersion=3` and require an exact version match. The unqualified runtime probe retains protocol 2 for older task-owned supervisors, with `latestViewerProtocolVersion` identifying the current implementation. This preserves the still-supported older HTTP surface without accepting an older viewer for new statistics clients.
 
+During replacement the installer stops only `Cave.Mcp` processes whose executable path is inside the verified CAVE plugin cache, then stops the verified viewer. This prevents a task-owned supervisor from reviving a viewer that locks DLLs during copying. Codex Desktop and the tasks remain running; a fresh task loads the updated MCP connection and UI assets.
+
 ## Focused verification
 
 ```powershell

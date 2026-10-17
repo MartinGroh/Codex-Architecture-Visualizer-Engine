@@ -168,6 +168,24 @@ function Stop-StableCaveViewerProcesses {
     }
 }
 
+function Stop-CaveViewerSupervisors {
+    # CONSTRAINT: old task-owned MCP servers supervise the stable viewer every five seconds.
+    # Stop only CAVE's verified plugin processes before replacing loaded viewer DLLs, otherwise
+    # they can revive a mixed payload while installation is copying files. Codex tasks stay alive.
+    foreach ($candidate in @(Get-Process -Name 'Cave.Mcp' -ErrorAction SilentlyContinue)) {
+        $candidatePath = try { $candidate.Path } catch { $null }
+        if ([string]::IsNullOrWhiteSpace($candidatePath) -or
+            -not (Test-PathBelow -Candidate $candidatePath -Root $pluginCacheRoot)) {
+            continue
+        }
+        Stop-Process -Id $candidate.Id -ErrorAction Stop
+        if (-not $candidate.WaitForExit(5000)) {
+            throw "CAVE supervisor $($candidate.Id) did not exit; refusing to replace its viewer payload."
+        }
+        Write-Host "Stopped CAVE viewer supervisor $($candidate.Id)."
+    }
+}
+
 function Stop-CurrentCaveViewer {
     $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $viewerPort -ErrorAction SilentlyContinue |
         Sort-Object OwningProcess -Unique)
@@ -362,6 +380,7 @@ foreach ($binaryName in @('Cave.Mcp.exe', 'Cave.Host.exe')) {
     if ($publishedHash -cne $cachedHash) { throw "Installed plugin $binaryName does not match the published payload." }
 }
 
+Stop-CaveViewerSupervisors
 Stop-CurrentCaveViewer
 Install-StableCaveViewer -SourceRoot $installedServerRoot
 Start-InstalledCaveViewer -ExecutablePath $machineViewerExecutable

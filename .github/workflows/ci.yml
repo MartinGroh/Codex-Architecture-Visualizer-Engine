@@ -44,6 +44,9 @@ jobs:
       - name: Validate repository plugin metadata
         shell: pwsh
         run: ./scripts/validate-plugin-metadata.ps1
+      - name: Test plugin installation tooling
+        shell: pwsh
+        run: ./scripts/test-plugin-tooling.ps1
       - name: Build backend
         run: dotnet build CAVE.slnx --configuration Release
       - name: Audit backend dependencies

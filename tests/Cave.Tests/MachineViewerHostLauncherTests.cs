@@ -42,10 +42,13 @@ public sealed class MachineViewerHostLauncherTests
     /// <summary>
     /// Verifies an older or unrelated process on the viewer port is not silently reused.
     /// </summary>
-    [Fact]
-    public async Task IncompatibleRuntimeIsNotReady()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(4)]
+    public async Task IncompatibleRuntimeIsNotReady(int version)
     {
-        using var client = CreateClient("{\"viewerProtocolVersion\":0}");
+        using var client = CreateClient($"{{\"viewerProtocolVersion\":{version}}}");
         var launcher = new MachineViewerHostLauncher(client, NullLogger<MachineViewerHostLauncher>.Instance);
 
         Assert.False(await launcher.IsCompatibleAsync(CancellationToken.None));
@@ -63,6 +66,7 @@ public sealed class MachineViewerHostLauncherTests
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal("?viewerProtocolVersion=3", request.RequestUri!.Query);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),

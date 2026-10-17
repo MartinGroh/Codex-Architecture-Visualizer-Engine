@@ -39,6 +39,7 @@ export interface CodexHostBridge {
 export type ArchitectureFeedConnectionState =
   | { status: 'Connecting'; attempt: 0; retryInMs: null }
   | { status: 'Connected'; attempt: 0; retryInMs: null }
+  | { status: 'Failed'; attempt: 0; retryInMs: null }
   | { status: 'Reconnecting'; attempt: number; retryInMs: number }
 
 const reconnectDelaysMs = [500, 1_000, 2_000, 4_000, 5_000] as const
@@ -51,6 +52,7 @@ export async function connectArchitectureFeed(
   onConnection: ConnectionHandler,
   browserWorkspaceId?: string,
   onHostBridge: HostBridgeHandler = () => {},
+  signal?: AbortSignal,
 ): Promise<() => void> {
   onConnection({ status: 'Connecting', attempt: 0, retryInMs: null })
   if (window.parent === window) {
@@ -67,7 +69,7 @@ export async function connectArchitectureFeed(
     }
   }
 
-  return connectMcpFeed(onUpdate, onError, onConnection, onHostBridge)
+  return connectMcpFeed(onUpdate, onError, onConnection, onHostBridge, signal)
 }
 
 export async function readCaveInfo(signal?: AbortSignal): Promise<CaveInfoSnapshot> {
@@ -394,6 +396,7 @@ async function connectMcpFeed(
   onError: ErrorHandler,
   onConnection: ConnectionHandler,
   onHostBridge: HostBridgeHandler,
+  signal?: AbortSignal,
 ): Promise<() => void> {
   const app = new App(
     { name: 'CAVE', version: '0.3.0' },
@@ -401,49 +404,118 @@ async function connectMcpFeed(
     { autoResize: true, strict: true },
   )
   let stopped = false
-  let initialResult: ((result: CaveToolResult) => void) | null = null
-  const firstResult = new Promise<CaveToolResult>((resolve) => {
-    initialResult = resolve
-  })
-
-  const receiveToolResult = (params: Parameters<NonNullable<typeof app.ontoolresult>>[0]) => {
-    const result = readToolResult(params)
-    if (result !== null) {
-      initialResult?.(result)
-      initialResult = null
-    }
-  }
-  app.addEventListener('toolresult', receiveToolResult)
-
   const receiveHostContext = () => setEmbeddedHostTheme(app.getHostContext()?.theme)
   app.addEventListener('hostcontextchanged', receiveHostContext)
+  const stop = () => {
+    if (stopped) return
+    stopped = true
+    app.removeEventListener('hostcontextchanged', receiveHostContext)
+    signal?.removeEventListener('abort', stop)
+    setEmbeddedHostTheme(undefined)
+    onHostBridge(null)
+    void app.close().catch(onError)
+  }
 
-  await app.connect()
-  setEmbeddedHostTheme(app.getHostContext()?.theme)
-  await requestLargestDisplay(app)
-
-  const initial = await Promise.race([
-    firstResult,
-    new Promise<never>((_, reject) =>
-      window.setTimeout(
-        () => reject(new Error('CAVE did not receive its initial architecture graph.')),
-        30_000,
-      ),
-    ),
-  ])
+  let initial: CaveToolResult
+  try {
+    initial = await receiveInitialMcpGraph(app, onConnection, signal)
+    signal?.throwIfAborted()
+  } catch (reason: unknown) {
+    stop()
+    onConnection({ status: 'Failed', attempt: 0, retryInMs: null })
+    throw reason
+  }
+  signal?.addEventListener('abort', stop, { once: true })
   const bridge = createCodexHostBridge(app, initial, onUpdate)
   onUpdate(initial.update)
   onHostBridge(bridge)
   onConnection({ status: 'Connected', attempt: 0, retryInMs: null })
 
   void pollForUpdates(app, initial, onUpdate, onError, onConnection, () => stopped)
-  return () => {
-    stopped = true
-    app.removeEventListener('toolresult', receiveToolResult)
-    app.removeEventListener('hostcontextchanged', receiveHostContext)
-    setEmbeddedHostTheme(undefined)
-    onHostBridge(null)
-    void app.close()
+  return stop
+}
+
+/** Acquires one real graph through the owning MCP connection, including one bounded reattachment. */
+async function receiveInitialMcpGraph(
+  app: App,
+  onConnection: ConnectionHandler,
+  signal?: AbortSignal,
+): Promise<CaveToolResult> {
+  let finish!: (result: CaveToolResult) => void
+  let fail!: (reason: unknown) => void
+  const firstResult = new Promise<CaveToolResult>((resolve, reject) => { finish = resolve; fail = reject })
+  const recoveryController = new AbortController()
+  let workspacePath: string | null = null
+  let connected = false
+  let recoveryDue = false
+  let recoveryStarted = false
+  let settled = false
+  let receivedResult: CaveToolResult | null = null
+  let recoveryTimer: number | undefined
+  const deadline = window.setTimeout(() => fail(new Error(workspacePath === null
+    ? 'Codex did not provide CAVE with its initial graph or workspace. Reopen CAVE in Codex.'
+    : 'CAVE could not retrieve its initial graph within 30 seconds. Reopen CAVE in Codex.')), 30_000)
+
+  const recover = () => {
+    if (!connected || !recoveryDue || recoveryStarted || settled || workspacePath === null) return
+    recoveryStarted = true
+    onConnection({ status: 'Reconnecting', attempt: 1, retryInMs: 0 })
+    // CONSTRAINT: a host can miss the one-shot result while mounting the app. Reacquire
+    // only the complete tool-input workspace, through the same canonical MCP tool.
+    void app.callServerTool({
+      name: 'cave_show_architecture', arguments: { workspacePath },
+    }, { signal: recoveryController.signal }).then((response) => {
+      if (settled) return
+      const result = readToolResult(response)
+      if (result === null) throw new Error('CAVE returned an invalid initial graph during reattachment.')
+      finish(result)
+    }).catch((reason: unknown) => { if (!settled) fail(reason) })
+  }
+  const receiveInput = (params: Parameters<NonNullable<typeof app.ontoolinput>>[0]) => {
+    const path = params.arguments?.workspacePath
+    if (workspacePath !== null || typeof path !== 'string' || !/^(?:[A-Za-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+|\/)/.test(path)) return
+    workspacePath = path
+    recover()
+  }
+  const receiveResult = (params: Parameters<NonNullable<typeof app.ontoolresult>>[0]) => {
+    if (params.isError) {
+      fail(new Error('CAVE could not create the architecture snapshot. Check the CAVE plugin diagnostics and reopen the view.'))
+      return
+    }
+    const result = readToolResult(params)
+    if (result === null) {
+      fail(new Error('Codex delivered an invalid CAVE graph result. Update CAVE and reopen the view.'))
+      return
+    }
+    receivedResult = result
+    if (connected) finish(result)
+  }
+  const cancel = () => fail(signal?.reason ?? new DOMException('CAVE connection cancelled.', 'AbortError'))
+  app.addEventListener('toolinput', receiveInput)
+  app.addEventListener('toolresult', receiveResult)
+  signal?.addEventListener('abort', cancel, { once: true })
+  // The deadline covers the handshake too. Placement is optional and must never
+  // hold the graph hostage to an unanswered display-mode request.
+  if (signal?.aborted) cancel()
+  else void app.connect().then(() => {
+    if (settled) return
+    connected = true
+    setEmbeddedHostTheme(app.getHostContext()?.theme)
+    void requestLargestDisplay(app)
+    if (receivedResult !== null) finish(receivedResult)
+    else recoveryTimer = window.setTimeout(() => { recoveryDue = true; recover() }, 2_000)
+  }).catch(fail)
+
+  try {
+    return await firstResult
+  } finally {
+    settled = true
+    window.clearTimeout(deadline)
+    window.clearTimeout(recoveryTimer)
+    recoveryController.abort()
+    signal?.removeEventListener('abort', cancel)
+    app.removeEventListener('toolinput', receiveInput)
+    app.removeEventListener('toolresult', receiveResult)
   }
 }
 
@@ -722,7 +794,7 @@ function readSamplingText(value: unknown): string {
 }
 
 function readToolResult(value: unknown): CaveToolResult | null {
-  if (typeof value !== 'object' || value === null || !('structuredContent' in value)) {
+  if (!isRecord(value) || value.isError === true || !('structuredContent' in value)) {
     return null
   }
 
@@ -733,10 +805,63 @@ function readToolResult(value: unknown): CaveToolResult | null {
 
   const candidate = structured as Partial<CaveToolResult>
   return typeof candidate.subscriptionId === 'string'
+    && candidate.subscriptionId.trim().length > 0
     && typeof candidate.workspaceRoot === 'string'
-    && candidate.update !== undefined
+    && candidate.workspaceRoot.trim().length > 0
+    && isLiveSnapshot(candidate.update)
     ? (candidate as CaveToolResult)
     : null
+}
+
+/** Checks required snapshot containers before publishing a structured MCP result to React. */
+function isLiveSnapshot(value: unknown): value is LiveArchitectureSnapshot {
+  if (!isRecord(value)
+    || !Number.isSafeInteger(value.version) || (value.version as number) < 1
+    || !isStringArray(value.changedPaths)
+    || typeof value.activityChanged !== 'boolean' || typeof value.conversationChanged !== 'boolean'
+    || typeof value.observedAtUtc !== 'string' || !isNullableString(value.refreshError)
+    || !isRecord(value.snapshot)) return false
+  const { metadata, graph, git, activity, conversation } = value.snapshot
+  const baseline = isRecord(git) ? git.baseline : undefined
+  return isRecord(metadata)
+    && typeof metadata.workspaceName === 'string' && typeof metadata.providerId === 'string'
+    && typeof metadata.sourceKind === 'string' && typeof metadata.isLive === 'boolean'
+    && typeof metadata.generatedAtUtc === 'string'
+    && isRecord(graph) && Array.isArray(graph.nodes) && Array.isArray(graph.relations)
+    && graph.nodes.every((node) => isRecord(node)
+      && typeof node.id === 'string' && typeof node.name === 'string' && typeof node.kind === 'string'
+      && isNullableString(node.parentId) && isNullableString(node.qualifiedName)
+      && isNullableString(node.description) && isNullableString(node.categoryId)
+      && isStringArray(node.tags) && Array.isArray(node.sourceLocations)
+      && node.sourceLocations.every((location: unknown) => isRecord(location)
+        && typeof location.filePath === 'string' && Number.isSafeInteger(location.startLine) && Number.isSafeInteger(location.endLine)))
+    && graph.relations.every((relation) => isRecord(relation)
+      && ['id', 'sourceId', 'targetId', 'kind', 'confidence'].every((key) => typeof relation[key] === 'string')
+      && Number.isFinite(relation.weight) && Number.isFinite(relation.evidenceCount))
+    && isRecord(git) && typeof git.status === 'string' && isNullableString(git.error)
+    && (baseline === null || (isRecord(baseline)
+      && ['kind', 'reference', 'resolvedSha'].every((key) => typeof baseline[key] === 'string')))
+    && (git.worktree === null || (isRecord(git.worktree)
+      && typeof git.worktree.headSha === 'string' && isNullableString(git.worktree.branch)))
+    && Array.isArray(git.files) && Array.isArray(git.nodes) && Array.isArray(git.unmappedFiles)
+    && isRecord(activity) && Array.isArray(activity.agents) && Array.isArray(activity.nodes)
+    && Array.isArray(activity.recentEdits) && isStringArray(activity.unmappedPaths) && isNullableString(activity.error)
+    && (activity.latestInstruction === null || (isRecord(activity.latestInstruction)
+      && typeof activity.latestInstruction.id === 'string' && typeof activity.latestInstruction.observedAtUtc === 'string'))
+    && isRecord(conversation) && typeof conversation.sharingEnabled === 'boolean'
+    && typeof conversation.status === 'string' && isNullableString(conversation.error)
+    && Array.isArray(conversation.messages) && isRecord(conversation.control)
+    && typeof conversation.control.state === 'string' && typeof conversation.control.canSend === 'boolean'
+    && isNullableString(conversation.control.sessionId) && isNullableString(conversation.control.turnId)
+    && isNullableString(conversation.control.error) && Array.isArray(conversation.control.deliveries)
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === 'string'
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
 }
 
 function toError(reason: unknown): Error {

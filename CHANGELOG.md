@@ -15,6 +15,10 @@ All notable changes are recorded here. CAVE follows [Semantic Versioning](https:
 
 ### Fixed
 
+- Embedded startup now recovers a missed initial result once for the exact requested workspace, bounds handshake time, and releases failed or cancelled connections. Optional display placement cannot block the graph.
+- Viewer protocol negotiation lets older active MCP connections reuse the updated viewer while current clients still require the statistics-capable protocol.
+- Local Desktop installation no longer depends on removed private Codex development helpers; package validation, cachebusters and backend selection share repository-owned tooling.
+- A locked untracked file marks Git evidence unavailable while preserving the architecture and activity snapshot, and recovers after the file is released.
 - Codex 0.157 contract handling for interruption, ephemeral forks, server requests, and missing usage metrics.
 - Reported frontend dependency vulnerabilities through compatible patch updates.
 - Multi-step semantic undo/redo, positioned-entity deletion, malformed write payload rejection, activity provenance labels, and the mobile focused-work empty state.

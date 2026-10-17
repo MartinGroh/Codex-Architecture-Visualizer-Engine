@@ -81,6 +81,7 @@ Push-Location $repoRoot
 try {
     Invoke-CheckedNative { pwsh -NoProfile -File $publicReadinessScript } 'Public-readiness audit'
     Invoke-CheckedNative { pwsh -NoProfile -File $metadataValidationScript } 'Repository plugin metadata validation'
+    Invoke-CheckedNative { pwsh -NoProfile -File scripts/test-plugin-tooling.ps1 } 'Plugin installation tooling tests'
     Invoke-CheckedNative { pwsh -NoProfile -File resources/agent-flow-light/embedded/test.ps1 } 'Portable Agent Flow C/C++ client tests'
     Invoke-CheckedNative { python -m unittest discover -s plugins/cave/scripts -p 'test_*.py' } 'CAVE activity hook tests'
     Invoke-CheckedNative { pwsh -NoProfile -File plugins/cave/scripts/test_cave_hook_launcher.ps1 } 'CAVE hook launcher fallback tests'
@@ -135,7 +136,7 @@ try {
             throw 'CAVE health endpoint did not report Healthy.'
         }
 
-        $runtime = Invoke-RestMethod -Uri "$healthBaseUri/api/runtime" -TimeoutSec 5
+        $runtime = Invoke-RestMethod -Uri "$healthBaseUri/api/runtime?viewerProtocolVersion=3" -TimeoutSec 5
         if ($runtime.viewerProtocolVersion -ne 3) {
             throw 'The CAVE host did not expose the expected viewer compatibility contract.'
         }

@@ -16,6 +16,8 @@ Open the URL printed by the script, then explore Architecture, Live activity, Ch
 
 Install PowerShell 7, .NET 10, Node.js, Python 3.11+, Codex, and CodeGraph 1.5.0. From the CAVE repository:
 
+Codex Desktop supplies the backend through `CODEX_CLI_PATH`; a separate CLI is unnecessary when running the installer from Desktop. An explicit invalid path fails instead of selecting another CLI. To validate metadata and executable selection without installation or process changes, run `pwsh ./scripts/install-local-plugin.ps1 -PreflightOnly`. Repository-owned validation no longer depends on private scripts shipped by Codex updates; see [plugin installation and validation](../development/Plugin-Installation.md).
+
 ```powershell
 npm --prefix src/Cave.Ui ci
 pwsh ./scripts/install-local-plugin.ps1

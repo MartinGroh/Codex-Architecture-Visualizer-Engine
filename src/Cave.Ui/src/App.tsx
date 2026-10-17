@@ -288,6 +288,7 @@ function ArchitectureApp({
   useEffect(() => {
     let active = true
     let disconnect: (() => void) | null = null
+    const controller = new AbortController()
 
     const applyUpdate = (update: LiveArchitectureSnapshot) => {
       if (!active) {
@@ -304,6 +305,7 @@ function ArchitectureApp({
       (state) => active && setFeedConnection(state),
       browserWorkspaceId ?? undefined,
       (bridge) => active && setHostBridge(bridge),
+      controller.signal,
     ).then((cleanup) => {
       if (active) {
         disconnect = cleanup
@@ -318,6 +320,7 @@ function ArchitectureApp({
 
     return () => {
       active = false
+      controller.abort()
       if (disconnect !== null) {
         disconnect()
       }
@@ -1773,7 +1776,9 @@ function ErrorState({ message }: { message: string }) {
       <CircleAlert size={32} />
       <h1>CAVE could not load the architecture snapshot.</h1>
       <p>{message}</p>
-      <code>dotnet run --project src/Cave.Host</code>
+      {window.parent === window
+        ? <code>dotnet run --project src/Cave.Host</code>
+        : <p>Reopen CAVE in Codex. If this continues, update the installed CAVE plugin.</p>}
     </main>
   )
 }

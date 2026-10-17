@@ -77,7 +77,7 @@ Real mode additionally requires:
 
 - Codex CLI or the Codex desktop app.
 - CodeGraph 1.5.0, preferably its official standalone Windows bundle.
-- Python 3.11 or newer for the isolated plugin validator.
+- Python 3.11 or newer for the activity hooks and their tests.
 
 From the CAVE repository root:
 
@@ -94,6 +94,10 @@ Then start a new Codex task in the repository you want to inspect:
 3. Run `/cave:open` whenever you want to reopen the live graph.
 
 The installer builds the self-contained MCP App, publishes the .NET host and stdio server, validates the plugin, installs `cave@personal`, and refreshes a stable per-user viewer. The initializer creates only ignored `.codegraph/` and `.cave/` state in the observed workspace.
+
+Run `pwsh ./scripts/install-local-plugin.ps1 -PreflightOnly` to check source metadata and backend selection without building, updating versions, installing plugins or stopping processes. From Codex Desktop, the installer uses its validated `CODEX_CLI_PATH`; a separate CLI installation is unnecessary. See [plugin installation and validation](docs/development/Plugin-Installation.md) for the repository-owned tooling contract and focused checks.
+
+A marketplace registered to another checkout fails closed. Review a proposed local CAVE-only rebind with `-PreflightOnly -ReplaceMarketplaceSource`, then use `-ReplaceMarketplaceSource` for the approved installation.
 
 ## Privacy and network boundary
 

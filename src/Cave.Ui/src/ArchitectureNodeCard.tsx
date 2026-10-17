@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { AgentAvatar } from './AgentAvatar'
+import { configurationLabel } from './agentModelPresentation'
 import type { ArchitectureFlowNode } from './graphPresentation'
 import { nodeDocumentationPreview, nodeDocumentationSummary } from './nodeDocumentation'
 import { nodeLabelSegments } from './nodeLabel'
@@ -107,11 +108,12 @@ export function ArchitectureNodeCard({
               <span
                 key={decoration.agent.agentId}
                 className={`agent-badge ${decoration.agent.isSubagent ? 'agent-badge--subagent' : 'agent-badge--main'} ${decoration.state === 'Active' ? 'is-active' : 'is-worked'} ${decoration.evidence === 'Declared' ? 'is-declared' : 'is-observed'}${phase === null ? '' : ` phase-${phase.toLowerCase()}`}`}
-                title={`${agentName} · ${phase ?? (decoration.state === 'Active' ? 'Working' : 'Work finished or idle')} · ${decoration.evidence} evidence${decoration.agent.summary === null ? '' : ` · ${decoration.agent.summary}`}`}
+                title={`${agentName} · ${phase ?? (decoration.state === 'Active' ? 'Working' : 'Work finished or idle')} · ${configurationLabel(decoration.agent.configuration)} · ${decoration.evidence} evidence${decoration.agent.summary === null ? '' : ` · ${decoration.agent.summary}`}`}
               >
                 <span className="agent-badge__icon" aria-hidden="true">
                   <AgentAvatar
                     phase={phase}
+                    configuration={decoration.agent.configuration ?? null}
                     active={decoration.state === 'Active'}
                     isSubagent={decoration.agent.isSubagent}
                     size={decoration.state === 'Active' ? 28 : 17}

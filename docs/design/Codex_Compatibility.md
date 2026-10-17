@@ -46,3 +46,17 @@ Unit/process contract tests and a synthetic browser check do not establish that 
 The local Desktop process supplied `CODEX_CLI_PATH` pointing to its bundled **0.162.0-alpha.17.2** backend, while the separately installed CLI reported **0.162.1**. Direct read-only probes of the Desktop backend accepted `initialize`, `account/usage/read`, and `account/rateLimits/read`. No task was resumed or changed. Seven focused tests cover Desktop selection without CLI PATH, a competing CLI, explicit override, invalid paths with visible unavailable results, and Windows command quoting. The full backend suite passed 220 tests; the unchanged frontend passed 202 tests and built successfully.
 
 This verifies local executable selection and the observed local native calls, not the laptop's rejection or an installed update there. Full plugin validation remains blocked by the missing installed `plugin-creator/scripts/validate_plugin.py`; the temporary host health/snapshot verification command was rejected by automatic approval review as blocked by policy. Do not bypass canonical validation or claim that the laptop has been repaired.
+
+## Configured models and statistics (2026-10-15)
+
+Verified against installed CLI **0.162.1**, its generated experimental TypeScript protocol under ignored `output/codex-protocol`, process-contract tests, and a live exact-task read-only probe:
+
+- `thread/read` with `includeTurns: false` returns exact `id`, nullable `parentThreadId`, `model` and `reasoningEffort`. These are current or latest persisted configured settings, explicitly not per-turn execution telemetry. No parent model is inherited.
+- `thread/turns/list` with `itemsView: notLoaded` supplies nullable recorded durations without conversation items. CAVE reads at most four 50-turn pages, deduplicates turn IDs/cursors, and reports partial coverage.
+- `account/usage/read` accepts `threadId` and may return matching `threadUsage.groups` with individually nullable input, cached-input, output and total tokens grouped by model/effort. These are source estimates. The live task returned null thread usage; support does not establish availability on every account or billing route.
+- Independent metadata, token and duration reads use one bounded 12-second batch and exact-thread cache without task-control requests, transcript ingestion or hidden reasoning.
+- `GET /api/statistics` and app-private `cave_get_statistics` return schema 1 with opaque task keys, coverage and synthetic-demo labels. The installed viewer requires protocol **3**. Optional configured metadata in existing Light/activity feeds remains additive within schema 1.
+
+Lifetime statistics mean retained CAVE-observed history. Native historical token groups keep their source model attribution; historical duration has no model attribution. Prospective time under configured settings is separately sampled; gaps/changes are unattributed. Account quotas and totals are never distributed across agents or projects.
+
+Local installation preflight on 2026-10-15 stops because the installed Codex setup lacks the `plugin-creator` helpers used by the canonical installer (`update_plugin_cachebuster.py`, `read_marketplace_name.py`, and `validate_plugin.py`). Repository metadata, published binaries and runtime checks can be verified independently; they do not establish a completed plugin installation. Restore the canonical development tooling before using `scripts/install-local-plugin.ps1`; do not hand-copy deployed plugin state or bypass the missing validation.

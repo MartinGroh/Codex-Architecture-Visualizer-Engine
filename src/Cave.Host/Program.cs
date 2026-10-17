@@ -39,6 +39,10 @@ if (demoMode)
     builder.Services.AddSingleton<IConversationControl, DemoConversationControl>();
     builder.Services.AddSingleton<ICodexUsageProvider, DemoCodexUsageProvider>();
     builder.Services.AddSingleton<ICodexGoalProvider, DemoCodexGoalProvider>();
+    builder.Services.AddSingleton(services => new DemoAgentTelemetry(services.GetRequiredService<TimeProvider>(),
+        builder.Configuration["Cave:WorkspaceRoot"] ?? Path.Combine(builder.Environment.ContentRootPath, "demo-workspace")));
+    builder.Services.AddSingleton<IAgentTelemetrySource>(services => services.GetRequiredService<DemoAgentTelemetry>());
+    builder.Services.AddSingleton<IAgentTelemetryStore>(services => services.GetRequiredService<DemoAgentTelemetry>());
 }
 else
 {
@@ -50,6 +54,10 @@ else
         services.GetRequiredService<FileAgentActivityStore>());
     builder.Services.AddSingleton<ICodexTaskLocator>(services =>
         services.GetRequiredService<FileAgentActivityStore>());
+    builder.Services.AddSingleton<IAgentTelemetrySource>(services => new CodexAppServerTelemetrySource(
+        services.GetRequiredService<TimeProvider>(), builder.Configuration["Cave:CodexCommand"]));
+    builder.Services.AddSingleton<IAgentTelemetryStore>(services => new FileAgentTelemetryStore(
+        builder.Configuration["Cave:StatisticsRoot"] ?? FileAgentTelemetryStore.DefaultRoot, services.GetRequiredService<TimeProvider>()));
     builder.Services.AddSingleton<IConversationStore, FileConversationStore>();
     builder.Services.AddSingleton<ICodexGoalProvider>(services => new CodexAppServerGoalProvider(
         services.GetRequiredService<TimeProvider>(),
@@ -83,6 +91,8 @@ else
 }
 
 builder.Services.AddSingleton<GitDeltaService>();
+builder.Services.AddSingleton<AgentTelemetryService>();
+builder.Services.AddHostedService<AgentTelemetryHostedService>();
 builder.Services.AddSingleton<CaveInfoService>();
 builder.Services.AddSingleton<WorkspaceConversationService>();
 builder.Services.AddSingleton<ArchitectureSnapshotService>();
@@ -133,6 +143,7 @@ app.MapGet(
 app.MapRecentActivity();
 app.MapAgentFlow();
 app.MapAgentFlowResources();
+app.MapAgentStatistics();
 app.MapGet(
     "/api/activity",
     async (

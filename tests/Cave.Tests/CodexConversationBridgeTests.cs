@@ -114,7 +114,8 @@ public sealed class CodexConversationBridgeTests : IDisposable
     {
         var conversations = new FileConversationStore();
         await conversations.SetSharingAsync(_workspaceRoot, enabled: true, CancellationToken.None);
-        var runner = new StubTurnRunner();
+        var completionGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var runner = new StubTurnRunner { CompletionGate = completionGate };
         var binding = new CodexTaskBinding(
             "exact-task",
             "desktop-turn",
@@ -131,23 +132,41 @@ public sealed class CodexConversationBridgeTests : IDisposable
         var persisted = await conversations.ReadAsync(_workspaceRoot, CancellationToken.None);
         Assert.Equal(queued.MessageId, Assert.Single(persisted.Control.Deliveries).MessageId);
         Assert.Equal(ConversationControlState.Queued, persisted.Control.State);
+        // A browser may briefly hold its previous complete delivery snapshot while the
+        // worker advances that pathname. Windows publication must tolerate bounded readers.
+        var queuedPath = Directory.EnumerateFiles(Path.Combine(_workspaceRoot, ".cave", "conversation", "control", "outbox"), "*.json").Single();
 
         using var stopping = new CancellationTokenSource(BridgeTestDeadline);
         var background = bridge.RunAsync(stopping.Token);
         try
         {
             await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await using var observing = new FileStream(queuedPath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous);
+            completionGate.TrySetResult();
+            await Task.Delay(75, stopping.Token);
+            await observing.DisposeAsync();
 
-            ConversationOverlay overlay;
-            do
+            ConversationOverlay overlay = persisted;
+            try
             {
-                await Task.Delay(25, stopping.Token);
-                overlay = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+                do
+                {
+                    await Task.Delay(25, stopping.Token);
+                    overlay = await conversations.ReadAsync(_workspaceRoot, stopping.Token);
+                    Assert.True(overlay.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Failed),
+                        $"Delivery failed: {string.Join("; ", overlay.Control.Deliveries.Select(item => item.Error))}");
+                }
+                // Delivery and control status are separate durable writes. Completion can
+                // become visible before Ready, especially on the Windows CI filesystem.
+                while (overlay.Control.State != ConversationControlState.Ready
+                    || overlay.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
             }
-            // Delivery and control status are separate durable writes. Completion can
-            // become visible before Ready, especially on the Windows CI filesystem.
-            while (overlay.Control.State != ConversationControlState.Ready
-                || overlay.Control.Deliveries.All(item => item.State != ConversationDeliveryState.Completed));
+            catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+            {
+                Assert.Fail($"Delivery did not become ready within {BridgeTestDeadline}: control={overlay.Control.State}, "
+                    + $"error={overlay.Control.Error}, deliveries={string.Join(", ", overlay.Control.Deliveries.Select(item => item.State))}.");
+            }
 
             var delivery = Assert.Single(overlay.Control.Deliveries);
             Assert.Equal(queued.MessageId, delivery.MessageId);
@@ -586,6 +605,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
     private sealed class StubTurnRunner : ICodexTurnRunner
     {
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource? CompletionGate { get; init; }
         public string? SessionId { get; private set; }
         public string? Text { get; private set; }
 
@@ -601,6 +621,7 @@ public sealed class CodexConversationBridgeTests : IDisposable
             Text = text;
             await turnStarted("bridge-turn", cancellationToken);
             Started.TrySetResult();
+            if (CompletionGate is not null) await CompletionGate.Task.WaitAsync(cancellationToken);
             return "bridge-turn";
         }
 

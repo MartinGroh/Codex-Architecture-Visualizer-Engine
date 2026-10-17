@@ -24,7 +24,12 @@
       "startedAtUtc": "2026-09-27T12:00:00Z",
       "updatedAtUtc": "2026-09-27T12:00:00Z",
       "evidence": "Observed",
-      "summaryEvidence": "Declared"
+      "summaryEvidence": "Declared",
+      "configuration": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "xhigh"
+      },
+      "statisticsTaskId": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     },
     {
       "agentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -41,7 +46,12 @@
       "startedAtUtc": "2026-09-27T12:00:00Z",
       "updatedAtUtc": "2026-09-27T12:00:00Z",
       "evidence": "Observed",
-      "summaryEvidence": "Declared"
+      "summaryEvidence": "Declared",
+      "configuration": {
+        "model": "gpt-6-astra",
+        "reasoningEffort": "high"
+      },
+      "statisticsTaskId": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     },
     {
       "agentId": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -58,7 +68,12 @@
       "startedAtUtc": "2026-09-27T12:00:00Z",
       "updatedAtUtc": "2026-09-27T12:00:00Z",
       "evidence": "Observed",
-      "summaryEvidence": "Observed"
+      "summaryEvidence": "Observed",
+      "configuration": {
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "low"
+      },
+      "statisticsTaskId": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     }
   ],
   "mainGoal": {

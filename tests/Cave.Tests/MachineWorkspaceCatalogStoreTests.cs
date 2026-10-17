@@ -92,6 +92,36 @@ public sealed class MachineWorkspaceCatalogStoreTests
         }
     }
 
+    /// <summary>Background catalog reads must not deny concurrent atomic registration refreshes on Windows.</summary>
+    [Fact]
+    public async Task ConcurrentReadsDoNotBlockAtomicRegistration()
+    {
+        var testRoot = CreateTestRoot();
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(testRoot, "Workspace")).FullName;
+        var catalogRoot = Path.Combine(testRoot, "catalog");
+        try
+        {
+            var store = new MachineWorkspaceCatalogStore(catalogRoot, TimeProvider.System);
+            var registered = await store.RegisterAsync(workspaceRoot, CancellationToken.None);
+            async Task ReadContinuously()
+            {
+                for (var index = 0; index < 100; index++)
+                {
+                    var result = await store.ReadAsync(CancellationToken.None);
+                    Assert.Empty(result.Errors);
+                    Assert.Equal(registered.WorkspaceId, Assert.Single(result.Entries).WorkspaceId);
+                }
+            }
+            async Task RefreshContinuously()
+            {
+                for (var index = 0; index < 100; index++)
+                    await store.RegisterAsync(workspaceRoot, CancellationToken.None);
+            }
+            await Task.WhenAll(ReadContinuously(), ReadContinuously(), ReadContinuously(), RefreshContinuously());
+        }
+        finally { Directory.Delete(testRoot, recursive: true); }
+    }
+
     /// <summary>
     /// Verifies that the dashboard summary reuses the canonical activity reducer.
     /// </summary>
@@ -123,7 +153,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
                     [],
                     []),
                 CancellationToken.None);
-            var service = new WorkspaceCatalogService(catalogStore, activityStore);
+            var service = new WorkspaceCatalogService(catalogStore, activityStore, TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
             var workspace = Assert.Single(snapshot.Workspaces);
@@ -162,7 +192,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
             var project = await catalogStore.RegisterAsync(projectRoot, CancellationToken.None);
             var service = new WorkspaceCatalogService(
                 catalogStore,
-                new FileAgentActivityStore(TimeProvider.System));
+                new FileAgentActivityStore(TimeProvider.System), TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
 
@@ -194,7 +224,7 @@ public sealed class MachineWorkspaceCatalogStoreTests
             Directory.Delete(workspaceRoot, recursive: true);
             var service = new WorkspaceCatalogService(
                 catalogStore,
-                new FileAgentActivityStore(TimeProvider.System));
+                new FileAgentActivityStore(TimeProvider.System), TestTelemetry.Create());
 
             var snapshot = await service.GetOverviewAsync(CancellationToken.None);
             var workspace = Assert.Single(snapshot.Workspaces);

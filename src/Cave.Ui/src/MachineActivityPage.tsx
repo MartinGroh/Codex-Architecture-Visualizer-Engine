@@ -19,6 +19,8 @@ import {
   Target,
 } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
+import { AgentModelLabel } from './AgentModel'
+import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { connectArchitectureFeed } from './api'
 import { MachinePageFrame } from './MachinePageFrame'
 import {
@@ -370,7 +372,7 @@ function ActivityProjectFlow({
       </div>
 
       {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
-      {view === 'compact' ? <AgentFlowCompact lanes={lanes} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
+      {view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
         {lanes.map((lane) => (
           <AgentTimelineLane key={lane.agent.agentId} lane={lane} workspaceId={timeline.workspace.workspaceId} nowMs={nowMs} active={lane.active}
             onDismiss={() => onDismissAgent(lane.agent.agentId, lane.agent.updatedAtUtc)} />
@@ -430,10 +432,11 @@ function AgentTimelineLane({
   return (
     <article className={`machine-agent-lane phase-${phase.toLowerCase()} ${active ? '' : 'is-complete'} ${agent.isSubagent ? 'is-subagent' : 'is-main-agent'}`}>
       <div className="machine-agent-lane__identity">
-        <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} size={35} />
+        <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} configuration={agent.configuration ?? null} size={35} />
         <span>
           <strong>{agent.publicId ? <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(agent.publicId)}`}>{agentDisplayName(agent)}</a> : agentDisplayName(agent)}</strong>
           <small>{active ? phase : 'Done'} · {formatDuration(lane.durationMs)}</small>
+          <AgentModelLabel configuration={agent.configuration} />
         </span>
         <div className="machine-agent-lane__action">
           <small>{active ? agentFocusLabel(agent) : 'Last focus / action'}</small>
@@ -444,6 +447,7 @@ function AgentTimelineLane({
       <div className="machine-agent-lane__classification">
         <span><Target size={12} /> {agent.hasDeclaredScope ? 'Scope declared' : 'Observed task'}</span>
       </div>
+      {agent.statisticsTaskId && !agent.isSubagent && <AgentStatisticsPanel title="Task statistics" workspaceId={workspaceId} taskId={agent.statisticsTaskId} />}
 
       <div className="machine-agent-track" aria-label={`${agent.agentId} observed work timeline`}>
         <div className="machine-agent-track__line">

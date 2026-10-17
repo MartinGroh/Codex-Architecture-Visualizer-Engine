@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, RefreshCw, Route, Smartphone, WifiOff } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
+import { AgentModelLabel } from './AgentModel'
+import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { readAgentFlowLight } from './api'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { AgentFlowLightAgent, AgentFlowLightMainGoal, AgentFlowLightSnapshot, WorkspaceOverview } from './types'
@@ -173,9 +175,11 @@ function AgentRow({ agent, workspaceId, onDismiss }: { agent: AgentFlowLightAgen
   const focusLabel = agent.currentFocus !== null ? 'Declared focus'
     : agent.summaryEvidence === 'Observed' ? 'Last observed activity' : 'Activity summary'
   return <li className={`agent-flow-light-agent ${active ? 'is-active' : ''}`}>
-    <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} size={38} />
+    <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} configuration={agent.configuration ?? null} size={38} />
     <div className="agent-flow-light-agent__body">
       <div className="agent-flow-light-agent__identity"><strong>{agent.displayName}</strong><span>{active ? agent.phase ?? 'Working' : agent.state}</span></div>
+      <AgentModelLabel configuration={agent.configuration} />
+      {agent.statisticsTaskId && !agent.isSubagent && <AgentStatisticsPanel title="Task statistics" workspaceId={workspaceId} taskId={agent.statisticsTaskId} />}
       <small>{focusLabel}</small><p>{agent.currentFocus ?? agent.summary ?? 'No work detail was observed.'}</p>
       {agent.currentFocus !== null && <><small>Last observed activity</small><p>{agent.lastObservedActivity ?? 'No work action was observed.'}</p></>}
       <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(agent.agentId)}`}>View flow as list</a>

@@ -1,5 +1,7 @@
 import { agentDisplayName } from './agentIdentity'
 import { AgentAvatar } from './AgentAvatar'
+import { AgentModelLabel } from './AgentModel'
+import { configurationLabel } from './agentModelPresentation'
 import type { AgentActivity } from './types'
 
 export interface AgentActivitySpotlightProps {
@@ -28,7 +30,7 @@ export function AgentActivitySpotlight({
     ? 'No active agents'
     : `${agents.length} active agent${agents.length === 1 ? '' : 's'}`
   const activeDetail = agents
-    .map((agent) => `${agentDisplayName(agent)} ${agent.phase ?? 'Working'}${agent.summary ? `: ${agent.summary}` : ''}`)
+    .map((agent) => `${agentDisplayName(agent)} ${agent.phase ?? 'Working'}${agent.summary ? `: ${agent.summary}` : ''}. ${configurationLabel(agent.configuration)}`)
     .join('. ')
   const accessibleMetrics = `${activeNodeCount} active nodes, ${recentEditCount} recent edits, ${unmappedCount} unmapped paths`
 
@@ -43,6 +45,7 @@ export function AgentActivitySpotlight({
       <span className="agent-activity-spotlight__icon" aria-hidden="true">
         <AgentAvatar
           phase={primaryAgent?.phase ?? null}
+          configuration={primaryAgent ? primaryAgent.configuration ?? null : undefined}
           active={agents.length > 0}
           isSubagent={primaryAgent?.isSubagent ?? false}
           size={prominent ? 48 : 36}
@@ -65,12 +68,14 @@ export function AgentActivitySpotlight({
                 {index > 0 && (
                   <AgentAvatar
                     phase={agent.phase}
+                    configuration={agent.configuration ?? null}
                     active
                     isSubagent={agent.isSubagent}
                     size={17}
                   />
                 )}
                 <span>{agentDisplayName(agent)}</span>
+                <AgentModelLabel configuration={agent.configuration} />
                 <b>{agent.phase ?? 'Working'}</b>
               </span>
             ))}

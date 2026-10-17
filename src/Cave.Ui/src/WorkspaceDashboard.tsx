@@ -11,6 +11,8 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
+import { AgentModelLabel } from './AgentModel'
+import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { WorkspaceOverview } from './types'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
@@ -63,6 +65,7 @@ export function WorkspaceDashboard() {
             {workspaces.map((workspace) => <WorkspaceCard key={workspace.workspaceId} workspace={workspace} />)}
           </div>
         )}
+        <AgentStatisticsPanel title="All project statistics" defaultOpen />
       </section>
     </MachinePageFrame>
   )
@@ -77,7 +80,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
       <div className="workspace-card__header">
         <span className={`workspace-card__icon ${hasActiveAgents ? `is-active phase-${phaseToken}` : ''}`}>
           {hasActiveAgents
-            ? <AgentAvatar phase={workspace.currentPhase} active isSubagent={hasOnlySubagents} size={29} />
+            ? <AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active isSubagent={hasOnlySubagents} size={29} />
             : <Boxes size={20} />}
         </span>
         <span className={`workspace-availability ${workspace.isAvailable ? '' : 'is-unavailable'}`}>
@@ -91,8 +94,9 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
       <div className="workspace-card__activity">
         {hasActiveAgents ? (
           <>
-            <AgentAvatar phase={workspace.currentPhase} active isSubagent={hasOnlySubagents} size={17} />
+            <AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active isSubagent={hasOnlySubagents} size={17} />
             <strong>{workspace.currentPhase ?? 'Working'}</strong>
+            <AgentModelLabel configuration={workspace.currentAgentConfiguration} />
             <span>{workspace.activitySummary ?? 'Agent activity is live'}</span>
           </>
         ) : (
@@ -104,7 +108,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
         )}
       </div>
       <footer>
-        <span><AgentAvatar phase={workspace.currentPhase} active={hasActiveAgents} isSubagent={hasOnlySubagents} size={15} /> {workspace.activeAgentCount} active</span>
+        <span><AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active={hasActiveAgents} isSubagent={hasOnlySubagents} size={15} /> {workspace.activeAgentCount} active</span>
         <span><UsersRound size={14} /> {workspace.activeSubagentCount} {workspace.activeSubagentCount === 1 ? 'subagent' : 'subagents'}</span>
         {workspace.isAvailable && <ChevronRight size={17} className="workspace-card__open" />}
       </footer>

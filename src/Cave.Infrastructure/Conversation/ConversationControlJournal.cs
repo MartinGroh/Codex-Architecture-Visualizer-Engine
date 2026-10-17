@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cave.Domain;
+using Cave.Infrastructure.Files;
 
 namespace Cave.Infrastructure.Conversation;
 
@@ -503,7 +504,7 @@ internal sealed class ConversationControlJournal(TimeProvider timeProvider)
                     .ConfigureAwait(false);
             }
 
-            File.Move(temporaryPath, path, overwrite: true);
+            await AtomicFilePublisher.PublishAsync(temporaryPath, path, cancellationToken).ConfigureAwait(false);
         }
         finally
         {

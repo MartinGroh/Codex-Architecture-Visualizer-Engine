@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
-import type { AgentActivityPhase } from './types'
+import type { AgentActivityPhase, AgentModelConfiguration } from './types'
+import { ModelFamilyIcon } from './AgentModel'
+import { agentModelFamily, configurationLabel, effortShort } from './agentModelPresentation'
 
 export interface AgentAvatarProps {
   phase: AgentActivityPhase | null
@@ -7,6 +9,7 @@ export interface AgentAvatarProps {
   isSubagent?: boolean
   size?: number
   className?: string
+  configuration?: AgentModelConfiguration | null
 }
 
 /** Renders the canonical phase-aware agent glyph used by every live-activity surface. */
@@ -16,6 +19,7 @@ export function AgentAvatar({
   isSubagent = false,
   size = 28,
   className = '',
+  configuration,
 }: AgentAvatarProps) {
   const visiblePhase = active ? phase ?? 'Working' : null
   const phaseToken = visiblePhase?.toLowerCase() ?? 'idle'
@@ -27,11 +31,14 @@ export function AgentAvatar({
       data-agent-phase={visiblePhase ?? 'Idle'}
       data-agent-role={isSubagent ? 'Subagent' : 'Main agent'}
       style={style}
-      aria-hidden="true"
+      role="img"
+      aria-label={`${isSubagent ? 'Subagent' : 'Main agent'}, ${visiblePhase ?? 'Idle'}${configuration === undefined ? '' : `. ${configurationLabel(configuration)}`}`}
+      title={configuration === undefined ? undefined : configurationLabel(configuration)}
     >
       <svg
         viewBox="0 0 36 36"
         focusable="false"
+        aria-hidden="true"
         data-agent-avatar-silhouette={isSubagent ? 'helper-drone' : 'main-robot'}
       >
         <g className="agent-avatar__head">
@@ -86,6 +93,14 @@ export function AgentAvatar({
         <span className="agent-avatar__check" data-agent-avatar-accessory="check">✓</span>
       )}
       <span className="agent-avatar__role" />
+      {configuration !== undefined && <>
+        <span className={`agent-avatar__model model-family-${agentModelFamily(configuration?.model)}`} aria-hidden="true">
+          <ModelFamilyIcon model={configuration?.model} />
+        </span>
+        <span className="agent-avatar__effort" data-reasoning-effort={configuration?.reasoningEffort ?? 'unknown'} aria-hidden="true">
+          {effortShort(configuration?.reasoningEffort)}
+        </span>
+      </>}
     </span>
   )
 }

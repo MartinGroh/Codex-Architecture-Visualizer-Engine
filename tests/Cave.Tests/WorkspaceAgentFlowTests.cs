@@ -230,7 +230,7 @@ public sealed class WorkspaceAgentFlowTests
 
     private static WorkspaceAgentFlowService CreateService(
         IAgentActivityStore activity, IConversationStore conversations, ICodexGoalProvider goals) =>
-        new(new WorkspaceActivityService(activity, new FixedClock()),
+        new(new WorkspaceActivityService(activity, new FixedClock(), TestTelemetry.Create()),
             new WorkspaceConversationService(conversations, goals, new FixedClock()), AgentFlowSourceMode.Live);
 
     private static WorkspaceCatalogEntry Workspace() => new("workspace", Path.GetTempPath(), Now);

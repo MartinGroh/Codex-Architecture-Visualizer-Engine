@@ -47,7 +47,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 activityStore,
                 new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(timeProvider), timeProvider),
-                timeProvider);
+                timeProvider, TestTelemetry.Create());
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, timeProvider)
                 .Create(workspaceRoot);
 
@@ -91,7 +91,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 activityStore,
                 new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(timeProvider), timeProvider),
-                timeProvider);
+                timeProvider, TestTelemetry.Create());
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, timeProvider)
                 .Create(workspaceRoot);
             var current = await monitor.GetCurrentAsync(CancellationToken.None);
@@ -151,7 +151,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
                 new WorkspaceConversationService(conversationStore, new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
-                TimeProvider.System);
+                TimeProvider.System, TestTelemetry.Create());
             await using var monitor = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System)
                 .Create(workspaceRoot);
             var initial = await monitor.GetCurrentAsync(CancellationToken.None);
@@ -188,7 +188,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
                 new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
-                TimeProvider.System);
+                TimeProvider.System, TestTelemetry.Create());
             var factory = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System);
             await using var registry = new WorkspaceGraphMonitorRegistry(
                 factory,
@@ -244,7 +244,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
                 new WorkspaceConversationService(new FileConversationStore(), new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
-                TimeProvider.System);
+                TimeProvider.System, TestTelemetry.Create());
             var factory = new WorkspaceGraphMonitorFactory(snapshotService, TimeProvider.System);
             await using var registry = new WorkspaceGraphMonitorRegistry(
                 factory,
@@ -292,7 +292,7 @@ public sealed class CaveToolsLiveTests
             var service = new ArchitectureSnapshotService(new SampleSemanticIndex(),
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
-                new WorkspaceConversationService(conversations, goals, TimeProvider.System), TimeProvider.System);
+                new WorkspaceConversationService(conversations, goals, TimeProvider.System), TimeProvider.System, TestTelemetry.Create());
             await using var monitor = new WorkspaceGraphMonitorFactory(service, TimeProvider.System).Create(workspaceRoot);
             var initial = await monitor.GetCurrentAsync(CancellationToken.None);
             goals.Result = goals.Result with { RetrievedAtUtc = DateTimeOffset.UnixEpoch.AddSeconds(16) };
@@ -334,7 +334,7 @@ public sealed class CaveToolsLiveTests
                 new GitDeltaService(new EmptyGitDeltaProvider(), GitBaselineRequest.Upstream),
                 new FileAgentActivityStore(TimeProvider.System),
                 new WorkspaceConversationService(conversations, new DemoCodexGoalProvider(TimeProvider.System), TimeProvider.System),
-                TimeProvider.System);
+                TimeProvider.System, TestTelemetry.Create());
             await using var monitor = new WorkspaceGraphMonitorFactory(service, TimeProvider.System).Create(workspaceRoot);
             var initial = await monitor.GetCurrentAsync(CancellationToken.None);
             conversations.Overlay = conversations.Overlay with

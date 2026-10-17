@@ -85,6 +85,7 @@ function WorkspaceRailItem({
         {hasActiveAgents && (
           <AgentAvatar
             phase={workspace.currentPhase}
+            configuration={workspace.currentAgentConfiguration ?? null}
             active
             isSubagent={!hasActiveMainAgent}
             size={expanded ? 28 : 18}

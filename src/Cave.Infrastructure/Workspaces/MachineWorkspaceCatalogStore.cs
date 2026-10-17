@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cave.Application;
+using Cave.Infrastructure.Files;
 
 namespace Cave.Infrastructure.Workspaces;
 
@@ -87,7 +88,7 @@ public sealed class MachineWorkspaceCatalogStore(
                     .ConfigureAwait(false);
             }
 
-            File.Move(temporaryPath, finalPath, overwrite: true);
+            await AtomicFilePublisher.PublishAsync(temporaryPath, finalPath, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -116,7 +117,10 @@ public sealed class MachineWorkspaceCatalogStore(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await using var stream = File.OpenRead(path);
+                // CONSTRAINT: readers retain a complete old snapshot while an atomic refresh
+                // replaces the pathname. Denying delete sharing makes Windows registrations fail.
+                await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous);
                 var record = await JsonSerializer.DeserializeAsync<WorkspaceCatalogRecord>(
                     stream,
                     JsonOptions,

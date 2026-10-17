@@ -116,6 +116,12 @@ public sealed record AgentActivity(
 
     /// <summary>A privacy-preserving external correlation key supplied by Application.</summary>
     public string? PublicId { get; init; }
+
+    /// <summary>The exact source-reported configured model and effort, when available.</summary>
+    public AgentModelConfiguration? Configuration { get; init; }
+
+    /// <summary>The opaque key used to open statistics for this agent's main-task tree.</summary>
+    public string? StatisticsTaskId { get; init; }
 }
 
 /// <summary>

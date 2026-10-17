@@ -136,7 +136,7 @@ try {
         }
 
         $runtime = Invoke-RestMethod -Uri "$healthBaseUri/api/runtime" -TimeoutSec 5
-        if ($runtime.viewerProtocolVersion -ne 2) {
+        if ($runtime.viewerProtocolVersion -ne 3) {
             throw 'The CAVE host did not expose the expected viewer compatibility contract.'
         }
 
@@ -186,7 +186,7 @@ try {
         }
 
         $info = Invoke-RestMethod -Uri "$healthBaseUri/api/info" -TimeoutSec 20
-        if ($info.viewerProtocolVersion -ne 2 -or
+        if ($info.viewerProtocolVersion -ne 3 -or
             $null -eq $info.usage -or
             [string]::IsNullOrWhiteSpace($info.usage.status)) {
             throw 'The live info endpoint did not expose the viewer and Codex usage contract.'

@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using Cave.Application;
 using Cave.Domain;
@@ -105,7 +104,7 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
         var stderr = DrainAsync(process.StandardError, cancellationToken);
         try
         {
-            var reader = new BoundedLineReader(process.StandardOutput);
+            var reader = new CodexAppServerJsonReader(process.StandardOutput);
             await CodexAppServerProcess.WriteAsync(process, new
             {
                 method = "initialize",
@@ -116,14 +115,14 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
                     capabilities = new { experimentalApi = true },
                 },
             }, cancellationToken).ConfigureAwait(false);
-            using var initialize = await ReadResponseAsync(reader, 1, cancellationToken).ConfigureAwait(false);
+            using var initialize = await reader.ReadResponseAsync(1, cancellationToken).ConfigureAwait(false);
             ThrowIfError(initialize.RootElement);
             await CodexAppServerProcess.WriteAsync(process,
                 new { method = "initialized", @params = new { } }, cancellationToken).ConfigureAwait(false);
             await CodexAppServerProcess.WriteAsync(process,
                 new { method = "thread/goal/get", id = 2, @params = new { threadId = sessionId } },
                 cancellationToken).ConfigureAwait(false);
-            using var response = await ReadResponseAsync(reader, 2, cancellationToken).ConfigureAwait(false);
+            using var response = await reader.ReadResponseAsync(2, cancellationToken).ConfigureAwait(false);
             ThrowIfError(response.RootElement);
             var result = response.RootElement.GetProperty("result");
             if (result.ValueKind != JsonValueKind.Object)
@@ -199,34 +198,6 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
             goal.GetProperty("createdAt").GetInt64(), goal.GetProperty("updatedAt").GetInt64());
     }
 
-    private static async Task<JsonDocument> ReadResponseAsync(
-        BoundedLineReader reader,
-        int id,
-        CancellationToken cancellationToken)
-    {
-        for (var count = 0; count < 64; count++)
-        {
-            var line = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-            if (line is null)
-            {
-                throw new InvalidOperationException("The Codex App Server closed before replying.");
-            }
-
-            var document = JsonDocument.Parse(line);
-            if (!document.RootElement.TryGetProperty("method", out _)
-                && document.RootElement.TryGetProperty("id", out var responseId)
-                && responseId.ValueKind == JsonValueKind.Number && responseId.TryGetInt32(out var responseNumber)
-                && responseNumber == id)
-            {
-                return document;
-            }
-
-            document.Dispose();
-        }
-
-        throw new InvalidOperationException("The Codex App Server exceeded the bounded response count.");
-    }
-
     private static void ThrowIfError(JsonElement response)
     {
         if (response.TryGetProperty("error", out var error))
@@ -249,40 +220,4 @@ public sealed class CodexAppServerGoalProvider : ICodexGoalProvider, IDisposable
         new(CodexGoalSourceStatus.Unavailable, sessionId, null, retrievedAt,
             error.Length <= 512 ? error : error[..512]);
 
-    private sealed class BoundedLineReader(StreamReader reader)
-    {
-        private readonly char[] _buffer = new char[4096];
-        private int _position;
-        private int _count;
-
-        internal async Task<string?> ReadAsync(CancellationToken cancellationToken)
-        {
-            var line = new StringBuilder();
-            while (true)
-            {
-                if (_position == _count)
-                {
-                    _count = await reader.ReadAsync(_buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-                    _position = 0;
-                    if (_count == 0)
-                    {
-                        return line.Length == 0 ? null : line.ToString();
-                    }
-                }
-
-                var character = _buffer[_position++];
-                if (character == '\n')
-                {
-                    return line.ToString().TrimEnd('\r');
-                }
-
-                if (line.Length >= 131_072)
-                {
-                    throw new InvalidOperationException("The native goal response exceeded the 131072 character limit.");
-                }
-
-                line.Append(character);
-            }
-        }
-    }
 }

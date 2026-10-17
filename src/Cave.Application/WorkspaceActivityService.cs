@@ -7,7 +7,8 @@ namespace Cave.Application;
 /// </summary>
 /// <param name="activityStore">The canonical activity reducer shared with the full workspace view.</param>
 /// <param name="timeProvider">The clock identifying when this projection was read.</param>
-public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, TimeProvider timeProvider)
+/// <param name="telemetry">Cached configuration and retained task correlation shared with graph presentation.</param>
+public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, TimeProvider timeProvider, AgentTelemetryService telemetry)
 {
     private static readonly ArchitectureGraph EmptyGraph = ArchitectureGraph.Create([], []);
 
@@ -28,6 +29,7 @@ public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, 
         ArgumentNullException.ThrowIfNull(workspace);
         var activity = await activityStore.ReadAsync(workspace.WorkspaceRoot, EmptyGraph, cancellationToken)
             .ConfigureAwait(false);
+        activity = await telemetry.EnrichAsync(activity, cancellationToken).ConfigureAwait(false);
         var selectedAgents = activity.Agents
             .OrderByDescending(agent => agent.State == AgentWorkState.Active)
             .ThenByDescending(agent => agent.UpdatedAtUtc)
@@ -47,6 +49,8 @@ public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, 
             {
                 ParentAgentId = agent.ParentAgentId is null ? null : RequireIdentity(agent.ParentAgentId),
                 LastObservedActivity = Bound(agent.LastObservedActivity, 160),
+                Configuration = agent.Configuration,
+                StatisticsTaskId = agent.StatisticsTaskId,
             })
             .ToArray();
         var latest = activity.Agents.Select(agent => (DateTimeOffset?)agent.UpdatedAtUtc)
@@ -132,4 +136,10 @@ public sealed record WorkspaceActivityAgent(
 
     /// <summary>The last observed work action, excluding terminal lifecycle markers.</summary>
     public string? LastObservedActivity { get; init; }
+
+    /// <summary>The source-reported configured model and effort, or null.</summary>
+    public AgentModelConfiguration? Configuration { get; init; }
+
+    /// <summary>The opaque statistics key for the main task, or null before collection.</summary>
+    public string? StatisticsTaskId { get; init; }
 }

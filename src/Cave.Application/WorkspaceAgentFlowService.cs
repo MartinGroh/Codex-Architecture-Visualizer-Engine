@@ -67,6 +67,8 @@ public sealed class WorkspaceAgentFlowService(
         {
             ParentAgentId = agent.ParentAgentId is null ? null : AgentDisplayNames.PublicId(agent.ParentAgentId),
             LastObservedActivity = agent.LastObservedActivity,
+            Configuration = agent.Configuration,
+            StatisticsTaskId = agent.StatisticsTaskId,
         }).ToArray();
 
         return new WorkspaceAgentFlowSnapshot(1, currentActivity.WorkspaceId, currentActivity.WorkspaceName,
@@ -173,6 +175,12 @@ public sealed record WorkspaceAgentFlowAgent(
 
     /// <summary>The last observed work action, excluding terminal lifecycle markers.</summary>
     public string? LastObservedActivity { get; init; }
+
+    /// <summary>The configured model and effort; not per-turn execution telemetry.</summary>
+    public AgentModelConfiguration? Configuration { get; init; }
+
+    /// <summary>The opaque statistics key for the main task, when available.</summary>
+    public string? StatisticsTaskId { get; init; }
 }
 
 /// <summary>Contains main-goal availability without exposing the exact-task binding or raw diagnostics.</summary>

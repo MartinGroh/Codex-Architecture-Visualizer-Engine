@@ -22,6 +22,11 @@ builder.Services.AddSingleton(GitBaselineRequest.Upstream);
 builder.Services.AddSingleton<IGitDeltaProvider, NativeGitDeltaProvider>();
 builder.Services.AddSingleton<GitDeltaService>();
 builder.Services.AddSingleton<IAgentActivityStore, FileAgentActivityStore>();
+builder.Services.AddSingleton<IAgentTelemetrySource>(services => new CodexAppServerTelemetrySource(
+    services.GetRequiredService<TimeProvider>(), builder.Configuration["Cave:CodexCommand"]));
+builder.Services.AddSingleton<IAgentTelemetryStore>(services => new FileAgentTelemetryStore(
+    FileAgentTelemetryStore.DefaultRoot, services.GetRequiredService<TimeProvider>()));
+builder.Services.AddSingleton<AgentTelemetryService>();
 builder.Services.AddSingleton<IConversationStore, FileConversationStore>();
 builder.Services.AddSingleton<ICodexGoalProvider>(services => new CodexAppServerGoalProvider(
     services.GetRequiredService<TimeProvider>(),
@@ -49,6 +54,7 @@ builder.Services
     .WithStdioServerTransport()
     .WithTools<CaveTools>()
     .WithTools<SemanticWorkspaceTools>()
+    .WithTools<StatisticsTools>()
     .WithResources<CaveResources>()
     .WithMcpApps();
 

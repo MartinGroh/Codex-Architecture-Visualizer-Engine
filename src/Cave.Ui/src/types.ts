@@ -120,7 +120,15 @@ export type AgentActivityPhase = 'Thinking' | 'Reading' | 'Editing' | 'Validatin
 export type AgentActivityEvidenceKind = 'Observed' | 'Declared'
 export type AgentActivitySourceStatus = 'Unobserved' | 'Ready' | 'Degraded'
 
+/** Current or latest persisted configuration; never inferred per-turn execution metadata. */
+export interface AgentModelConfiguration {
+  model: string | null
+  reasoningEffort: string | null
+}
+
 export interface AgentActivity {
+  configuration?: AgentModelConfiguration | null
+  statisticsTaskId?: string | null
   agentId: string
   publicId?: string | null
   parentAgentId?: string | null
@@ -262,6 +270,7 @@ export interface CaveToolResult {
 }
 
 export interface WorkspaceOverview {
+  currentAgentConfiguration?: AgentModelConfiguration | null
   workspaceId: string
   name: string
   rootPath: string
@@ -298,6 +307,8 @@ export interface AgentFlowLightSnapshot {
 }
 
 export interface AgentFlowLightAgent {
+  configuration?: AgentModelConfiguration | null
+  statisticsTaskId?: string | null
   agentId: string
   parentAgentId?: string | null
   lastObservedActivity?: string | null

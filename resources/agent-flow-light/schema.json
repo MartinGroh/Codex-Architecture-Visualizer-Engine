@@ -111,6 +111,19 @@
           "maxLength": 160,
           "description": "Last work action, excluding lifecycle-only completion markers."
         },
+        "configuration": {
+          "type": ["object", "null"],
+          "description": "Source-reported current or latest persisted configuration, not per-turn execution telemetry. Missing fields remain unknown.",
+          "properties": {
+            "model": { "type": ["string", "null"], "maxLength": 128 },
+            "reasoningEffort": { "type": ["string", "null"], "maxLength": 32 }
+          }
+        },
+        "statisticsTaskId": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "Opaque key for the main-task statistics tree, independent of activity row identity."
+        },
         "displayName": {
           "type": "string",
           "maxLength": 32

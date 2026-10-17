@@ -1243,7 +1243,7 @@ function ArchitectureApp({
 
             <div className="architecture-work-surface">
             {snapshot !== null && graphMode !== 'Changes' && (
-              <AgentWorkContext conversation={snapshot.conversation} agents={activeAgents} />
+              <AgentWorkContext conversation={snapshot.conversation} agents={activeAgents} workspaceId={browserWorkspaceId} statisticsReader={hostBridge?.readStatistics} />
             )}
             <div className={`canvas-layout ${showDetailPanel ? 'canvas-layout--detail-open' : ''}`}>
           <section
@@ -1558,6 +1558,7 @@ function DetailPanel({
                       <li key={agent.agentId}>
                         <AgentAvatar
                           phase={agent.phase}
+                          configuration={agent.configuration ?? null}
                           active={agent.state === 'Active'}
                           isSubagent={agent.isSubagent}
                           size={30}

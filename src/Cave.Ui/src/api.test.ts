@@ -14,6 +14,11 @@ import type {
   SemanticWorkspaceOperationResult,
 } from './semanticWorkspaceTypes'
 
+const mcp = vi.hoisted(() => ({ create: vi.fn() }))
+vi.mock('@modelcontextprotocol/ext-apps', () => ({
+  App: vi.fn(function () { return mcp.create() }),
+}))
+
 const snapshot = (version: number): LiveArchitectureSnapshot => ({
   version,
   snapshot: {
@@ -140,6 +145,183 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   FakeEventSource.instances = []
+  mcp.create.mockReset()
+})
+
+class FakeMcpApp {
+  readonly listeners = new Map<string, Set<(params: never) => void>>()
+  readonly connect = vi.fn(async () => {})
+  readonly close = vi.fn(async () => {})
+  readonly getHostContext = vi.fn(() => ({ theme: 'dark', availableDisplayModes: ['fullscreen'] }))
+  readonly getHostCapabilities = vi.fn(() => ({}))
+  readonly requestDisplayMode = vi.fn(async () => ({}))
+  readonly callServerTool = vi.fn<(params: { name: string }, options?: { signal?: AbortSignal }) => Promise<unknown>>(
+    () => new Promise(() => {}),
+  )
+
+  addEventListener(name: string, listener: (params: never) => void) {
+    if (!this.listeners.has(name)) this.listeners.set(name, new Set())
+    this.listeners.get(name)!.add(listener)
+  }
+
+  removeEventListener(name: string, listener: (params: never) => void) {
+    this.listeners.get(name)?.delete(listener)
+  }
+
+  emit(name: string, params: unknown) {
+    for (const listener of this.listeners.get(name) ?? []) listener(params as never)
+  }
+}
+
+describe('embedded CAVE startup', () => {
+  const initial: CaveToolResult = {
+    subscriptionId: 'initial-subscription', workspaceRoot: 'C:\\Code\\Example', update: snapshot(1),
+  }
+  const start = (app: FakeMcpApp, signal?: AbortSignal) => {
+    vi.useFakeTimers()
+    vi.stubGlobal('parent', {})
+    mcp.create.mockReturnValue(app)
+    const updates = vi.fn()
+    const states = vi.fn()
+    const connected = connectArchitectureFeed(updates, vi.fn(), states, undefined, vi.fn(), signal)
+    return { connected, updates, states }
+  }
+
+  it('accepts a result delivered during the handshake and does not wait for display placement', async () => {
+    const app = new FakeMcpApp()
+    app.connect.mockImplementation(async () => { app.emit('toolresult', { structuredContent: initial }) })
+    app.requestDisplayMode.mockImplementation(() => new Promise(() => {}))
+    const { connected, updates } = start(app)
+    const stop = await connected
+    expect(updates).toHaveBeenCalledExactlyOnceWith(initial.update)
+    expect(app.callServerTool).toHaveBeenCalledExactlyOnceWith({
+      name: 'cave_poll_architecture', arguments: { subscriptionId: initial.subscriptionId, afterVersion: 1 },
+    })
+    expect(vi.getTimerCount()).toBe(0)
+    stop()
+    stop()
+    expect(app.close).toHaveBeenCalledOnce()
+  })
+
+  it('reattaches once to the complete tool-input workspace when the one-shot result is lost', async () => {
+    const app = new FakeMcpApp()
+    app.callServerTool.mockResolvedValueOnce({ structuredContent: initial })
+    const { connected, updates, states } = start(app)
+    app.emit('toolinput', { arguments: { workspacePath: initial.workspaceRoot } })
+    await vi.advanceTimersByTimeAsync(2_000)
+    const stop = await connected
+    expect(app.callServerTool).toHaveBeenNthCalledWith(1, {
+      name: 'cave_show_architecture', arguments: { workspacePath: initial.workspaceRoot },
+    }, { signal: expect.any(AbortSignal) })
+    expect(updates).toHaveBeenCalledExactlyOnceWith(initial.update)
+    expect(states.mock.calls.map(([state]) => state.status)).toEqual(['Connecting', 'Reconnecting', 'Connected'])
+    expect(vi.getTimerCount()).toBe(0)
+    stop()
+  })
+
+  it('also recovers if complete tool input arrives after the recovery grace period', async () => {
+    const app = new FakeMcpApp()
+    app.callServerTool.mockResolvedValueOnce({ structuredContent: initial })
+    const { connected } = start(app)
+    await vi.advanceTimersByTimeAsync(3_000)
+    expect(app.callServerTool).not.toHaveBeenCalled()
+    app.emit('toolinputpartial', { arguments: { workspacePath: 'C:\\Partial' } })
+    expect(app.callServerTool).not.toHaveBeenCalled()
+    app.emit('toolinput', { arguments: { workspacePath: initial.workspaceRoot } })
+    const stop = await connected
+    expect(app.callServerTool.mock.calls[0][0]).toEqual({
+      name: 'cave_show_architecture', arguments: { workspacePath: initial.workspaceRoot },
+    })
+    stop()
+  })
+
+  it('fails with no guessed workspace and releases listeners when neither payload arrives', async () => {
+    const app = new FakeMcpApp()
+    const { connected, states, updates } = start(app)
+    const failure = expect(connected).rejects.toThrow('initial graph or workspace')
+    app.emit('toolinput', { arguments: { workspacePath: '../another-project' } })
+    await vi.advanceTimersByTimeAsync(30_000)
+    await failure
+    expect(app.callServerTool).not.toHaveBeenCalled()
+    expect(updates).not.toHaveBeenCalled()
+    expect(states).toHaveBeenLastCalledWith({ status: 'Failed', attempt: 0, retryInMs: null })
+    expect([...app.listeners.values()].every((listeners) => listeners.size === 0)).toBe(true)
+    expect(app.close).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('bounds an unanswered handshake and ignores its late completion', async () => {
+    const app = new FakeMcpApp()
+    let complete!: () => void
+    app.connect.mockImplementation(() => new Promise<void>((resolve) => { complete = resolve }))
+    const { connected, updates } = start(app)
+    const failure = expect(connected).rejects.toThrow('initial graph or workspace')
+    await vi.advanceTimersByTimeAsync(30_000)
+    await failure
+    complete()
+    await flushPromises()
+    expect(updates).not.toHaveBeenCalled()
+    expect(app.requestDisplayMode).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it.each([
+    [{ isError: true, structuredContent: initial }, 'could not create'],
+    [{ structuredContent: { ...initial, update: null } }, 'invalid CAVE graph'],
+    [{ structuredContent: { ...initial, update: { version: 1, snapshot: { metadata: {}, graph: { nodes: [], relations: [] } } } } }, 'invalid CAVE graph'],
+    [{ structuredContent: { ...initial, update: { ...snapshot(1), changedPaths: null } } }, 'invalid CAVE graph'],
+    [{ structuredContent: { ...initial, update: { ...snapshot(1), snapshot: { ...snapshot(1).snapshot, activity: {} } } } }, 'invalid CAVE graph'],
+  ])('reports a failed or malformed initial result immediately', async (payload, message) => {
+    const app = new FakeMcpApp()
+    const { connected, updates } = start(app)
+    const failure = expect(connected).rejects.toThrow(message as string)
+    app.emit('toolresult', payload)
+    await failure
+    expect(updates).not.toHaveBeenCalled()
+    expect(app.close).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('bounds a stalled recovery, aborts its request, and does not retry endlessly', async () => {
+    const app = new FakeMcpApp()
+    const { connected } = start(app)
+    const failure = expect(connected).rejects.toThrow('within 30 seconds')
+    app.emit('toolinput', { arguments: { workspacePath: initial.workspaceRoot } })
+    await vi.advanceTimersByTimeAsync(30_000)
+    await failure
+    expect(app.callServerTool).toHaveBeenCalledOnce()
+    expect(app.callServerTool.mock.calls[0][1]?.signal?.aborted).toBe(true)
+    expect(app.close).toHaveBeenCalledOnce()
+  })
+
+  it('accepts the original result if it arrives during recovery, without publishing a late replacement', async () => {
+    const app = new FakeMcpApp()
+    let completeRecovery!: (result: unknown) => void
+    app.callServerTool.mockImplementationOnce(() => new Promise((resolve) => { completeRecovery = resolve }))
+    const { connected, updates } = start(app)
+    app.emit('toolinput', { arguments: { workspacePath: initial.workspaceRoot } })
+    await vi.advanceTimersByTimeAsync(2_000)
+    app.emit('toolresult', { structuredContent: initial })
+    const stop = await connected
+    completeRecovery({ structuredContent: { ...initial, update: snapshot(9) } })
+    await flushPromises()
+    expect(updates).toHaveBeenCalledExactlyOnceWith(initial.update)
+    expect(app.callServerTool.mock.calls[0][1]?.signal?.aborted).toBe(true)
+    stop()
+  })
+
+  it('cancels startup on unmount and leaves no delayed recovery or listeners', async () => {
+    const app = new FakeMcpApp()
+    const controller = new AbortController()
+    const { connected } = start(app, controller.signal)
+    const failure = expect(connected).rejects.toMatchObject({ name: 'AbortError' })
+    controller.abort()
+    await failure
+    expect(app.callServerTool).not.toHaveBeenCalled()
+    expect(app.close).toHaveBeenCalledOnce()
+    expect([...app.listeners.values()].every((listeners) => listeners.size === 0)).toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
+  })
 })
 
 describe('Agent Flow Light transport', () => {

@@ -1,26 +1,40 @@
 [CmdletBinding()]
-param()
+param([switch] $PreflightOnly, [switch] $ReplaceMarketplaceSource)
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $pluginPath = Join-Path $repoRoot 'plugins\cave'
 $marketplacePath = Join-Path $repoRoot '.agents\plugins\marketplace.json'
-$pluginCreatorRoot = Join-Path $env:USERPROFILE '.codex\skills\.system\plugin-creator'
-$cachebusterScript = Join-Path $pluginCreatorRoot 'scripts\update_plugin_cachebuster.py'
-$marketplaceNameScript = Join-Path $pluginCreatorRoot 'scripts\read_marketplace_name.py'
 $validationScript = Join-Path $PSScriptRoot 'validate-plugin.ps1'
+$toolingModule = Join-Path $PSScriptRoot 'plugin-tooling.psm1'
 
-foreach ($requiredPath in @($pluginPath, $marketplacePath, $cachebusterScript, $marketplaceNameScript, $validationScript)) {
+foreach ($requiredPath in @($pluginPath, $marketplacePath, $validationScript, $toolingModule)) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required plugin-development path is missing: $requiredPath"
     }
 }
 
+Import-Module $toolingModule -Force
+Test-CavePluginPackage -PluginPath $pluginPath -RepositoryRoot $repoRoot | Out-Null
+$marketplaceName = Get-CaveRepositoryMarketplace -RepositoryRoot $repoRoot -PluginPath $pluginPath
+$codexExecutable = Resolve-CaveCodexExecutable
+$codexHomePath = if ($null -ne $env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+if ([string]::IsNullOrWhiteSpace($codexHomePath) -or -not [IO.Path]::IsPathFullyQualified($codexHomePath)) {
+    throw 'CODEX_HOME must be an absolute directory when configured.'
+}
+$marketplacePlan = Get-CaveMarketplaceRegistrationPlan -Executable $codexExecutable -RepositoryRoot $repoRoot `
+    -PluginPath $pluginPath -ReplaceMarketplaceSource:$ReplaceMarketplaceSource
+if ($PreflightOnly) {
+    Write-Host "CAVE installer preflight passed: cave@$marketplaceName; Codex backend: $codexExecutable"
+    Write-Host "Marketplace action: $($marketplacePlan.Action); previous: '$($marketplacePlan.PreviousRoot)'; target: '$($marketplacePlan.TargetRoot)'."
+    return
+}
+
 $pluginServerPath = Join-Path $pluginPath 'server'
 $viewerPort = 5098
 $viewerBaseUri = "http://127.0.0.1:$viewerPort"
-$pluginCacheRoot = Join-Path $env:USERPROFILE '.codex\plugins\cache\personal\cave'
+$pluginCacheRoot = Join-Path $codexHomePath "plugins\cache\$marketplaceName\cave"
 $machineCaveRoot = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'CAVE'
 $machineViewerRoot = Join-Path $machineCaveRoot 'viewer'
 $machineViewerExecutable = Join-Path $machineViewerRoot 'Cave.Host.exe'
@@ -286,55 +300,26 @@ finally {
     Pop-Location
 }
 
-$manifestPath = Join-Path $pluginPath '.codex-plugin\plugin.json'
-$currentPluginVersion = (Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json).version
-$nextCachebusterValue = [Int64]::Parse(
-    [DateTimeOffset]::UtcNow.ToString('yyyyMMddHHmmss', [Globalization.CultureInfo]::InvariantCulture),
-    [Globalization.CultureInfo]::InvariantCulture)
-$currentCachebusterMatch = [regex]::Match([string] $currentPluginVersion, '\+codex\.(\d{14})$')
-if ($currentCachebusterMatch.Success) {
-    $existingCachebusterValue = [Int64]::Parse(
-        $currentCachebusterMatch.Groups[1].Value,
-        [Globalization.CultureInfo]::InvariantCulture)
-    if ($existingCachebusterValue -ge $nextCachebusterValue) {
-        $nextCachebusterValue = $existingCachebusterValue + 1
-    }
-}
-$nextCachebuster = $nextCachebusterValue.ToString('00000000000000', [Globalization.CultureInfo]::InvariantCulture)
-
-Invoke-CheckedNative {
-    # CONSTRAINT: cache paths are version-addressed. Keep the suffix increasing even when an
-    # existing manifest came from a clock or timezone ahead of the current UTC timestamp.
-    python $cachebusterScript $pluginPath --cachebuster $nextCachebuster
-} 'Plugin cache-buster update'
-
-Invoke-CheckedNative {
-    pwsh -NoProfile -File $validationScript -PluginPath $pluginPath
-} 'Plugin validation'
-
-$marketplaceName = (& python $marketplaceNameScript --marketplace-path $marketplacePath).Trim()
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($marketplaceName)) {
-    throw 'Unable to read the repository marketplace name.'
-}
-
-$marketplaceState = codex plugin marketplace list --json | ConvertFrom-Json
-$registeredMarketplace = $marketplaceState.marketplaces | Where-Object {
-    $_.name -eq $marketplaceName -and (Resolve-Path -LiteralPath $_.root).Path -eq $repoRoot
-}
-
-if ($null -eq $registeredMarketplace) {
-    Invoke-CheckedNative {
-        codex plugin marketplace add $repoRoot --json
-    } 'Repository marketplace registration'
-}
-
 $hookRunnerBackups = @(Backup-CaveHookRunners)
 $pluginInstalled = $false
+$marketplaceRegistered = $false
 try {
+    $currentPluginVersion = Set-CavePluginCachebuster -PluginPath $pluginPath
     Invoke-CheckedNative {
-        codex plugin add "cave@$marketplaceName" --json
-    } 'CAVE plugin installation'
+        pwsh -NoProfile -File $validationScript -PluginPath $pluginPath -RequireBinaries
+    } 'Plugin validation'
+    Set-CaveMarketplaceRegistration -Executable $codexExecutable -Plan $marketplacePlan
+    $marketplaceRegistered = $true
+    Invoke-CaveCodexJson -Executable $codexExecutable -Arguments @('plugin', 'add', "cave@$marketplaceName", '--json') | Out-Null
     $pluginInstalled = $true
+}
+catch {
+    if ($marketplaceRegistered -and $marketplacePlan.Action -eq 'Replace') {
+        $originalFailure = $_.Exception
+        $recovery = Restore-CaveMarketplaceSource -Executable $codexExecutable -Plan $marketplacePlan
+        throw [InvalidOperationException]::new("CAVE plugin installation failed: $($originalFailure.Message) $recovery", $originalFailure)
+    }
+    throw
 }
 finally {
     # CONSTRAINT: Codex resolves PLUGIN_ROOT when a task starts. Reinstalling the plugin removes the
@@ -358,10 +343,10 @@ if ($hookRunnerBackups.Count -gt 0) {
     Write-Host "Preserved and refreshed $($hookRunnerBackups.Count) version-addressed CAVE hook runner(s) for active Codex tasks."
 }
 
-$installedPlugin = (codex plugin list --json | ConvertFrom-Json).installed | Where-Object {
+$installedPlugin = (Invoke-CaveCodexJson -Executable $codexExecutable -Arguments @('plugin', 'list', '--json') -RequiredArrayProperty 'installed').installed | Where-Object {
     $_.pluginId -eq "cave@$marketplaceName" -and $_.installed -and $_.enabled
 } | Select-Object -First 1
-if ($null -eq $installedPlugin -or [string]::IsNullOrWhiteSpace($installedPlugin.version)) {
+if ($null -eq $installedPlugin -or $installedPlugin.version -cne $currentPluginVersion) {
     throw 'Codex did not report the newly installed CAVE plugin version.'
 }
 
@@ -369,6 +354,12 @@ $installedServerRoot = Join-Path $pluginCacheRoot "$($installedPlugin.version)\s
 $installedViewer = Join-Path $installedServerRoot 'Cave.Host.exe'
 if (-not (Test-Path -LiteralPath $installedViewer -PathType Leaf)) {
     throw "The installed CAVE viewer is missing: $installedViewer"
+}
+
+foreach ($binaryName in @('Cave.Mcp.exe', 'Cave.Host.exe')) {
+    $publishedHash = (Get-FileHash -LiteralPath (Join-Path $pluginServerPath $binaryName) -Algorithm SHA256).Hash
+    $cachedHash = (Get-FileHash -LiteralPath (Join-Path $installedServerRoot $binaryName) -Algorithm SHA256).Hash
+    if ($publishedHash -cne $cachedHash) { throw "Installed plugin $binaryName does not match the published payload." }
 }
 
 Stop-CurrentCaveViewer

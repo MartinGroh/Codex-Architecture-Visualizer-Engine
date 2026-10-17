@@ -74,8 +74,21 @@ public sealed partial class NativeGitDeltaProvider : IGitDeltaProvider
                 continue;
             }
 
-            var isBinary = IsBinaryFile(absolutePath);
-            var additions = isBinary ? 0 : CountLines(absolutePath, cancellationToken);
+            bool isBinary;
+            int additions;
+            try
+            {
+                isBinary = IsBinaryFile(absolutePath);
+                additions = isBinary ? 0 : CountLines(absolutePath, cancellationToken);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // CONSTRAINT: a running tool may exclusively own an untracked log. Its unreadable
+                // Git evidence must not prevent the independent architecture and activity snapshot.
+                throw new GitDeltaUnavailableException(
+                    $"Git cannot read untracked file '{normalizedPath}': {exception.Message}",
+                    exception);
+            }
             files.Add(new GitFileDelta(
                 normalizedPath,
                 null,

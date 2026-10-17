@@ -88,6 +88,59 @@ public sealed class NativeGitDeltaProviderTests
         }
     }
 
+    /// <summary>
+    /// Verifies that an exclusively owned untracked log makes only Git unavailable and recovers after release.
+    /// </summary>
+    [Fact]
+    public async Task ReadAsyncReportsLockedUntrackedFileAndRecoversAfterRelease()
+    {
+        var repository = Path.Combine(Path.GetTempPath(), "cave-git-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(repository);
+
+        try
+        {
+            RunGit(repository, "init");
+            RunGit(repository, "config", "user.email", "cave-tests@example.invalid");
+            RunGit(repository, "config", "user.name", "CAVE Tests");
+            await File.WriteAllTextAsync(Path.Combine(repository, "Tracked.cs"), "baseline\n");
+            RunGit(repository, "add", "Tracked.cs");
+            RunGit(repository, "commit", "-m", "baseline");
+
+            var logPath = Path.Combine(repository, "preview-update.log");
+            await File.WriteAllTextAsync(logPath, "running\n");
+            var provider = new NativeGitDeltaProvider();
+            var baseline = new GitBaselineRequest(GitBaselineKind.Head, null);
+
+            using (var lockedLog = new FileStream(logPath, FileMode.Open, FileAccess.Write, FileShare.None))
+            {
+                var exception = await Assert.ThrowsAsync<GitDeltaUnavailableException>(() =>
+                    provider.ReadAsync(repository, baseline, CancellationToken.None));
+                Assert.Contains("preview-update.log", exception.Message, StringComparison.Ordinal);
+                Assert.IsType<IOException>(exception.InnerException);
+
+                var overlay = await new GitDeltaService(provider, baseline).GetAsync(
+                    repository, ArchitectureGraph.Create([], []), CancellationToken.None);
+                Assert.Equal(GitDeltaStatus.Unavailable, overlay.Status);
+                Assert.Contains("preview-update.log", overlay.Error, StringComparison.Ordinal);
+                Assert.Empty(overlay.Files);
+            }
+
+            var recovered = await provider.ReadAsync(repository, baseline, CancellationToken.None);
+            var log = Assert.Single(recovered.Files, file => file.FilePath == "preview-update.log");
+            Assert.Equal(GitFileChangeKind.Untracked, log.Kind);
+            Assert.Equal(1, log.Additions);
+        }
+        finally
+        {
+            foreach (var path in Directory.EnumerateFileSystemEntries(repository, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+            }
+
+            Directory.Delete(repository, recursive: true);
+        }
+    }
+
     private static void RunGit(string workingDirectory, params string[] arguments)
     {
         var startInfo = new ProcessStartInfo

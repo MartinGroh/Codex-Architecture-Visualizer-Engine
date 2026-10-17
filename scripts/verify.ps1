@@ -136,7 +136,7 @@ try {
             throw 'CAVE health endpoint did not report Healthy.'
         }
 
-        $runtime = Invoke-RestMethod -Uri "$healthBaseUri/api/runtime" -TimeoutSec 5
+        $runtime = Invoke-RestMethod -Uri "$healthBaseUri/api/runtime?viewerProtocolVersion=3" -TimeoutSec 5
         if ($runtime.viewerProtocolVersion -ne 3) {
             throw 'The CAVE host did not expose the expected viewer compatibility contract.'
         }

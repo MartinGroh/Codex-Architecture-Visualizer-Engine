@@ -47,13 +47,42 @@ public sealed class HostSnapshotTests(WebApplicationFactory<Program> factory)
     {
         using var client = CreateSampleFactory().CreateClient();
 
-        using var response = await client.GetAsync("/api/runtime", CancellationToken.None);
+        using var response = await client.GetAsync("/api/runtime?viewerProtocolVersion=3", CancellationToken.None);
         response.EnsureSuccessStatusCode();
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(CancellationToken.None));
 
         Assert.Equal(
             Cave.Application.CaveRuntimeContract.ViewerProtocolVersion,
             payload.RootElement.GetProperty("viewerProtocolVersion").GetInt32());
+    }
+
+    /// <summary>
+    /// Verifies old task-owned supervisors reuse the retained protocol-2 surface after an update.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/runtime")]
+    [InlineData("/api/runtime?viewerProtocolVersion=2")]
+    public async Task RuntimeEndpointPreservesLegacySupervisors(string requestPath)
+    {
+        using var client = CreateSampleFactory().CreateClient();
+        using var response = await client.GetAsync(requestPath, CancellationToken.None);
+        response.EnsureSuccessStatusCode();
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(CancellationToken.None));
+        Assert.Equal(2, payload.RootElement.GetProperty("viewerProtocolVersion").GetInt32());
+        Assert.Equal(3, payload.RootElement.GetProperty("latestViewerProtocolVersion").GetInt32());
+    }
+
+    /// <summary>
+    /// Verifies unsupported protocols fail explicitly without claiming compatibility.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public async Task RuntimeEndpointRejectsUnsupportedProtocol(int requestedProtocol)
+    {
+        using var client = CreateSampleFactory().CreateClient();
+        using var response = await client.GetAsync($"/api/runtime?viewerProtocolVersion={requestedProtocol}", CancellationToken.None);
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     /// <summary>

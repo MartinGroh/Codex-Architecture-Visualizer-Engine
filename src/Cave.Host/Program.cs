@@ -131,7 +131,13 @@ app.UseStaticFiles();
 app.MapHealthChecks("/health");
 app.MapGet(
     "/api/runtime",
-    () => TypedResults.Ok(new CaveRuntimeInfo(CaveRuntimeContract.ViewerProtocolVersion)));
+    (int? viewerProtocolVersion) =>
+    {
+        var selected = viewerProtocolVersion ?? CaveRuntimeContract.LegacyViewerProtocolVersion;
+        return selected is CaveRuntimeContract.LegacyViewerProtocolVersion or CaveRuntimeContract.ViewerProtocolVersion
+            ? Results.Ok(new CaveRuntimeInfo(selected, CaveRuntimeContract.ViewerProtocolVersion))
+            : Results.Problem("The requested CAVE viewer protocol is not supported.", statusCode: 400);
+    });
 app.MapGet(
     "/api/info",
     async (CaveInfoService info, CancellationToken cancellationToken) =>

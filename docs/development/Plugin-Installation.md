@@ -28,6 +28,8 @@ CAVE retains its existing `.codex-plugin/plugin.json`, `.mcp.json`, `skills/` an
 
 The `+codex.<14 digits>` installation suffix advances from UTC time or the previous suffix plus one, whichever is newer. Repeated installs and clock skew cannot reuse an older source version. Invalid versions and suffix overflow fail without changing the manifest. The installer preserves active tasks' version-addressed hook runners and uses its existing verified-process restart, stable-viewer hash check, viewer protocol 3 and `/health` requirements. It never substitutes manual deployed-cache edits for Codex installation commands.
 
+Current launchers and delivery checks request `/api/runtime?viewerProtocolVersion=3` and require an exact version match. The unqualified runtime probe retains protocol 2 for older task-owned supervisors, with `latestViewerProtocolVersion` identifying the current implementation. This preserves the still-supported older HTTP surface without accepting an older viewer for new statistics clients.
+
 ## Focused verification
 
 ```powershell

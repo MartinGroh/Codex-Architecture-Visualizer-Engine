@@ -16,7 +16,8 @@ public sealed class MachineViewerHostLauncher(
     HttpClient httpClient,
     ILogger<MachineViewerHostLauncher> logger)
 {
-    private static readonly Uri RuntimeInfoUri = new("http://127.0.0.1:5098/api/runtime");
+    private static readonly Uri RuntimeInfoUri = new(
+        $"http://127.0.0.1:5098/api/runtime?viewerProtocolVersion={CaveRuntimeContract.ViewerProtocolVersion}");
 
     /// <summary>
     /// Reuses a compatible running viewer or starts the stable per-user viewer installation.

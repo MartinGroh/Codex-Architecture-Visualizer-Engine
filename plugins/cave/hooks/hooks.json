@@ -8,7 +8,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Session started"
           }
         ]
       }
@@ -20,7 +21,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 3
+            "timeout": 3,
+            "statusMessage": "CAVE: Session ended"
           }
         ]
       }
@@ -32,7 +34,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: New instruction"
           }
         ]
       }
@@ -44,7 +47,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Subagent started"
           }
         ]
       }
@@ -56,7 +60,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Subagent finished"
           }
         ]
       }
@@ -69,7 +74,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Tool starting"
           }
         ]
       }
@@ -82,7 +88,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Tool finished"
           }
         ]
       }
@@ -94,7 +101,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 3
+            "timeout": 3,
+            "statusMessage": "CAVE: Turn interrupted"
           }
         ]
       }
@@ -106,7 +114,8 @@
             "type": "command",
             "command": "python3 -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
             "commandWindows": "python -c \"import os,runpy;from pathlib import Path;root=os.environ.get('PLUGIN_ROOT');direct=Path(root,'scripts','cave_activity_hook.py') if root else None;candidates=[direct] if direct and direct.is_file() else list(Path.home().glob('.codex/plugins/cache/*/cave/*/scripts/cave_activity_hook.py'));script=max(candidates,key=lambda path:path.parents[1].name);runpy.run_path(str(script),run_name='__main__')\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "CAVE: Turn finished"
           }
         ]
       }

@@ -20,8 +20,13 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private const int MaxProjectedEvents = 2048;
     private const int MaxRecentHistoryEvents = 512;
+    private const int MaxCachedWorkspaces = 64;
     private static readonly TimeSpan ActiveWindow = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan RecentEditWindow = TimeSpan.FromMinutes(5);
+    private readonly object _cacheGate = new();
+    private readonly Dictionary<string, JournalCache> _journalCaches = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private long _cacheSequence;
 
     /// <inheritdoc />
     public async Task<AgentActivityOverlay> ReadAsync(
@@ -289,7 +294,7 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
     public static string GetActivityDirectory(string workspaceRoot) =>
         Path.Combine(Path.GetFullPath(workspaceRoot), ".cave", "activity", "inbox");
 
-    private static async Task<ActivityRead> ReadEventsAsync(
+    private async Task<ActivityRead> ReadEventsAsync(
         string workspaceRoot,
         CancellationToken cancellationToken)
     {
@@ -300,53 +305,135 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
             return new ActivityRead([], []);
         }
 
-        var events = new List<ActivityEvent>();
-        var errors = new List<string>();
-        var retainedPaths = Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
-            .OrderDescending(StringComparer.Ordinal)
-            .Take(MaxProjectedEvents)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-        foreach (var path in retainedPaths)
+        var cache = GetJournalCache(directory);
+        await cache.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
+            // CONSTRAINT: the bridge resolves every registered task every second. Reopening
+            // unchanged journals made an idle viewer deserialize tens of thousands of files
+            // per pass. Cache only decoded records, never task bindings or time-based overlays.
+            // Enumerated metadata detects cross-process additions, replacement and deletion.
+            var retainedFiles = new DirectoryInfo(directory).EnumerateFiles("*.json", SearchOption.TopDirectoryOnly)
+                .OrderByDescending(file => file.Name, StringComparer.Ordinal)
+                .Take(MaxProjectedEvents)
+                .OrderBy(file => file.Name, StringComparer.Ordinal)
+                .ToArray();
+            var retainedPaths = retainedFiles.Select(file => file.FullName).ToHashSet(StringComparer.Ordinal);
+            foreach (var removed in cache.Events.Keys.Where(path => !retainedPaths.Contains(path)).ToArray())
             {
-                await using var stream = File.OpenRead(path);
-                var activityEvent = await JsonSerializer.DeserializeAsync<ActivityEvent>(
-                    stream,
-                    JsonOptions,
-                    cancellationToken).ConfigureAwait(false);
-                if (activityEvent is null || activityEvent.SchemaVersion != 1)
-                {
-                    errors.Add($"{Path.GetFileName(path)} has an unsupported activity schema.");
-                    continue;
-                }
+                cache.Events.Remove(removed);
+            }
 
-                if (Cave.Infrastructure.Conversation.EphemeralConversationSession.IsMarked(
-                        workspaceRoot,
-                        activityEvent.SessionId))
+            var events = new List<ActivityEvent>(retainedFiles.Length);
+            var errors = new List<string>();
+            var ephemeralSessions = new Dictionary<string, bool>(StringComparer.Ordinal);
+            foreach (var file in retainedFiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var path = file.FullName;
+                try
                 {
-                    continue;
-                }
+                    var stamp = EventStamp.From(file);
+                    if (!cache.Events.TryGetValue(path, out var cached) || cached.Stamp != stamp)
+                    {
+                        cache.Events.Remove(path);
+                        ActivityEvent? activityEvent;
+                        string? error = null;
+                        try
+                        {
+                            await using var stream = File.OpenRead(path);
+                            activityEvent = await JsonSerializer.DeserializeAsync<ActivityEvent>(
+                                stream, JsonOptions, cancellationToken).ConfigureAwait(false);
+                            if (activityEvent is null || activityEvent.SchemaVersion != 1)
+                            {
+                                error = $"{file.Name} has an unsupported activity schema.";
+                                activityEvent = null;
+                            }
+                        }
+                        catch (JsonException exception)
+                        {
+                            activityEvent = null;
+                            error = $"{file.Name}: {exception.Message}";
+                        }
 
-                events.Add(activityEvent);
-            }
-            catch (JsonException exception)
-            {
-                errors.Add($"{Path.GetFileName(path)}: {exception.Message}");
-            }
-            catch (IOException exception)
-            {
-                if (File.Exists(path))
+                        cached = new CachedEvent(stamp, activityEvent, error);
+                        file.Refresh();
+                        if (file.Exists && EventStamp.From(file) == stamp)
+                        {
+                            cache.Events[path] = cached;
+                        }
+                    }
+
+                    if (cached.Error is { } diagnostic)
+                    {
+                        errors.Add(diagnostic);
+                    }
+                    else if (cached.Event is { } activityEvent)
+                    {
+                        // Markers can arrive after their event. Recheck each session on every
+                        // read rather than caching a previous privacy/ephemeral decision.
+                        if (activityEvent.SessionId is { } sessionId)
+                        {
+                            if (!ephemeralSessions.TryGetValue(sessionId, out var ephemeral))
+                            {
+                                ephemeral = Cave.Infrastructure.Conversation.EphemeralConversationSession.IsMarked(
+                                    workspaceRoot, sessionId);
+                                ephemeralSessions[sessionId] = ephemeral;
+                            }
+                            if (ephemeral) continue;
+                        }
+                        events.Add(activityEvent);
+                    }
+                }
+                catch (IOException exception)
                 {
-                    errors.Add($"{Path.GetFileName(path)}: {exception.Message}");
+                    // File sharing errors are transient even if metadata does not change.
+                    // Never retain a failed open as an immutable decoded-record cache entry.
+                    cache.Events.Remove(path);
+                    if (File.Exists(path)) errors.Add($"{file.Name}: {exception.Message}");
                 }
             }
+
+            return new ActivityRead(events, errors);
         }
-
-        return new ActivityRead(events, errors);
+        finally
+        {
+            cache.Gate.Release();
+        }
     }
+
+    private JournalCache GetJournalCache(string directory)
+    {
+        lock (_cacheGate)
+        {
+            if (!_journalCaches.TryGetValue(directory, out var cache))
+            {
+                if (_journalCaches.Count == MaxCachedWorkspaces)
+                {
+                    var oldest = _journalCaches.MinBy(pair => pair.Value.LastUsed).Key;
+                    _journalCaches.Remove(oldest);
+                }
+                cache = new JournalCache();
+                _journalCaches.Add(directory, cache);
+            }
+            cache.LastUsed = ++_cacheSequence;
+            return cache;
+        }
+    }
+
+    private sealed class JournalCache
+    {
+        internal SemaphoreSlim Gate { get; } = new(1, 1);
+        internal Dictionary<string, CachedEvent> Events { get; } = new(StringComparer.Ordinal);
+        internal long LastUsed { get; set; }
+    }
+
+    private readonly record struct EventStamp(long Length, long LastWriteTicks, long CreationTicks)
+    {
+        internal static EventStamp From(FileInfo file) => new(file.Length, file.LastWriteTimeUtc.Ticks, file.CreationTimeUtc.Ticks);
+    }
+
+    private sealed record CachedEvent(EventStamp Stamp, ActivityEvent? Event, string? Error);
 
     private static AgentActivityOverlay Project(
         IReadOnlyList<ActivityEvent> events,

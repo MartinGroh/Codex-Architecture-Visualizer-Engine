@@ -66,7 +66,7 @@ function Get-CaveVersionParts {
     foreach ($identifier in (($Matches.base -split '-', 2 | Select-Object -Skip 1) -split '\.')) {
         if ($identifier -match '^0\d+$') { throw "Invalid numeric prerelease identifier in '$Version'." }
     }
-    return @{ Base = $Matches.base; Stamp = $Matches.stamp }
+    return @{ Base = $Matches.base; Stamp = $Matches['stamp'] }
 }
 
 function Assert-CaveSkill {

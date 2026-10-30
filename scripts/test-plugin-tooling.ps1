@@ -56,6 +56,11 @@ try {
     }
     Reset-Fixture
     Assert-Equal (Test-Fixture).name 'cave' 'Valid source package.'
+    $releaseManifest = Get-Content $manifestPath -Raw | ConvertFrom-Json -AsHashtable
+    $releaseManifest.version = (Get-Content -LiteralPath (Join-Path $fixtureRoot 'VERSION') -Raw).Trim()
+    Write-Json $manifestPath $releaseManifest
+    Assert-Equal (Test-Fixture).version $releaseManifest.version 'Release SemVer without an optional cachebuster is valid under strict mode.'
+    Reset-Fixture
     Assert-Equal (Get-CaveRepositoryMarketplace $fixtureRoot $pluginRoot) 'personal' 'Repository marketplace identity.'
     Assert-Rejected { Test-CavePluginPackage -PluginPath $pluginRoot -RepositoryRoot $fixtureRoot -RequireBinaries } 'Packaged binaries absent.'
     New-Item -ItemType Directory -Path (Join-Path $pluginRoot 'server') | Out-Null

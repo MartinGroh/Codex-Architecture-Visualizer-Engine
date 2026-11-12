@@ -246,7 +246,7 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
         }
 
         var occurredAt = timeProvider.GetUtcNow();
-        var mainTaskBinding = declaration.IsSubagent
+        var mainTaskBinding = declaration.IsSubagent || !declaration.BindToObservedMainTask
             ? null
             : await ResolveAsync(canonicalRoot, cancellationToken).ConfigureAwait(false);
         var bindToObservedMainTask = mainTaskBinding?.IsActive is true;
@@ -255,9 +255,8 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
             EventId: Guid.NewGuid().ToString("N"),
             Kind: "ScopeDeclared",
             OccurredAtUtc: occurredAt,
-            // CONSTRAINT: a declared scope is additional evidence about the calling Codex task,
-            // not a second agent. Bind main-agent declarations to the exact hook-observed task
-            // whenever that ownership evidence exists; retain the supplied id as the offline fallback.
+            // CONSTRAINT: Codex declarations join the exact hook-observed main task, but an
+            // external declaration must not borrow a concurrent Codex task's identity.
             SessionId: bindToObservedMainTask ? mainTaskBinding!.SessionId : null,
             TurnId: bindToObservedMainTask ? mainTaskBinding!.TurnId : null,
             AgentId: bindToObservedMainTask ? null : declaration.AgentId.Trim(),
@@ -274,7 +273,8 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
                 NormalizeDistinct(declaration.Projects),
                 NormalizeDistinct(declaration.Namespaces),
                 NormalizeDistinct(declaration.Classes),
-                NormalizeDistinct(declaration.Files)));
+                NormalizeDistinct(declaration.Files)),
+            BindToObservedMainTask: declaration.BindToObservedMainTask);
 
         var directory = GetActivityDirectory(canonicalRoot);
         Directory.CreateDirectory(directory);
@@ -659,6 +659,7 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
         foreach (var declaration in events.Where(item =>
                      item.Kind.Equals("ScopeDeclared", StringComparison.OrdinalIgnoreCase)
                      && item.IsSubagent is not true
+                     && item.BindToObservedMainTask is not false
                      && string.IsNullOrWhiteSpace(item.SessionId)
                      && !string.IsNullOrWhiteSpace(item.AgentId)
                      && now - item.OccurredAtUtc <= ActiveWindow))
@@ -839,7 +840,8 @@ public sealed class FileAgentActivityStore(TimeProvider timeProvider) : IAgentAc
         IReadOnlyList<string> Paths,
         string? Summary,
         AgentWorkState? State,
-        ActivityScope? Scope);
+        ActivityScope? Scope,
+        bool? BindToObservedMainTask = null);
 
     private sealed record ActivityRead(
         IReadOnlyList<ActivityEvent> Events,

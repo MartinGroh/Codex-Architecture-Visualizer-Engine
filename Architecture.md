@@ -18,6 +18,7 @@ The product requirements and gap analysis live in `docs/design/Codex_Architectur
 - Documentation enrichment: CodeGraph remains the symbol authority, while its docstrings are narrowed to the declaration's primary XML `<summary>` so parameter and remarks text cannot pollute node descriptions. A bounded C# source-trivia fallback reads only the contiguous `///` block immediately above a declaration when the provider omits that docstring; project descriptions come from `.csproj` or `package.json` metadata before generic type copy. The canonical graph retains the complete summary, and only the card presentation clamps it; hover and selection details expose the full text.
 - Change truth: native Git commands behind an infrastructure adapter.
 - Activity truth: privacy-minimized Codex lifecycle/tool hooks plus explicit `cave_set_scope` declarations, retained as independent evidence.
+- Dot scope is an explicit local declaration, not observed Codex activity. `Cave.Mcp.exe dot-scope` reads one bounded JSON request from standard input, registers the exact Git worktree in the machine catalog, and writes through the existing activity-store port. Its stable `dot:` identity cannot bind to a concurrent Codex main task. It supplies neither automatic Dot lifecycle/tool telemetry nor embedded MCP App access; those require host integration.
 - Live browser updates: server-sent events.
 - Codex integration: a .NET stdio MCP server and self-contained MCP App resource.
 - Embedded startup registers result and complete-input listeners before the MCP handshake. If the initial result notification is missed, the UI makes one read-only reattachment through `cave_show_architecture`, using only that complete input's absolute workspace path. One 30-second deadline covers the handshake and recovery; absent workspace identity never selects another project or the browser transport. Optional display placement cannot delay the graph. Failure and unmount remove listeners, timers and the owned bridge; server errors remain distinct from missing results.
@@ -60,6 +61,7 @@ flowchart LR
     Hooks["Observed Codex activity"] --> Events[".cave activity event stream"]
     Hooks --> Conversation["Opt-in .cave conversation stream"]
     Scope["cave_set_scope declarations"] --> Events
+    DotScope["Explicit local Dot scope command"] --> Events
     Events --> Projection
     Events --> Telemetry["AgentTelemetryService\nobserved exact-task collection"]
     NativeTelemetry["Codex metadata and optional reported usage"] --> Telemetry

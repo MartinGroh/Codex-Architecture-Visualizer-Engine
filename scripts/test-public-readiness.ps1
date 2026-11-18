@@ -51,3 +51,6 @@ finally {
     if (-not $resolvedFixture.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Fixture cleanup escaped temp root.' }
     Remove-Item -LiteralPath $resolvedFixture -Recurse -Force
 }
+
+# The final negative test intentionally exits 1; do not leak it to the CI wrapper.
+exit 0

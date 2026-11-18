@@ -1,6 +1,7 @@
 .app-shell {
   display: grid;
   grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100vh;
   color: var(--text);
   background: radial-gradient(circle at 52% -20%, color-mix(in srgb, var(--violet) 11%, transparent), transparent 42%), var(--bg);
@@ -1230,7 +1231,7 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 .agent-flow-compact__detail ol { display: grid; gap: 12px; margin: 16px 0; padding-left: 20px; }
 .agent-flow-compact__detail li span, .agent-flow-compact__detail li time { display: block; color: var(--text-soft); }
 .agent-flow-compact__detail li time { font-size: 12px; }
-.architecture-work-context { margin: 0 18px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); flex-shrink: 0; }
+.architecture-work-context { max-height: 40%; overflow-y: auto; margin: 0 18px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); flex-shrink: 0; }
 .architecture-work-context > summary { padding: 10px 14px; cursor: pointer; font-size: 14px; font-weight: 600; }
 .architecture-work-context > summary span { display: inline-block; max-width: min(65vw, 700px); vertical-align: bottom; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: 8px; font-weight: 400; color: var(--text-soft); }
 .architecture-work-context__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-height: 190px; overflow: auto; border-top: 1px solid var(--line); }

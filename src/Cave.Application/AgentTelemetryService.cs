@@ -11,6 +11,7 @@ public sealed class AgentTelemetryService(IAgentTelemetryStore store, IAgentTele
     IAgentActivityStore activityStore, TimeProvider timeProvider)
 {
     private static readonly ArchitectureGraph EmptyGraph = ArchitectureGraph.Create([], []);
+    private static readonly TimeSpan InactiveRefreshInterval = TimeSpan.FromMinutes(5);
     private int _cursor;
     private int _activeCursor;
     private string? _collectionError;
@@ -43,7 +44,16 @@ public sealed class AgentTelemetryService(IAgentTelemetryStore store, IAgentTele
         }
         var running = targets.Where(pair => pair.Value.Agent.State == AgentWorkState.Active)
             .OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();
-        var inactive = targets.Where(pair => pair.Value.Agent.State != AgentWorkState.Active).OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();
+        var retainedById = retained.Records.ToDictionary(record => record.ThreadId, StringComparer.Ordinal);
+        var now = timeProvider.GetUtcNow();
+        // Finished tasks need a terminal sample and occasional reconciliation, not a native process
+        // every 15 seconds forever. Fresh evidence and resumed tasks bypass this idle budget.
+        var inactive = targets.Where(pair => pair.Value.Agent.State != AgentWorkState.Active
+            && (!retainedById.TryGetValue(pair.Key, out var prior) || prior.WasActive
+                || pair.Value.Agent.UpdatedAtUtc > prior.ActivityAtUtc
+                || !pair.Value.WorkspaceIds.SetEquals(prior.WorkspaceIds)
+                || now < prior.LastSampleAtUtc || now - prior.LastSampleAtUtc >= InactiveRefreshInterval))
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();
         var activeCount = Math.Min(inactive.Length == 0 ? 32 : 24, running.Length);
         var active = Enumerable.Range(0, activeCount).Select(offset => running[(_activeCursor + offset) % running.Length]).ToArray();
         if (running.Length > 0) _activeCursor = (_activeCursor + activeCount) % running.Length;
@@ -79,9 +89,11 @@ public sealed class AgentTelemetryService(IAgentTelemetryStore store, IAgentTele
             Agents = named.Agents.Select(agent =>
             {
                 var id = NativeId(agent.AgentId, agent.IsSubagent);
+                // Finished agents show their last reported configuration; only active tasks need fresh settings.
                 var configuration = id is not null && records.TryGetValue(id, out var record)
                     && timeProvider.GetUtcNow() >= record.LastSampleAtUtc
-                    && timeProvider.GetUtcNow() - record.LastSampleAtUtc <= TimeSpan.FromMinutes(2)
+                    && (agent.State != AgentWorkState.Active
+                        || timeProvider.GetUtcNow() - record.LastSampleAtUtc <= TimeSpan.FromMinutes(2))
                     ? record.Configuration : null;
                 return agent with { Configuration = configuration,
                     StatisticsTaskId = id is not null && records.TryGetValue(id, out var known)

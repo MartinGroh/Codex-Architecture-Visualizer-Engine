@@ -560,6 +560,44 @@ public sealed class CodexConversationBridgeTests : IDisposable
         }
     }
 
+    /// <summary>Idle reconciliation sleeps, but browser work wakes delivery without waiting for the idle timer.</summary>
+    [Fact]
+    public async Task IdleLoopSleepsAndQueueWakesItImmediately()
+    {
+        var conversations = new FileConversationStore();
+        await conversations.SetSharingAsync(_workspaceRoot, enabled: true, CancellationToken.None);
+        var locator = new CountingIdleTaskLocator();
+        var runner = new StubTurnRunner();
+        using var bridge = CreateBridge(conversations, locator, runner);
+        using var cancellation = new CancellationTokenSource(BridgeTestDeadline);
+        var loop = bridge.RunAsync(cancellation.Token);
+        try
+        {
+            await locator.FirstRead.Task.WaitAsync(cancellation.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(1400), cancellation.Token);
+            Assert.Equal(1, locator.Reads);
+            await bridge.QueueAsync(_workspaceRoot, "exact-task", "Wake idle bridge", cancellation.Token);
+            await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(3), cancellation.Token);
+            Assert.Equal("Wake idle bridge", runner.Text);
+        }
+        finally
+        {
+            await cancellation.CancelAsync();
+            await loop.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+    }
+
+    private sealed class CountingIdleTaskLocator : ICodexTaskLocator
+    {
+        internal int Reads;
+        internal TaskCompletionSource FirstRead { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task<CodexTaskBinding?> ResolveAsync(string root, CancellationToken token)
+        {
+            Interlocked.Increment(ref Reads);
+            FirstRead.TrySetResult();
+            return Task.FromResult<CodexTaskBinding?>(new("exact-task", "turn-1", false, DateTimeOffset.UtcNow));
+        }
+    }
     private CodexConversationBridge CreateBridge(
         IConversationStore conversations,
         ICodexTaskLocator taskLocator,

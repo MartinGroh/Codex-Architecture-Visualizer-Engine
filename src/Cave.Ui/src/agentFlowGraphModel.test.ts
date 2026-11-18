@@ -1,0 +1,34 @@
+import { describe, expect, it } from 'vitest'
+import { agentFlowTopology, flowOperation, layoutAgentFlow } from './agentFlowGraphModel'
+import type { MachineActivityLane } from './machineActivityTimeline'
+const lane = (id: string, parent: string | null = null): MachineActivityLane => ({ agent: {
+  agentId: id, parentAgentId: parent, agentType: 'default', isSubagent: parent !== null,
+  state: 'Active', phase: 'Editing', summary: null, hasObservedActivity: true, hasDeclaredScope: false,
+  startedAtUtc: '2026-11-18T10:00:00Z', updatedAtUtc: '2026-11-18T10:01:00Z',
+}, active: true, durationMs: 60000, durationPercent: 100, milestones: [], completionSummary: null })
+describe('agent flow graph', () => {
+  it('uses only observed parents, not guessed delegation', () => {
+    expect(agentFlowTopology([lane('main'), lane('child', 'main'), lane('orphan', 'missing'), lane('self', 'self')])).toEqual([
+      { id: 'child', parent: 'main' }, { id: 'main', parent: 'project-hub' },
+      { id: 'orphan', parent: 'project-hub' }, { id: 'self', parent: 'project-hub' },
+    ])
+  })
+  it('gives completed work a terminal treatment', () => {
+    expect(flowOperation({ ...lane('done'), agent: { ...lane('done').agent, state: 'Completed' }, active: false })).toBe('Completed')
+    expect(flowOperation({ ...lane('stale'), active: false })).toBe('Idle')
+    expect(flowOperation(lane('working'))).toBe('Editing')
+  })
+  it('lays out the hub and agents without overlap', async () => {
+    const result = await layoutAgentFlow(agentFlowTopology([lane('main'), lane('child', 'main'), lane('other')]))
+    expect(result.nodes).toHaveLength(4)
+    expect(result.edges).toHaveLength(3)
+    for (const node of result.nodes) {
+      expect(Number.isFinite(node.position.x)).toBe(true)
+      expect(Number.isFinite(node.position.y)).toBe(true)
+    }
+    for (const a of result.nodes) for (const b of result.nodes) if(a.id !== b.id) {
+      expect(a.position.x + a.width! <= b.position.x || b.position.x + b.width! <= a.position.x
+        || a.position.y + a.height! <= b.position.y || b.position.y + b.height! <= a.position.y).toBe(true)
+    }
+  })
+})

@@ -24,10 +24,17 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+      - name: Test audit history scopes
+        shell: pwsh
+        run: ./scripts/test-public-readiness.ps1
       - name: Audit current tree
         shell: pwsh
         run: ./scripts/audit-public-readiness.ps1
       - name: Audit Git history
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.include_history }}
         shell: pwsh
-        run: ./scripts/audit-public-readiness.ps1 -IncludeHistory
+        # PRs audit the complete merge ancestry, not unrelated fetched branches.
+        # Main/manual audits retain all fetched refs. Detectors are unchanged.
+        env:
+          AUDIT_HISTORY_SCOPE: ${{ github.event_name == 'pull_request' && 'Head' || 'All' }}
+        run: ./scripts/audit-public-readiness.ps1 -IncludeHistory -HistoryScope $env:AUDIT_HISTORY_SCOPE

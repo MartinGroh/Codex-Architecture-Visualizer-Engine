@@ -1,5 +1,6 @@
 .codex-text { min-width: 0; overflow-wrap: anywhere; }
-.codex-text table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .88em; }
+.codex-text__table { max-width: 100%; overflow-x: auto; }
+.codex-text table { border-collapse: collapse; font-size: .88em; }
 .codex-text th, .codex-text td { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding: .45em .7em; text-align: left; }
 .codex-text th { background: color-mix(in srgb, currentColor 6%, transparent); }
 .codex-text pre { max-width: 100%; overflow-x: auto; }

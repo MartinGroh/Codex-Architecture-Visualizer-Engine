@@ -11,6 +11,7 @@ import {
 import { AgentAvatar } from './AgentAvatar'
 import { AgentModelLabel } from './AgentModel'
 import { AgentStatisticsPanel } from './AgentStatisticsPanel'
+import { LongText } from './LongText'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { WorkspaceOverview } from './types'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
@@ -75,9 +76,10 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
   const hasActiveAgents = workspace.activeAgentCount > 0
   const hasOnlySubagents = hasActiveAgents && workspace.activeAgentCount === workspace.activeSubagentCount
   const phaseToken = (workspace.currentPhase ?? 'Working').toLowerCase()
-  const summary = workspace.activitySummary ?? (hasActiveAgents ? 'Agent activity is live' : 'No recent agent activity')
-  const content = (
-    <>
+  const summary = workspace.activitySummary
+  const href = `/?workspace=${encodeURIComponent(workspace.workspaceId)}`
+  return (
+    <article className={`workspace-card ${!workspace.isAvailable ? 'is-unavailable' : hasActiveAgents ? `is-active phase-${phaseToken}` : ''}`}>
       <div className="workspace-card__header">
         <span className={`workspace-card__icon ${hasActiveAgents ? `is-active phase-${phaseToken}` : ''}`}>
           {hasActiveAgents
@@ -85,31 +87,25 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
             : <Boxes size={20} />}
         </span>
         <div className="workspace-card__identity">
-          <h2>{workspace.name}</h2>
+          <h2>{workspace.isAvailable ? <a className="workspace-card__link" href={href}>{workspace.name}</a> : workspace.name}</h2>
           <p title={workspace.rootPath}>{workspace.rootPath}</p>
         </div>
         {!workspace.isAvailable && <span className="workspace-availability is-unavailable">Missing</span>}
       </div>
       <div className="workspace-card__activity">
-        <div>
+        <div className="workspace-card__state">
           <strong>{hasActiveAgents ? workspace.currentPhase ?? 'Working' : 'Quiet'}</strong>
           {hasActiveAgents && <AgentModelLabel configuration={workspace.currentAgentConfiguration} />}
         </div>
-        <p title={summary}>{summary}</p>
+        <div className="workspace-card__summary">
+          {summary ? <LongText text={summary} title="activity summary" compact /> : hasActiveAgents ? 'Agent activity is live' : 'No recent agent activity'}
+        </div>
       </div>
       <footer>
         <span>{workspace.activeAgentCount} active</span>
         <span><UsersRound size={14} /> {workspace.activeSubagentCount} {workspace.activeSubagentCount === 1 ? 'subagent' : 'subagents'}</span>
-        {workspace.isAvailable && <ChevronRight size={17} className="workspace-card__open" />}
+        {workspace.isAvailable && <ChevronRight size={17} className="workspace-card__open" aria-hidden="true" />}
       </footer>
-    </>
-  )
-
-  return workspace.isAvailable ? (
-    <a className={`workspace-card ${hasActiveAgents ? `is-active phase-${phaseToken}` : ''}`} href={`/?workspace=${encodeURIComponent(workspace.workspaceId)}`}>
-      {content}
-    </a>
-  ) : (
-    <div className="workspace-card is-unavailable" aria-disabled="true">{content}</div>
+    </article>
   )
 }

@@ -1,6 +1,7 @@
 import { MessageSquareText, Sparkles, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { CodexText } from './CodexText'
+import { LongText } from './LongText'
 import type { ArchitectureNode } from './types'
 
 export interface NodeMemoState {
@@ -102,7 +103,7 @@ export function NodeMemoDialog({ memo, onClose }: {
         </header>
         <section className="node-memo-question" aria-label="Question">
           <small>Question</small>
-          <p>{memo.question}</p>
+          <LongText text={memo.question} title="question" byline={memo.nodeName}><p>{memo.question}</p></LongText>
         </section>
         <section className="node-memo-answer" aria-live="polite">
           {memo.status === 'Loading' && memo.text === null ? (
@@ -111,7 +112,7 @@ export function NodeMemoDialog({ memo, onClose }: {
               <p>Waiting for Codex to answer…</p>
             </div>
           ) : null}
-          {memo.text !== null ? <CodexText text={memo.text} /> : null}
+          {memo.text !== null ? <LongText text={memo.text} title="answer" byline={memo.nodeName} format="codex"><CodexText text={memo.text} /></LongText> : null}
           {memo.status === 'Loading' && memo.text !== null ? <small>Codex is still writing…</small> : null}
           {memo.status === 'Error' ? <p className="node-memo-error">{memo.error}</p> : null}
         </section>

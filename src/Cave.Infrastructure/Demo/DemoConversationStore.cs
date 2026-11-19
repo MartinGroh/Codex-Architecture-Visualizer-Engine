@@ -4,7 +4,7 @@ using Cave.Domain;
 namespace Cave.Infrastructure.Demo;
 
 /// <summary>
-/// Supplies a short, synthetic public conversation for the explicit browser demo mode.
+/// Supplies a synthetic public conversation for the explicit browser demo mode.
 /// </summary>
 /// <param name="timeProvider">The clock used to present a current demo conversation.</param>
 public sealed class DemoConversationStore(TimeProvider timeProvider) : IConversationStore
@@ -39,7 +39,7 @@ public sealed class DemoConversationStore(TimeProvider timeProvider) : IConversa
                     IsSubagent: false,
                     ConversationRole.User,
                     ConversationMessageKind.Prompt,
-                    "Show the impact of the projection changes and keep the architecture boundaries clear.",
+                    "Review how the UI receives the workspace snapshot and what to check when the event stream reconnects.",
                     IsTruncated: false,
                     IsStreaming: false,
                     now.AddMinutes(-7)),
@@ -52,16 +52,7 @@ public sealed class DemoConversationStore(TimeProvider timeProvider) : IConversa
                     IsSubagent: true,
                     ConversationRole.Assistant,
                     ConversationMessageKind.Final,
-                    """
-                    The API still depends inward. All values in this conversation are synthetic.
-
-                    | Evidence | Owner |
-                    | --- | --- |
-                    | Architecture | CodeGraph |
-                    | Changes | Git |
-
-                    - [x] Keep evidence separate
-
+                    DemoSnapshotHandoff.Text + "\n\n" + """
                     :::writing{variant="document" id="12345"}
                     **Review note**
 

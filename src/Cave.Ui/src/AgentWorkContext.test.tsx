@@ -24,7 +24,8 @@ describe('AgentWorkContext', () => {
       summaryEvidence: 'Declared', startedAtUtc: '2026-09-27T12:00:00Z', updatedAtUtc: '2026-09-27T12:01:00Z',
     }]} />)
     expect(screen.getAllByText('Improve the activity view').length).toBeGreaterThan(0)
-    expect(screen.getByText('Current focus / subgoal: Verify mobile disclosure')).toBeTruthy()
+    expect(screen.getByText('Current focus / subgoal')).toBeTruthy()
+    expect(screen.getByText('Verify mobile disclosure')).toBeTruthy()
     expect(screen.getByText('0 tokens used of 1,000 · 1m elapsed')).toBeTruthy()
     expect(screen.queryByText('default')).toBeNull()
     expect(screen.getByText('Ada')).toBeTruthy()

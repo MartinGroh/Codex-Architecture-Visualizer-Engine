@@ -211,10 +211,10 @@
 .agent-inspector__activity dl { margin: 0; }
 .agent-inspector__activity dt { margin: 16px 0 3px; font-size: .77rem; font-weight: 600; color: var(--text-soft); }
 .agent-inspector__activity dd { margin: 0; font-size: .9375rem; line-height: 1.5; }
-.agent-inspector__activity header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; margin: 18px 0 8px; }
-.agent-inspector__activity h4 { margin: 0; font-size: 1rem; }
-.agent-inspector__activity ol { margin: 0; padding: 0; list-style: none; }
-.agent-inspector__activity li {
+.agent-inspector__activity > header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; margin: 18px 0 8px; }
+.agent-inspector__activity > header h4 { margin: 0; font-size: 1rem; }
+.agent-inspector__activity > ol { margin: 0; padding: 0; list-style: none; }
+.agent-inspector__activity > ol > li {
   position: relative;
   grid-template-columns: 9ch 26px minmax(0, 1fr);
   align-items: start;
@@ -224,9 +224,10 @@
 }
 .agent-inspector__activity time { grid-area: 1 / 1; align-self: start; padding-block: 4px; color: var(--text-soft); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .agent-inspector__activity .agent-chat-event__marker { grid-area: 1 / 2; }
-.agent-inspector__activity li > span:last-of-type { grid-area: 1 / 3; min-width: 0; overflow-wrap: anywhere; }
-.agent-inspector__activity li strong { font-weight: 630; }
-.agent-inspector__activity li:not(:last-child)::after {
+.agent-inspector__activity .agent-chat-event__copy { grid-area: 1 / 3; min-width: 0; overflow-wrap: anywhere; }
+.agent-inspector__work dd:has(> .long-text) { --long-text-preview-lines: 2; max-height: none; overflow: visible; }
+.agent-inspector__activity > ol > li strong { font-weight: 630; }
+.agent-inspector__activity > ol > li:not(:last-child)::after {
   content: '';
   position: absolute;
   top: 29px;
@@ -235,7 +236,7 @@
   width: 1px;
   background: var(--line-strong);
 }
-.agent-inspector__activity a {
+.agent-inspector__activity > header a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -276,7 +277,7 @@
   }
   .agent-inspector__heading { padding-top: 12px; }
   .agent-inspector__actions button, .agent-inspector__sharing button { min-width: 44px; min-height: 44px; }
-  .agent-inspector__tabs button, .agent-inspector__activity a { min-height: 44px; }
+  .agent-inspector__tabs button, .agent-inspector__activity > header a { min-height: 44px; }
   .agent-inspector:modal::backdrop { background: var(--bg); }
   body:has(.agent-inspector:modal) { overflow: hidden; }
 }

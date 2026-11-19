@@ -3,6 +3,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import type { Components } from 'react-markdown'
 import type { AgentChatArtifact } from './agentChat'
 import { CodexText } from './CodexText'
+import { LongText } from './LongText'
 import { renderAgentChatDiagram } from './agentChatDiagram'
 import './AgentChatContent.css'
 
@@ -23,13 +24,19 @@ const chatComponents: Components = {
 }
 
 /** Renders shared chat text and artifacts supplied by the scoped read endpoint. */
-export function AgentChatContent({ text, artifacts, artifactUrl }: {
+export function AgentChatContent({ text, artifacts, artifactUrl, title = 'message', byline, truncated, openRequest }: {
   text: string
   artifacts: readonly AgentChatArtifact[]
   artifactUrl: (id: string) => string
+  title?: string
+  byline?: string
+  truncated?: boolean
+  openRequest?: object
 }) {
   return <div className="agent-chat-content">
-    {text && <CodexText text={text} attributed={false} components={chatComponents} />}
+    {text && <LongText text={text} title={title} byline={byline} format="markdown" truncated={truncated} openRequest={openRequest}>
+      <CodexText text={text} attributed={false} components={chatComponents} />
+    </LongText>}
     {artifacts.length > 0 && <div className="agent-chat-content__artifacts">
       {artifacts.map((artifact, index) => <SharedImagePreview key={artifact.id}
         artifact={artifact} artifactUrl={artifactUrl}

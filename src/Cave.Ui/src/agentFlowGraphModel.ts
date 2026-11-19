@@ -10,7 +10,7 @@ interface ParentLink {
   id: string
   parent: string
 }
-export type AgentFlowBubbleGeometry = Pick<AgentFlowBubble, 'id' | 'parent' | 'kind'>
+export type AgentFlowBubbleGeometry = Pick<AgentFlowBubble, 'id' | 'parent' | 'kind' | 'size'>
 export interface AgentFlowNodeData extends Record<string, unknown> {
   name: string
   lane?: MachineActivityLane
@@ -43,6 +43,7 @@ const cardSizes = {
   compact: { hub: { width: 174, height: 76 }, agent: { width: 216, height: 96 } },
 }
 const textBubble = { width: 228, height: 72 }
+const readingSizes = { expanded: { width: 268, height: 94 }, report: { width: 304, height: 142 } }
 const bubbleSizes = {
   task: textBubble, activity: textBubble, text: textBubble,
   image: { width: 220, height: 146 }, diagram: { width: 220, height: 112 },
@@ -234,7 +235,7 @@ function geometryHandle(type: 'source' | 'target', position: Position, width: nu
   return { type, position, x, y, ...(id ? { id } : {}) }
 }
 
-/** Phase, summaries, and previews belong to node data. Only topology, mode, and bubble kinds affect geometry. */
+/** Only topology, mode and bounded bubble dimensions affect layout. Updated copy within a size keeps its position. */
 export async function layoutAgentFlow(
   topology: readonly ParentLink[],
   mode: AgentFlowLayoutMode = 'flow',
@@ -245,9 +246,9 @@ export async function layoutAgentFlow(
   const nodes: NodeGeometry[] = [hub, ...topology.map((agent): NodeGeometry => ({ ...agent, type: 'agent', ...sizes.agent }))]
   const agentIds = new Set(topology.map(({ id }) => id))
   const ids = new Set([...agentIds, hub.id])
-  for (const { id, parent, kind } of [...bubbles].sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const { id, parent, kind, size } of [...bubbles].sort((a, b) => a.id.localeCompare(b.id))) {
     if (ids.has(id) || !agentIds.has(parent)) continue
-    nodes.push({ id, parent, type: 'bubble', ...bubbleSizes[kind] })
+    nodes.push({ id, parent, type: 'bubble', ...(size ? readingSizes[size] : bubbleSizes[kind]) })
     ids.add(id)
   }
   const placements = mode === 'mindmap'

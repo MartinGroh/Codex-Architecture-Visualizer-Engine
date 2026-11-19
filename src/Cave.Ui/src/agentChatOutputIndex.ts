@@ -5,6 +5,7 @@ import remarkParse from 'remark-parse'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 import { compareChatMessages, type AgentChatArtifact, type AgentChatMessage } from './agentChat'
+import { remarkCodexAttribution } from './codexTextFormat'
 
 interface AgentChatMarkdown {
   caption: string
@@ -20,13 +21,16 @@ export type AgentChatOutput = {
 } & ({ kind: 'diagram'; source: string } | { kind: 'image'; artifact: AgentChatArtifact })
 
 const markdown = unified().use(remarkParse).use(remarkGfm)
+const applyCodexAttribution = remarkCodexAttribution()
 
 /** Extracts visible text, including code-only replies, and indexes fenced diagrams. */
-export function readAgentChatMarkdown(text: string): AgentChatMarkdown {
+export function readAgentChatMarkdown(text: string, attributed = false): AgentChatMarkdown {
   const diagrams: AgentChatMarkdown['diagrams'] = []
   const blocks: string[] = []
   let caption = ''
-  visit(markdown.parse(text), (node) => {
+  const document = markdown.parse(text)
+  if (attributed) applyCodexAttribution(document, { value: text })
+  visit(document, (node) => {
     if (node.type === 'paragraph' || node.type === 'heading' || node.type === 'tableCell') {
       const plain = toString(node, { includeImageAlt: false, includeHtml: false }).replace(/\s+/g, ' ').trim()
       if (plain) {

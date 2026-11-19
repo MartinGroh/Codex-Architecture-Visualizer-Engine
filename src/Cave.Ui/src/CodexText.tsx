@@ -7,6 +7,10 @@ const variants: Record<string, string> = {
   email: 'Email', chat_message: 'Message', social_post: 'Social post', document: 'Document', standard: 'Draft',
 }
 
+const defaultComponents: Components = {
+  table: ({ node: _node, ...props }) => <div className="codex-text__table"><table {...props} /></div>,
+}
+
 /** One read-only rendering owner for public Codex chat and isolated node answers. */
 export function CodexText({ text, attributed = true, components }: { text: string; attributed?: boolean; components?: Components }) {
   const parts = attributed ? parseCodexText(text) : [{ kind: 'markdown' as const, text }]
@@ -46,5 +50,6 @@ export function CodexText({ text, attributed = true, components }: { text: strin
 }
 
 function CodexMarkdown({ text, attributed = true, components }: { text: string; attributed?: boolean; components?: Components }) {
-  return <Markdown components={components} remarkPlugins={attributed ? [remarkGfm, remarkCodexAttribution] : [remarkGfm]}>{text}</Markdown>
+  return <Markdown components={components ? { ...defaultComponents, ...components } : defaultComponents}
+    remarkPlugins={attributed ? [remarkGfm, remarkCodexAttribution] : [remarkGfm]}>{text}</Markdown>
 }

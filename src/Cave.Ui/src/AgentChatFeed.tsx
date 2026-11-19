@@ -1,8 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Activity, ArrowDown, Check, Circle, FilePenLine, LogIn, MessageSquare, Network, UserRound } from 'lucide-react'
 import { AgentChatContent } from './AgentChatContent'
+import { LongText } from './LongText'
 import { agentChatNotice, sharedAgentMessages, type AgentChatAgent, type AgentChatMessage, type AgentChatSession } from './agentChat'
-import { agentDisplayName } from './agentIdentity'
+import { agentDisplayName, agentRoleLabel } from './agentIdentity'
 import { agentHistoryMilestones, type MachineActivityLane, type MachineActivityMilestone } from './machineActivityTimeline'
 import './AgentChatFeed.css'
 
@@ -16,7 +17,7 @@ interface AgentChatFeedProps {
   agent?: AgentChatAgent
   chat: AgentChatSession
   view?: 'combined' | 'conversation'
-  reveal?: { messageId: string } | null
+  reveal?: { messageId: string; read?: boolean } | null
 }
 
 /** A single scrollable history shared by the Flow inspector and every wall pane. */
@@ -48,6 +49,8 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
   const prevFingerprint = useRef<string | null>(null)
   const [updatesBelow, setUpdatesBelow] = useState(false)
   const name = lane ? agentDisplayName(lane.agent) : agent?.displayName ?? 'Agent'
+  const role = lane && agentRoleLabel(lane.agent)
+  const author = role && role !== name ? `${name} · ${role}` : name
   const notice = agentChatNotice(chat, agent)
 
   useLayoutEffect(() => {
@@ -119,6 +122,7 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
         {items.map((item) => {
           if ('event' in item) return <AgentActivityEntry key={item.id} event={item.event} />
           const Icon = messageIcons[item.message.kind]
+          const title = item.message.role === 'User' ? 'prompt' : item.message.kind === 'Final' ? 'final reply' : 'progress update'
           return <li key={item.id} data-message-id={item.message.id} tabIndex={view === 'conversation' ? -1 : undefined}
             className={'agent-chat-message agent-chat-message--' + item.message.kind.toLowerCase()}>
             <header>
@@ -127,9 +131,11 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
               <MessageTime datetime={item.time} />
             </header>
             <div className="agent-chat-message__content">
-              <AgentChatContent text={item.message.text} artifacts={item.message.artifacts} artifactUrl={chat.artifactUrl} />
+              <AgentChatContent title={title} text={item.message.text} truncated={item.message.isTruncated}
+                byline={item.message.role === 'User' ? `Task for ${author}` : author}
+                openRequest={reveal?.read && reveal.messageId === item.message.id ? reveal : undefined}
+                artifacts={item.message.artifacts} artifactUrl={chat.artifactUrl} />
             </div>
-            {item.message.isTruncated && <small className="agent-chat-message__truncated">Message shortened</small>}
           </li>
         })}
       </ol>
@@ -140,12 +146,15 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
   </div>
 }
 
-export function AgentActivityEntry({ event, detailed = false }: { event: MachineActivityMilestone; detailed?: boolean }) {
+export function AgentActivityEntry({ event, detailed = false, openRequest }: { event: MachineActivityMilestone; detailed?: boolean; openRequest?: object }) {
   const Icon = milestoneIcons[event.kind]
   return <li className="agent-chat-event">
     {detailed ? <span className="agent-chat-event__marker"><Icon size={15} aria-hidden="true" /></span>
       : <Circle size={6} aria-hidden="true" />}
-    <span><strong>{event.label}</strong><small>{event.detail}</small></span>
+    <div className="agent-chat-event__copy">
+      <LongText text={event.label} title="activity" openRequest={openRequest}><strong>{event.label}</strong></LongText>
+      <LongText text={event.detail} title="activity detail"><small>{event.detail}</small></LongText>
+    </div>
     <MessageTime datetime={event.observedAtUtc} />
   </li>
 }

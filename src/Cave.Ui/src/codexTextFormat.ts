@@ -1,3 +1,5 @@
+import type { Data } from 'unist'
+
 /** Presentation of retained public text only; no directive may execute a host action. */
 export type CodexTextPart =
   | { kind: 'markdown'; text: string }
@@ -97,7 +99,7 @@ interface TextNode {
   type: string
   value?: string
   children?: TextNode[]
-  data?: { hName: string; hProperties: Record<string, string> }
+  data?: Data
   position?: { start: { offset?: number }; end: { offset?: number } }
 }
 

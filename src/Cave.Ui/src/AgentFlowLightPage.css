@@ -224,6 +224,7 @@
 .agent-flow-light-goal-state { font-weight: 700; }
 
 .agent-flow-light-objective {
+  --long-text-preview-lines: 3;
   max-width: 65ch;
   margin: 0;
   color: var(--text);
@@ -240,13 +241,6 @@
   font-size: .8125rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
-}
-
-.agent-flow-light-goal small {
-  display: block;
-  margin-top: 8px;
-  color: var(--text-soft);
-  font-size: .75rem;
 }
 
 .agent-flow-light-agents {
@@ -294,7 +288,7 @@
   font-weight: 650;
 }
 
-.agent-flow-light-agent__body small {
+.agent-flow-light-agent__body > small {
   display: block;
   margin-top: 8px;
   color: var(--text-soft);
@@ -302,7 +296,8 @@
   font-weight: 680;
 }
 
-.agent-flow-light-agent__body p {
+.agent-flow-light-agent__detail {
+  --long-text-preview-lines: 3;
   max-width: 70ch;
   margin: 2px 0 0;
   color: var(--text-soft);

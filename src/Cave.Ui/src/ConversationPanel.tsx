@@ -1,6 +1,7 @@
 import { MessageCircle, Send, ShieldCheck, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { CodexText } from './CodexText'
+import { LongText } from './LongText'
 import type { ConversationOverlay } from './types'
 
 export function ConversationPanel({
@@ -67,10 +68,13 @@ export function ConversationPanel({
               <time>{new Date(message.occurredAtUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
             </header>
             <div className="conversation-message__content">
-              <CodexText text={message.text} attributed={message.role === 'Assistant'} />
+              <LongText text={message.text} title={message.role === 'User' ? 'prompt' : message.kind === 'Final' ? 'final reply' : 'message'}
+                byline={message.isSubagent ? message.agentType ?? 'Subagent' : message.role}
+                format={message.role === 'Assistant' ? 'codex' : 'markdown'} truncated={message.isTruncated}>
+                <CodexText text={message.text} attributed={message.role === 'Assistant'} />
+              </LongText>
             </div>
             {message.isStreaming && <small>Codex is still writing…</small>}
-            {message.isTruncated && <small>Message was truncated by the retention boundary.</small>}
           </article>
         ))}
       </div>

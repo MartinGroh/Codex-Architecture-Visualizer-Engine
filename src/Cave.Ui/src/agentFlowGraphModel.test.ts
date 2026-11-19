@@ -83,6 +83,21 @@ describe('agent flow graph', () => {
     { id: 'artifact-diagram', parent: 'nested', kind: 'diagram' }, { id: 'work-main', parent: 'main', kind: 'task' },
   ]
 
+  it.each(['mindmap', 'tree', 'flow'] as const)('lays out bounded reading sizes without overlaps in %s', async (mode) => {
+    const topology = agentFlowTopology(lanes)
+    const result = await layoutAgentFlow(topology, mode, [
+      ...work,
+      { id: 'medium', parent: 'b', kind: 'activity', size: 'expanded' },
+      { id: 'report', parent: 'b', kind: 'task', size: 'report' },
+      { id: 'other-report', parent: 'main', kind: 'text', size: 'report' },
+    ])
+    expectClearNodes(result)
+    const byId = new Map(result.nodes.map((node) => [node.id, node]))
+    expect(byId.get('artifact-text')).toMatchObject({ width: 228, height: 72 })
+    expect(byId.get('medium')).toMatchObject({ width: 268, height: 94 })
+    expect(byId.get('report')).toMatchObject({ width: 304, height: 142 })
+  })
+
   it('fits tree work beneath its owner and routes delegation below sibling work', async () => {
     const treeWork: AgentFlowBubbleGeometry[] = [
       ...work,

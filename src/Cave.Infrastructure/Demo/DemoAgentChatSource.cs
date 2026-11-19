@@ -30,21 +30,13 @@ public sealed class DemoAgentChatSource(TimeProvider clock) : ICodexAgentChatSou
             new(rootThreadId, null, CodexAgentChatStatus.Available,
             [
                 new("demo-chat-root-prompt", "turn-7", null, ConversationRole.User, ConversationMessageKind.Prompt,
-                    _startedAt.AddMinutes(-7), "Show how the UI receives the workspace snapshot.", false, []),
+                    _startedAt.AddMinutes(-7), "Review how the UI receives the workspace snapshot and what to check when the event stream reconnects.", false, []),
                 Published("demo-chat-root-progress", "I asked the review agent to map the snapshot handoff.", -5),
             ]),
             new("demo-reviewer", rootThreadId, CodexAgentChatStatus.Available,
             [
                 Published("demo-chat-review-progress", "I traced the handoff from the application to the viewer.", -4),
-                Published("demo-chat-review-diagram", """
-                    The preview uses one workspace snapshot.
-
-                    ```mermaid
-                    flowchart LR
-                        A[Application] --> B[Workspace snapshot]
-                        B --> C[CAVE viewer]
-                    ```
-                    """, -3, ConversationMessageKind.Final),
+                Published("demo-chat-review-diagram", DemoSnapshotHandoff.Text, -3, ConversationMessageKind.Final),
             ]),
             new("demo-docs", rootThreadId, CodexAgentChatStatus.Available,
             [

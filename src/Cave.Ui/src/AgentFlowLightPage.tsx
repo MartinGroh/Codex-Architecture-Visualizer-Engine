@@ -4,6 +4,7 @@ import { AgentAvatar } from './AgentAvatar'
 import { AgentModelLabel } from './AgentModel'
 import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { readAgentFlowLight } from './api'
+import { LongText } from './LongText'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { AgentFlowLightAgent, AgentFlowLightMainGoal, AgentFlowLightSnapshot, WorkspaceOverview } from './types'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
@@ -163,7 +164,9 @@ function GoalContent({ mainGoal }: { mainGoal: AgentFlowLightMainGoal }) {
   if (mainGoal.status === 'Unbound') return <p className="agent-flow-light-goal-empty">No exact Codex task is bound to this project.</p>
   if (mainGoal.status === 'Unavailable') return <p className="agent-flow-light-goal-empty">{mainGoal.error ?? 'The main goal is currently unavailable.'}</p>
   if (mainGoal.goal === null) return <p className="agent-flow-light-goal-empty">No main goal is set for this task.</p>
-  return <><p className="agent-flow-light-objective">{mainGoal.goal.objective}</p>{mainGoal.goal.isTruncated && <small>Goal text shortened for this display.</small>}</>
+  return <div className="agent-flow-light-objective">
+    <LongText text={mainGoal.goal.objective} title="main goal" truncated={mainGoal.goal.isTruncated} compact />
+  </div>
 }
 
 function AgentRow({ agent, workspaceId, onDismiss }: { agent: AgentFlowLightAgent; workspaceId: string; onDismiss: () => void }) {
@@ -171,13 +174,23 @@ function AgentRow({ agent, workspaceId, onDismiss }: { agent: AgentFlowLightAgen
   const finished = agent.state === 'Completed' || agent.state === 'Idle'
   const focusLabel = agent.currentFocus !== null ? 'Declared focus'
     : agent.summaryEvidence === 'Observed' ? 'Last observed activity' : 'Activity summary'
+  const focus = agent.currentFocus ?? agent.summary
+  const observedActivity = agent.lastObservedActivity
   return <li className={`agent-flow-light-agent ${active ? 'is-active' : ''}`}>
     <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} configuration={agent.configuration ?? null} size={38} />
     <div className="agent-flow-light-agent__body">
       <div className="agent-flow-light-agent__identity"><strong>{agent.displayName}</strong><span>{active ? agent.phase ?? 'Working' : agent.state}</span></div>
       <AgentModelLabel configuration={agent.configuration} />
-      <small>{focusLabel}</small><p>{agent.currentFocus ?? agent.summary ?? 'No work detail was observed.'}</p>
-      {agent.currentFocus !== null && <><small>Last observed activity</small><p>{agent.lastObservedActivity ?? 'No work action was observed.'}</p></>}
+      <small>{focusLabel}</small>
+      <div className="agent-flow-light-agent__detail">
+        {focus ? <LongText text={focus} title={focusLabel.toLowerCase()} compact /> : 'No work detail was observed.'}
+      </div>
+      {agent.currentFocus !== null && <>
+        <small>Last observed activity</small>
+        <div className="agent-flow-light-agent__detail">
+          {observedActivity ? <LongText text={observedActivity} title="last observed activity" compact /> : 'No work action was observed.'}
+        </div>
+      </>}
       <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(agent.agentId)}`}>View flow as list</a>
       {agent.statisticsTaskId && !agent.isSubagent && <AgentStatisticsPanel title="Task statistics" workspaceId={workspaceId} taskId={agent.statisticsTaskId} />}
     </div>

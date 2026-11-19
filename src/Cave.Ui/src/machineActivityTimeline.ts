@@ -18,6 +18,7 @@ export interface MachineActivityMilestone {
   id: string
   label: string
   detail: string
+  filePath?: string
   observedAtUtc: string
   positionPercent: number
   kind: 'Start' | 'Architecture' | 'Edit' | 'Phase' | 'Complete'
@@ -141,6 +142,7 @@ export function buildMachineActivityTimelines(
             id: `edit:${edit.filePath}:${edit.observedAtUtc}`,
             label: fileName(edit.filePath),
             detail: 'Observed edit',
+            filePath: edit.filePath,
             observedAtUtc: edit.observedAtUtc,
             kind: 'Edit' as const,
           }))

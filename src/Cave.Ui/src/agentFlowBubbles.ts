@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { compareChatMessages, type AgentChatAgent, type AgentChatArtifact, type AgentChatSession } from './agentChat'
 import { chatMessageOutputs, readAgentChatMarkdown } from './agentChatOutputIndex'
+import { getLongTextPreview } from './longTextPreview'
 import { observedTaskRoot, type MachineActivityLane } from './machineActivityTimeline'
 
 export interface AgentFlowBubble {
@@ -12,10 +13,12 @@ export interface AgentFlowBubble {
   messageId?: string
   artifact?: AgentChatArtifact
   source?: string
+  size?: 'expanded' | 'report'
+  reading?: { words: number; shortened?: boolean; evidence?: string }
 }
 
 type BubbleContent = Omit<AgentFlowBubble, 'id' | 'parent'>
-type ParsedMarkdown = ReturnType<typeof readAgentChatMarkdown>
+type ParsedMarkdown = ReturnType<typeof readAgentChatMarkdown> & { preview: ReturnType<typeof getLongTextPreview> }
 
 const excerptLength = 220
 
@@ -23,6 +26,12 @@ function excerpt(text: string | null | undefined) {
   const plain = text?.replace(/\s+/g, ' ').trim() ?? ''
   return plain.length <= excerptLength ? plain
     : plain.slice(0, excerptLength - 1).replace(/[\uD800-\uDBFF]$/, '').trimEnd() + '…'
+}
+
+function graphCopy(preview: ReturnType<typeof getLongTextPreview>, text: string, shortened?: boolean, evidence?: string): Pick<BubbleContent, 'text' | 'size' | 'reading'> {
+  if (preview.isLong) return { text: excerpt(preview.excerpt), size: 'report', reading: { words: preview.wordCount, shortened, evidence } }
+  const copy = excerpt(text)
+  return copy.length > 76 ? { text: copy, size: 'expanded' } : { text: copy }
 }
 
 function hasTaskAncestry(agent: AgentChatAgent, agents: Map<string, AgentChatAgent>, taskId: string) {
@@ -44,7 +53,8 @@ function latestPublication(agent: AgentChatAgent, read: (text: string) => Parsed
   for (const message of [...agent.messages].sort((left, right) => compareChatMessages(right, left))) {
     if (message.role === 'User') {
       if (!prompt && message.kind === 'Prompt') {
-        prompt = { kind: 'task', label: 'Task prompt', text: excerpt(read(message.text).visibleText), messageId: message.id }
+        const markdown = read(message.text)
+        prompt = { kind: 'task', label: 'Task prompt', ...graphCopy(markdown.preview, markdown.visibleText, message.isTruncated), messageId: message.id }
       }
       continue
     }
@@ -55,7 +65,7 @@ function latestPublication(agent: AgentChatAgent, read: (text: string) => Parsed
     const markdown = read(message.text)
     if (!reply && markdown.visibleText) {
       reply = { kind: 'text', label: message.kind === 'Final' ? 'Final reply' : 'Commentary',
-        text: excerpt(markdown.visibleText), messageId: message.id }
+        ...graphCopy(markdown.preview, markdown.visibleText, message.isTruncated), messageId: message.id }
     }
     for (const output of chatMessageOutputs(message, markdown)) {
       const origin = { text: excerpt(output.caption), messageId: output.messageId }
@@ -72,22 +82,24 @@ function latestPublication(agent: AgentChatAgent, read: (text: string) => Parsed
 
 function laneWork(lane: MachineActivityLane, prompt?: BubbleContent) {
   const { agent } = lane
-  const focus = agent.summaryEvidence === 'Declared' ? excerpt(agent.summary) : ''
-  const action = excerpt(agent.lastObservedActivity) || (agent.summaryEvidence === 'Observed' ? excerpt(agent.summary) : '')
+  const focus = agent.summaryEvidence === 'Declared' ? agent.summary?.trim() ?? '' : ''
+  const observed = agent.lastObservedActivity?.trim()
+  const action = observed || (agent.summaryEvidence === 'Observed' ? agent.summary?.trim() ?? '' : '')
+  const workCopy = (text: string, evidence: string) => graphCopy(getLongTextPreview(text), text, false, evidence)
   const bubbles: BubbleContent[] = []
-  const task = prompt?.text ? prompt : focus ? { kind: 'task' as const, label: 'Declared focus', text: focus } : undefined
+  const task = prompt?.text ? prompt : focus ? { kind: 'task' as const, label: 'Declared focus', ...workCopy(focus, 'summary') } : undefined
   if (task) bubbles.push(task)
 
   const work: BubbleContent[] = []
-  if (focus && task?.text !== focus) work.push({ kind: 'activity', label: 'Declared focus', text: focus })
-  if (action && task?.text !== action && action !== focus) work.push({ kind: 'activity', label: 'Observed action', text: action })
+  if (prompt?.text && focus && prompt.text !== excerpt(focus)) work.push({ kind: 'activity', label: 'Declared focus', ...workCopy(focus, 'summary') })
+  if (action && task?.text !== excerpt(action) && action !== focus) work.push({ kind: 'activity', label: 'Observed action', ...workCopy(action, observed && observed !== agent.summary?.trim() ? 'action' : 'summary') })
   if (work.length < 2) {
     const milestone = lane.milestones.findLast((step) => {
       const name = excerpt(step.label)
       return (step.kind === 'Edit' || step.kind === 'Architecture') && name && name !== action && name !== task?.text
         && name !== focus && !action.endsWith('/' + name) && !action.endsWith('\\' + name) && !action.endsWith(': ' + name)
     })
-    if (milestone) work.push({ kind: 'activity', label: milestone.detail, text: excerpt(milestone.label) })
+    if (milestone) work.push({ kind: 'activity', label: milestone.detail, ...workCopy(milestone.label, milestone.id) })
   }
   return [...bubbles, ...work]
 }
@@ -101,7 +113,11 @@ export function useAgentFlowBubbles(lanes: MachineActivityLane[], chat: AgentCha
   const projection = useMemo(() => {
     const markdown = new Map<string, ParsedMarkdown>()
     const read = (text: string) => {
-      const parsed = markdown.get(text) ?? (scope === cache.scope ? cache.markdown.get(text) : undefined) ?? readAgentChatMarkdown(text)
+      let parsed = markdown.get(text) ?? (scope === cache.scope ? cache.markdown.get(text) : undefined)
+      if (!parsed) {
+        const content = readAgentChatMarkdown(text)
+        parsed = { ...content, preview: getLongTextPreview(text, 'markdown', content.visibleText) }
+      }
       markdown.set(text, parsed)
       return parsed
     }

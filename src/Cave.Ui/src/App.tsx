@@ -65,6 +65,7 @@ import {
   type NodeMemoState,
 } from './NodeMemo'
 import { buildNodeMemoPrompt } from './nodeConversation'
+import { LongText } from './LongText'
 import {
   createAgentNodeDecorations,
   highlightConnectedEdges,
@@ -1574,14 +1575,14 @@ function DetailPanel({
                           size={30}
                           className="activity-agent-avatar"
                         />
-                        <span>
+                        <div className="agent-activity-list__copy">
                           <strong>
                             {agentDisplayName(agent)}
                             <i>{agent.state}{agent.state === 'Active' && agent.phase !== null ? ` · ${agent.phase}` : ''}</i>
                           </strong>
-                          <small>{agent.summary ?? 'No work summary supplied.'}</small>
+                          <LongText text={agent.summary ?? ''} title="work summary" byline={agentDisplayName(agent)}><small>{agent.summary ?? 'No work summary supplied.'}</small></LongText>
                           <em>{agent.hasObservedActivity ? 'Observed session activity' : ''}{agent.hasObservedActivity && agent.hasDeclaredScope ? ' · ' : ''}{agent.hasDeclaredScope ? 'Agent-declared scope' : ''}</em>
-                        </span>
+                        </div>
                       </li>
                     ))}
                   </ul>

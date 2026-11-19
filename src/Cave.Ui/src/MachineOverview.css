@@ -66,14 +66,25 @@
   box-shadow: none;
 }
 
-.workspace-dashboard .workspace-card:focus-visible {
+.workspace-card__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.workspace-card__link::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  content: '';
+}
+
+.workspace-card__link:focus-visible::after {
   outline: 2px solid var(--violet);
   outline-offset: 2px;
 }
 
-.workspace-dashboard a.workspace-card:hover {
-  box-shadow: none;
-  transform: none;
+.workspace-dashboard .workspace-card:has(.workspace-card__link:hover) {
+  border-color: color-mix(in srgb, var(--violet) 45%, var(--line));
 }
 
 .workspace-dashboard .workspace-card.is-active { box-shadow: none; }
@@ -105,7 +116,7 @@
   padding: 8px 10px;
 }
 
-.workspace-card__activity > div {
+.workspace-card__state {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -114,16 +125,13 @@
 
 .workspace-dashboard .workspace-card__activity strong { font-size: .75rem; }
 
-.workspace-card__activity > p {
-  display: -webkit-box;
-  margin: 0;
+.workspace-card__summary {
+  --long-text-preview-lines: 2;
+  position: relative;
   color: var(--text-soft);
   font-size: .75rem;
   line-height: 1.45;
-  overflow: hidden;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .workspace-dashboard .workspace-card footer {

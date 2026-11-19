@@ -1,9 +1,9 @@
-import { MainGoal } from './AgentWorkContext'
+import { AgentCompletionSummary, MainGoal } from './AgentWorkContext'
 import { AgentFlowGraph } from './AgentFlowGraph'
 import { AgentFlowCompact } from './AgentFlowCompact'
 import { AgentWall } from './AgentWall'
 import { agentDisplayName, agentFocusLabel } from './agentIdentity'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import {
   Activity,
   Bot,
@@ -14,7 +14,6 @@ import {
   Info,
   LayoutGrid,
   List,
-  MessageSquareText,
   RefreshCw,
   Route,
   Target,
@@ -23,11 +22,13 @@ import { AgentAvatar } from './AgentAvatar'
 import { AgentModelLabel } from './AgentModel'
 import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { connectArchitectureFeed } from './api'
+import { LongText } from './LongText'
+import { getLongTextExcerpt } from './longTextPreview'
 import { MachinePageFrame } from './MachinePageFrame'
 import {
   buildMachineActivityTimelines,
+  agentHistoryMilestones,
   observedTaskRoot,
-  visibleLaneMilestones,
   type MachineActivityLane,
   type MachineActivityProjectTimeline,
 } from './machineActivityTimeline'
@@ -383,6 +384,7 @@ function ActivityProjectFlow({
 }) {
   const lanes = timeline.lanes.filter((lane) =>
     lane.active || !dismissedAgents.includes(`${timeline.workspace.workspaceId}:${lane.agent.agentId}:${lane.agent.updatedAtUtc}`))
+  const headline = timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task'
   return (
     <section className={`machine-project-flow ${view === 'graph' && lanes.length > 0 ? 'machine-project-flow--graph' : ''} ${active ? '' : 'is-complete'}`}>
       <header>
@@ -394,37 +396,18 @@ function ActivityProjectFlow({
       </header>
 
       {view !== 'graph' && <details className="machine-project-work">
-        <summary>Current work <span>{timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task'}</span></summary>
+        <summary>Current work <span>{getLongTextExcerpt(headline, 'plain')}</span></summary>
         <MainGoal goal={timeline.goal} sharingEnabled={timeline.sharingEnabled} />
-      <div className="machine-prompt-root">
-        <span><GitCommitHorizontal size={17} /></span>
-        <div>
-          <small>Project prompt / instruction</small>
-          <strong>{timeline.instructionId === null ? 'Observed task root' : 'Current prompt root'}</strong>
-          <p className={timeline.prompt === null ? 'is-private' : ''}>
-            {timeline.prompt?.text
-              ?? 'Prompt text is not shared. Enable public conversation sharing for this workspace to show it.'}
-          </p>
+        <div className="machine-prompt-root">
+          <span><GitCommitHorizontal size={17} /></span>
+          <div>
+            <strong>{timeline.prompt ? 'Shared project prompt' : timeline.instructionId === null ? 'Observed task root' : 'Current prompt root'}</strong>
+            {timeline.prompt ? <div className="machine-prompt-root__text">
+              <LongText text={timeline.prompt.text} title="project prompt" truncated={timeline.prompt.isTruncated} compact />
+            </div> : <p className="machine-prompt-root__text is-private">Prompt text is not shared. Enable public conversation sharing for this workspace to show it.</p>}
+          </div>
+          <time dateTime={timeline.prompt?.occurredAtUtc ?? timeline.instructionAtUtc}>{formatClock(timeline.prompt?.occurredAtUtc ?? timeline.instructionAtUtc)}</time>
         </div>
-        <div className="machine-prompt-root__meta">
-          <time>{formatClock(timeline.instructionAtUtc)}</time>
-          {timeline.prompt !== null && (
-            <span
-              className="machine-evidence-trigger"
-              tabIndex={0}
-              aria-label="Show the full project prompt"
-            >
-              <MessageSquareText size={13} /> Full prompt
-              <span className="machine-evidence-popover" role="tooltip">
-                <strong>Shared project prompt</strong>
-                <span>{timeline.prompt.text}{timeline.prompt.isTruncated ? ' …' : ''}</span>
-                <time>{formatClock(timeline.prompt.occurredAtUtc)}</time>
-              </span>
-            </span>
-          )}
-        </div>
-      </div>
-
       </details>}
       {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
       {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} focused={focused} onOpenWall={onOpenWall} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
@@ -479,11 +462,12 @@ function AgentTimelineLane({
 }) {
   const { agent } = lane
   const phase = agent.phase ?? 'Working'
-  const milestones = visibleLaneMilestones(lane, active)
-  const completionText = lane.completionSummary?.text
-    ?? agent.lastObservedActivity
-    ?? agent.summary
-    ?? 'No work detail was observed before completion.'
+  const milestones = agentHistoryMilestones(lane)
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null)
+  const evidenceId = useId()
+  const evidence = milestones.find((milestone) => milestone.id === selectedMilestone)
+  const focusLabel = active ? agentFocusLabel(agent) : 'Last focus / action'
+  const focus = agent.summary ?? agent.lastObservedActivity
   return (
     <article className={`machine-agent-lane phase-${phase.toLowerCase()} ${active ? '' : 'is-complete'} ${agent.isSubagent ? 'is-subagent' : 'is-main-agent'}`}>
       <div className="machine-agent-lane__identity">
@@ -494,8 +478,8 @@ function AgentTimelineLane({
           <AgentModelLabel configuration={agent.configuration} />
         </span>
         <div className="machine-agent-lane__action">
-          <small>{active ? agentFocusLabel(agent) : 'Last focus / action'}</small>
-          <p>{agent.summary ?? agent.lastObservedActivity ?? 'No work detail was observed.'}</p>
+          <small>{focusLabel}</small>
+          {focus ? <LongText text={focus} title={focusLabel.toLowerCase()} compact /> : <p>No work detail was observed.</p>}
         </div>
       </div>
 
@@ -512,33 +496,47 @@ function AgentTimelineLane({
             aria-hidden="true"
           />
           {milestones.map((milestone, index) => (
-            <span
+            <button
+              type="button"
               key={milestone.id}
               className={`machine-agent-milestone is-${milestone.kind.toLowerCase()} ${milestoneLabelRow(index, milestones.length)} ${index === 0 ? 'is-first' : ''} ${index === milestones.length - 1 ? 'is-last' : ''}`}
               style={{ left: `${milestone.positionPercent}%` }}
-              aria-label={`${milestone.label}. ${milestone.detail}. ${formatClock(milestone.observedAtUtc)}`}
-              tabIndex={0}
+              aria-label={milestone.label}
+              aria-expanded={selectedMilestone === milestone.id}
+              aria-controls={evidenceId}
+              onClick={() => setSelectedMilestone((current) => current === milestone.id ? null : milestone.id)}
             >
               <i />
               <b>{milestone.label}</b>
               <span className="machine-evidence-popover machine-agent-milestone__popover" role="tooltip">
-                <strong><Info size={12} /> Observed work detail</strong>
-                <span>{milestone.detail}</span>
+                <strong><Info size={12} /> {milestone.detail === 'Agent-declared scope' || milestone.detail === 'Declared scope evidence' ? 'Declared work detail' : 'Observed work detail'}</strong>
+                <span>{getLongTextExcerpt(milestone.detail, 'plain')}</span>
                 <time>{formatClock(milestone.observedAtUtc)}</time>
               </span>
-            </span>
+            </button>
           ))}
         </div>
         <time>{formatClock(active ? new Date(nowMs).toISOString() : agent.updatedAtUtc)}</time>
       </div>
 
+      <div id={evidenceId} className="machine-agent-evidence" hidden={!evidence}>
+        {evidence && <>
+          <div className="machine-agent-evidence__heading">
+            <strong>{evidence.label}</strong>
+            <time dateTime={evidence.observedAtUtc}>{formatClock(evidence.observedAtUtc)}</time>
+          </div>
+          <LongText text={evidence.detail} title="work detail" compact />
+          {evidence.filePath && <code>{evidence.filePath}</code>}
+        </>}
+      </div>
+
       {!active && (
         <section className="machine-completion-summary" aria-label={`${agent.agentId} completion summary`}>
           <Check size={17} />
-          <details>
-            <summary>Completed summary</summary>
-            <p>{completionText}{lane.completionSummary?.isTruncated === true ? ' …' : ''}</p>
-          </details>
+          <div className="machine-completion-summary__body">
+            <strong>Completed summary</strong>
+            <AgentCompletionSummary lane={lane} />
+          </div>
           <time>{formatClock(lane.completionSummary?.occurredAtUtc ?? agent.updatedAtUtc)}</time>
           <button type="button" className="machine-project-flow__dismiss" onClick={onDismiss} aria-label={`Dismiss ${agentDisplayName(agent)}`}><Check size={14} /> Done</button>
         </section>

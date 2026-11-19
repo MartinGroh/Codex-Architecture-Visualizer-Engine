@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Activity, ArrowUpRight, ChevronDown, Images, LayoutGrid, MessagesSquare, Scan, X } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
+import { LongText } from './LongText'
 import { AgentActivityEntry, AgentChatFeed } from './AgentChatFeed'
 import { AgentChatOutputs } from './AgentChatOutputs'
 import { useAgentChatOutputs } from './agentChatOutputIndex'
@@ -17,11 +18,12 @@ const sections = [
   { name: 'Activity', icon: Activity },
 ] as const
 type InspectorSection = typeof sections[number]['name']
-type MessageLocation = { messageId: string; periodId: string | null; sharing: AgentChatSession['sharing'] }
+type MessageLocation = { messageId: string; periodId: string | null; sharing: AgentChatSession['sharing']; read?: boolean }
 export interface AgentInspectorTarget {
   agentId: string
   section: InspectorSection
   message?: MessageLocation
+  evidence?: string
 }
 
 interface InspectorProps {
@@ -63,13 +65,17 @@ export function AgentInspector({ lane, workspaceId, taskId, chat, target, sharin
     observer.observe(container)
     const narrow = window.matchMedia('(max-width: 900px)')
     const present = () => {
-      // Reopen the preview last so it keeps its place above the inspector after device rotation.
-      const preview = panel.querySelector<HTMLDialogElement>('dialog[open]')
-      preview?.close()
+      // Restore the reader and its media preview in their original top-layer order on rotation.
+      const descendants = Array.from(panel.querySelectorAll<HTMLDialogElement>('dialog[open]'))
+      const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      for (const nested of [...descendants].reverse()) nested.close()
       if (panel.open) panel.close()
       if (narrow.matches) panel.showModal()
       else panel.show()
-      if (preview) preview.showModal()
+      if (descendants.length) {
+        for (const nested of descendants) nested.showModal()
+        if (descendants.at(-1)?.contains(previousFocus)) previousFocus?.focus({ preventScroll: true })
+      }
       else panel.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true })
     }
     present()
@@ -147,7 +153,8 @@ export function AgentInspector({ lane, workspaceId, taskId, chat, target, sharin
         </div>
         {lane.agent.summary && <dl className="agent-inspector__work">
           <dt>{agentFocusLabel(lane.agent)}</dt>
-          <dd>{lane.agent.summary}</dd>
+          <dd><LongText text={lane.agent.summary} title="work summary" byline={name}
+            openRequest={target?.agentId === lane.agent.agentId && target.evidence === 'summary' ? target : undefined}>{lane.agent.summary}</LongText></dd>
         </dl>}
       </header>
       <InspectorViews key={JSON.stringify([workspaceId, taskId, lane.agent.agentId])}
@@ -230,12 +237,14 @@ function InspectorViews({ lane, workspaceId, chat, taskId, section, setSection, 
       className="agent-inspector__reader agent-inspector__activity" hidden={section !== 'Activity'}>
       {section === 'Activity' && <>
         {lane.agent.lastObservedActivity && lane.agent.lastObservedActivity !== lane.agent.summary &&
-          <dl><dt>Last observed action</dt><dd>{lane.agent.lastObservedActivity}</dd></dl>}
+          <dl><dt>Last observed action</dt><dd><LongText text={lane.agent.lastObservedActivity} title="observed action" byline={agentDisplayName(lane.agent)} openRequest={target?.evidence === 'action' ? target : undefined}>
+            {lane.agent.lastObservedActivity}</LongText></dd></dl>}
         <header><h4>Recent activity</h4>
           {lane.agent.publicId && <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(lane.agent.publicId)}`}>
             Open full timeline <ArrowUpRight size={15} aria-hidden="true" /></a>}
         </header>
-        <ol>{agentHistoryMilestones(lane).map((event) => <AgentActivityEntry key={event.id} event={event} detailed />)}</ol>
+        <ol>{agentHistoryMilestones(lane).map((event) => <AgentActivityEntry key={event.id} event={event} detailed
+          openRequest={target?.evidence === event.id ? target : undefined} />)}</ol>
       </>}
     </div>
   </>

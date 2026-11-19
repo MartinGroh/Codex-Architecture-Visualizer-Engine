@@ -8,6 +8,8 @@ import { useAgentFlowBubbles } from './agentFlowBubbles'
 import { useAgentChat } from './agentChat'
 import { MainGoal } from './AgentWorkContext'
 import { AgentModelLabel } from './AgentModel'
+import { LongText } from './LongText'
+import { getLongTextExcerpt } from './longTextPreview'
 import { agentModelFamily } from './agentModelPresentation'
 import { agentDisplayName, agentRoleLabel } from './agentIdentity'
 import { agentFlowTopology, flowOperation, layoutAgentFlow, type AgentFlowLayout, type AgentFlowLayoutMode, type AgentFlowNode, type FlowOperation } from './agentFlowGraphModel'
@@ -50,7 +52,7 @@ function AgentCard(props: NodeProps<AgentFlowNode>) {
   const operation = flowOperation(lane)
   const name = agentDisplayName(lane.agent)
   const role = agentRoleLabel(lane.agent)
-  const summary = lane.agent.summary ?? lane.agent.lastObservedActivity ?? 'No work detail observed'
+  const summary = getLongTextExcerpt(lane.agent.summary ?? lane.agent.lastObservedActivity ?? 'No work detail observed', 'plain')
   const work = props.data.workBranch
   const FoldIcon = work?.expanded ? Minus : Plus
   return <div className={`flow2-node flow2-operation-${operation.toLowerCase()}`} data-main={!lane.agent.isSubagent || undefined}>
@@ -161,7 +163,7 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
     for (const { parent } of bubbles) totals.set(parent, (totals.get(parent) ?? 0) + 1)
     return totals
   }, [bubbles])
-  const topologyKey = JSON.stringify([agentFlowTopology(lanes), Array.from(bubbleById.values(), ({ id, parent, kind }) => ({ id, parent, kind }))])
+  const topologyKey = JSON.stringify([agentFlowTopology(lanes), Array.from(bubbleById.values(), ({ id, parent, kind, size }) => ({ id, parent, kind, size }))])
   const arrangement = mode + (showWork ? '-work' : '-agents')
   useEffect(() => {
     let disposed = false
@@ -183,7 +185,9 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
       const owner = lane ? agentDisplayName(lane.agent) : timeline.workspace.name
       const count = counts.get(node.id)
       return [{ ...node, selected: node.id === selectedId, ariaRole: media || count ? 'group' : 'button',
-        ariaLabel: bubble ? `${owner}, ${bubble.label}: ${bubble.text}` : lane ? `Inspect ${owner}, ${agentRoleLabel(lane.agent)}` : `Inspect ${owner} project`,
+        ariaLabel: bubble ? bubble.reading
+          ? `Read ${owner}, ${bubble.label}, ${bubble.reading.words.toLocaleString()} words${bubble.reading.shortened ? ' captured' : ''}`
+          : `${owner}, ${bubble.label}: ${bubble.text}` : lane ? `Inspect ${owner}, ${agentRoleLabel(lane.agent)}` : `Inspect ${owner} project`,
         domAttributes: bubble ? undefined : { 'aria-expanded': node.id === selectedId },
         data: { ...node.data, name: timeline.workspace.name, lane, bubble, artifactUrl: chat.artifactUrl,
           workBranch: count ? { count, expanded: !folded.has(node.id), toggle: toggleBranch } : undefined },
@@ -204,8 +208,8 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
     const bubble = id ? bubbleById.get(id) : undefined
     const agentId = bubble?.parent ?? id
     setSelectedId(agentId)
-    setTarget(bubble ? { agentId: bubble.parent, section: bubble.messageId ? 'Conversation' : 'Activity',
-      message: bubble.messageId ? { messageId: bubble.messageId, periodId: chat.periodId, sharing: chat.sharing } : undefined } : undefined)
+    setTarget(bubble ? { agentId: bubble.parent, section: bubble.messageId ? 'Conversation' : 'Activity', evidence: bubble.reading?.evidence,
+      message: bubble.messageId ? { messageId: bubble.messageId, periodId: chat.periodId, sharing: chat.sharing, read: !!bubble.reading } : undefined } : undefined)
     if (agentId && agentId !== 'project-hub') {
       const root = observedTaskRoot(lanes, agentId)
       if (root) setFollowingTask(root.agent.publicId ?? null)
@@ -241,7 +245,7 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
   return <div className="flow2" data-layout={layout?.mode ?? mode}>
     <div className="flow2-toolbar">
       <button className="flow2-goal" type="button" aria-pressed={selectedId === 'project-hub'} onClick={() => setSelectedId(selectedId === 'project-hub' ? null : 'project-hub')}>
-        <strong>Current work</strong> <span>{timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task'}</span>
+        <strong>Current work</strong> <span>{getLongTextExcerpt(timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task', 'plain')}</span>
       </button>
       <select ref={picker} aria-label="Select an agent" value={selected?.agent.agentId ?? ''} onChange={(event) => inspect(event.target.value || null)}>
         <option value="">Select an agent</option>
@@ -286,7 +290,7 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
               }}>
                 <option value="">Choose task for outputs</option>
                 {roots.map(({ agent }) => <option key={agent.agentId} value={agent.publicId!}>
-                  {agentDisplayName(agent)} · {agent.summary || new Date(agent.startedAtUtc ?? agent.updatedAtUtc).toLocaleTimeString()}
+                  {agentDisplayName(agent)} · {agent.summary ? getLongTextExcerpt(agent.summary, 'plain') : new Date(agent.startedAtUtc ?? agent.updatedAtUtc).toLocaleTimeString()}
                 </option>)}
               </select>}
             </Panel>
@@ -296,7 +300,9 @@ export function AgentFlowGraph({ timeline, lanes, focused, onOpenWall }: {
         {selectedId === 'project-hub' && <aside className="flow2-detail flow2-detail--project" aria-label="Project goal and prompt">
           <header><h3>Current work</h3><button type="button" onClick={() => setSelectedId(null)} aria-label="Close project details"><X size={16} /></button></header>
           <MainGoal goal={timeline.goal} sharingEnabled={timeline.sharingEnabled} />
-          <h4>Project prompt</h4><p>{timeline.prompt?.text ?? 'Prompt text is not shared.'}</p>
+          <h4>Project prompt</h4>{timeline.prompt
+            ? <LongText title="project prompt" text={timeline.prompt.text} truncated={timeline.prompt.isTruncated}><p>{timeline.prompt.text}</p></LongText>
+            : <p>Prompt text is not shared.</p>}
         </aside>}
         {selected && <AgentInspector key={timeline.workspace.workspaceId} lane={selected} taskId={selectedTask} chat={chat} target={target}
           workspaceId={timeline.workspace.workspaceId} sharingEnabled={timeline.sharingEnabled}

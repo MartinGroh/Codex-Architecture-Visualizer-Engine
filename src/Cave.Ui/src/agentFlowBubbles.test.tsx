@@ -118,6 +118,22 @@ it('reuses parsed Markdown for unchanged polls and invalidates every published b
   expect(result.current).toEqual([])
 })
 
+it('bounds long leaves and keeps their exact message and observed work targets', () => {
+  const root = lane('native-root', 'public-root')
+  root.agent.summary = 'Observed work '.repeat(180).trim()
+  root.agent.summaryEvidence = 'Observed'
+  root.agent.lastObservedActivity = root.agent.summary
+  const text = '## Release notes\n\n' + 'Checked the graph. '.repeat(5000)
+  const session = chatSession([chatAgent('public-root', [message('large', text, 2, { kind: 'Final', isTruncated: true })])])
+  const { result } = renderHook(() => useAgentFlowBubbles([root], session, 'public-root'))
+  expect(result.current).toMatchObject([
+    { kind: 'activity', size: 'report', reading: { words: 360, evidence: 'summary' } },
+    { kind: 'text', size: 'report', reading: { words: 15003, shortened: true }, messageId: 'large' },
+  ])
+  expect(result.current[1].text).toMatch(/^Release notes Checked the graph/)
+  expect(result.current[1].text.length).toBeLessThanOrEqual(220)
+})
+
 it('shows captured legacy final text even when native history is unavailable', () => {
   const root = lane('native-root', 'public-root')
   const published = message('reply', 'A captured final reply', 2, { kind: 'Final' })

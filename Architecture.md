@@ -201,7 +201,7 @@ Agent Flow 2 is an additive React Flow presentation alongside the existing Timel
 
 ### Task-scoped chat and the agent wall
 
-The browser graph inspector and wall read the same task-scoped feed. The inspector keeps graph navigation open on desktop and uses the whole canvas area on a narrow screen. The wall displays one root task and its verified descendants. Each pane combines published messages with observed milestones and controls its own scroll position. The project canvas and wall fill the available desktop height. Current work in the project graph opens on demand and remembers the operator's choice.
+The browser graph inspector and wall read the same task-scoped feed. The selected-agent inspector shares a resizable row with the graph on desktop. On a narrow screen it fills the viewport and lets the operator switch agents in its header. Conversation follows published messages. Outputs indexes fenced Mermaid diagrams and scoped attachments in those same messages and can return to the source reply. Activity shows the agent's work evidence and identifies declared focus and observed actions. The wall displays one root task and its verified descendants. Each wall pane combines published messages with activity milestones and controls its own scroll position. The project canvas and wall fill the available desktop height. Current work in the project graph opens on demand and remembers the operator's choice.
 
 What grants access to a published message or raster preview?
 

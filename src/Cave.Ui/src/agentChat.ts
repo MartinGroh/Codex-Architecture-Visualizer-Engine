@@ -51,6 +51,22 @@ const retryIntervalMs = 5_000
 const requestTimeoutMs = 20_000
 const historyLimit = 512
 const emptyAgents: AgentChatAgent[] = []
+const emptyMessages: readonly AgentChatMessage[] = []
+
+export function sharedAgentMessages(chat: AgentChatSession, agent?: AgentChatAgent): readonly AgentChatMessage[] {
+  return chat.sharing === 'Shared' || chat.sharing === 'Legacy' ? agent?.messages ?? emptyMessages : emptyMessages
+}
+
+export function agentChatNotice(chat: AgentChatSession, agent?: AgentChatAgent): string | null {
+  if (chat.sharing === 'Private') return 'Conversation sharing is off.'
+  if (chat.status === 'Loading') return 'Loading conversation…'
+  if (chat.status === 'Reconnecting') return 'Reconnecting to the conversation feed…'
+  if (chat.sharing === 'Legacy') return agent?.messages.length ? null : 'No captured messages yet.'
+  if (chat.status === 'Unavailable' || agent?.status === 'Unavailable') return 'Conversation unavailable for this agent.'
+  if (agent?.status === 'Partial' || chat.status === 'Partial' && !agent) return 'Some messages are unavailable for this agent.'
+  if (chat.status === 'Idle') return 'Conversation unavailable for this task.'
+  return sharedAgentMessages(chat, agent).length > 0 ? null : 'No shared messages yet.'
+}
 
 export function compareChatMessages(left: AgentChatMessage, right: AgentChatMessage) {
   return Date.parse(left.occurredAtUtc) - Date.parse(right.occurredAtUtc) || left.id.localeCompare(right.id)

@@ -70,6 +70,11 @@ export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean
   ]
 }
 
+/** Shared final replies belong to the conversation. Activity uses only lifecycle and work evidence. */
+export function agentHistoryMilestones(lane: MachineActivityLane): MachineActivityMilestone[] {
+  return visibleLaneMilestones({ ...lane, completionSummary: null }, lane.active)
+}
+
 /** Builds comparable evidence-only timelines, retaining finished work for at most ten minutes. */
 export function buildMachineActivityTimelines(
   sources: MachineActivitySource[],

@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, Circle, MessageSquare } from 'lucide-react'
 import { AgentChatContent } from './AgentChatContent'
-import type { AgentChatAgent, AgentChatMessage, AgentChatSession } from './agentChat'
+import { agentChatNotice, sharedAgentMessages, type AgentChatAgent, type AgentChatMessage, type AgentChatSession } from './agentChat'
 import { agentDisplayName } from './agentIdentity'
-import { visibleLaneMilestones, type MachineActivityLane, type MachineActivityMilestone } from './machineActivityTimeline'
+import { agentHistoryMilestones, type MachineActivityLane, type MachineActivityMilestone } from './machineActivityTimeline'
 import './AgentChatFeed.css'
 
 type FeedItem = { id: string; time: string; message: AgentChatMessage } | { id: string; time: string; event: MachineActivityMilestone }
@@ -12,6 +12,8 @@ interface AgentChatFeedProps {
   lane?: MachineActivityLane | null
   agent?: AgentChatAgent
   chat: AgentChatSession
+  view?: 'combined' | 'conversation'
+  reveal?: { messageId: string } | null
 }
 
 /** A single scrollable history shared by the Flow inspector and every wall pane. */
@@ -21,16 +23,17 @@ export function AgentChatFeed(props: AgentChatFeedProps) {
   return <AgentChatHistory key={JSON.stringify([identity, chat.sharing, chat.periodId])} {...props} />
 }
 
-function AgentChatHistory({ agent, lane, chat }: AgentChatFeedProps) {
+function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: AgentChatFeedProps) {
+  const shared = sharedAgentMessages(chat, agent)
   const items = useMemo((): FeedItem[] => {
-    const messages: FeedItem[] = chat.sharing === 'Shared' || chat.sharing === 'Legacy'
-      ? (agent?.messages ?? []).map((message) => ({ id: 'message:' + message.id, time: message.occurredAtUtc, message }))
-      : []
-    const milestones = lane ? visibleLaneMilestones({ ...lane, completionSummary: null }, lane.active) : []
+    const messages: FeedItem[] = shared.map((message) => ({
+      id: 'message:' + message.id, time: message.occurredAtUtc, message,
+    }))
+    const milestones = lane && view === 'combined' ? agentHistoryMilestones(lane) : []
     const events: FeedItem[] = milestones.map((event) => ({ id: 'activity:' + event.id, time: event.observedAtUtc, event }))
     return [...messages, ...events].sort((left, right) =>
       Date.parse(left.time) - Date.parse(right.time) || left.id.localeCompare(right.id))
-  }, [agent, lane, chat.sharing])
+  }, [shared, lane, view])
   const fingerprint = JSON.stringify(items.map((item) => 'message' in item
     ? [item.id, item.time, item.message.text, item.message.kind, item.message.artifacts.map(({ id, contentType }) => [id, contentType])]
     : [item.id, item.time, item.event.label, item.event.detail]))
@@ -42,15 +45,7 @@ function AgentChatHistory({ agent, lane, chat }: AgentChatFeedProps) {
   const prevFingerprint = useRef<string | null>(null)
   const [updatesBelow, setUpdatesBelow] = useState(false)
   const name = lane ? agentDisplayName(lane.agent) : agent?.displayName ?? 'Agent'
-  const notice = chat.sharing === 'Private' ? 'Conversation sharing is off.'
-    : chat.status === 'Loading' ? 'Loading conversation…'
-    : chat.status === 'Reconnecting' ? 'Reconnecting to the conversation feed…'
-    : chat.sharing === 'Legacy' ? (agent?.messages.length ? null : 'No captured messages yet.')
-    : chat.status === 'Unavailable' || agent?.status === 'Unavailable' ? 'Conversation unavailable for this agent.'
-    : agent?.status === 'Partial' ? 'Some messages are unavailable for this agent.'
-    : chat.status === 'Idle' ? 'Conversation unavailable for this task.'
-    : !items.some((item) => 'message' in item) ? 'No shared messages yet.'
-    : null
+  const notice = agentChatNotice(chat, agent)
 
   useLayoutEffect(() => {
     if (following.current) {
@@ -61,6 +56,20 @@ function AgentChatHistory({ agent, lane, chat }: AgentChatFeedProps) {
     }
     prevFingerprint.current = fingerprint
   }, [fingerprint])
+
+  useLayoutEffect(() => {
+    if (!reveal || !feed.current || !scroller.current) return
+    const message = Array.from(feed.current.children).find((item): item is HTMLElement =>
+      item instanceof HTMLElement && item.dataset.messageId === reveal.messageId)
+    if (!message) return
+    const element = scroller.current
+    following.current = false
+    element.scrollTop += message.getBoundingClientRect().top - element.getBoundingClientRect().top - 12
+    lastVisibleOffset.current = element.scrollTop
+    following.current = element.scrollHeight - element.clientHeight - element.scrollTop <= 24
+    setUpdatesBelow(!following.current)
+    message.focus({ preventScroll: true })
+  }, [reveal])
 
   useLayoutEffect(() => {
     if (typeof ResizeObserver === 'undefined' || !scroller.current || !feed.current) return
@@ -92,20 +101,21 @@ function AgentChatHistory({ agent, lane, chat }: AgentChatFeedProps) {
     <div
       className="agent-chat-feed__scroll"
       role="region"
-      aria-label={name + ' conversation and activity'}
+      aria-label={name + ' ' + (view === 'combined' ? 'conversation and activity' : view)}
       tabIndex={0}
       ref={scroller}
       onScroll={({ currentTarget }) => {
         if (currentTarget.clientHeight === 0) return
         lastVisibleOffset.current = currentTarget.scrollTop
         following.current = currentTarget.scrollHeight - currentTarget.clientHeight - currentTarget.scrollTop <= 24
-        if (following.current) setUpdatesBelow(false)
+        if (view === 'conversation' || following.current) setUpdatesBelow(!following.current)
       }}
     >
       {notice && <p className="agent-chat-feed__notice" role="status"><MessageSquare size={14} aria-hidden="true" />{notice}</p>}
       <ol className="agent-chat-feed__entries" ref={feed}>
         {items.map((item) => 'message' in item
-          ? <li key={item.id} className={'agent-chat-message agent-chat-message--' + item.message.kind.toLowerCase()}>
+          ? <li key={item.id} data-message-id={item.message.id} tabIndex={view === 'conversation' ? -1 : undefined}
+            className={'agent-chat-message agent-chat-message--' + item.message.kind.toLowerCase()}>
             <header>
               <strong>{item.message.role === 'User' ? 'You' : item.message.kind === 'Final' ? 'Final reply' : 'Progress'}</strong>
               <MessageTime datetime={item.time} />
@@ -115,17 +125,21 @@ function AgentChatHistory({ agent, lane, chat }: AgentChatFeedProps) {
             </div>
             {item.message.isTruncated && <small className="agent-chat-message__truncated">Message shortened</small>}
           </li>
-          : <li className="agent-chat-event" key={item.id}>
-            <Circle size={6} aria-hidden="true" />
-            <span><strong>{item.event.label}</strong><small>{item.event.detail}</small></span>
-            <MessageTime datetime={item.time} />
-          </li>)}
+          : <AgentActivityEntry key={item.id} event={item.event} />)}
       </ol>
     </div>
     {updatesBelow && <div className="agent-chat-feed__jump">
       <button type="button" onClick={jumpToLatest}><ArrowDown size={14} aria-hidden="true" />Jump to latest</button>
     </div>}
   </div>
+}
+
+export function AgentActivityEntry({ event }: { event: MachineActivityMilestone }) {
+  return <li className="agent-chat-event">
+    <Circle size={6} aria-hidden="true" />
+    <span><strong>{event.label}</strong><small>{event.detail}</small></span>
+    <MessageTime datetime={event.observedAtUtc} />
+  </li>
 }
 
 function MessageTime({ datetime }: { datetime: string }) {

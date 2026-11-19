@@ -80,6 +80,34 @@
 .agent-chat-diagram summary { width: fit-content; cursor: pointer; color: var(--text-soft); font-size: .75rem; }
 .agent-chat-diagram summary:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
 
+.agent-inspector .agent-chat-content .agent-chat-preview {
+  display: grid;
+  width: 100%;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.agent-inspector .agent-chat-preview > img { width: 100%; padding: .75rem; max-height: 18rem; }
+.agent-inspector .agent-chat-preview > span {
+  width: 100%;
+  padding: .5rem .75rem;
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--line);
+}
+.agent-inspector .agent-chat-preview > span svg { order: 1; margin-inline-start: auto; }
+.agent-inspector .agent-chat-content__artifacts { justify-items: stretch; }
+
+.agent-inspector .agent-chat-preview-dialog {
+  width: min(90vw, 75rem);
+}
+
+.agent-inspector .agent-chat-preview-dialog img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 .agent-chat-diagram-workspace {
   position: fixed;
   top: 0;

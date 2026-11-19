@@ -50,25 +50,18 @@
 .flow2-node .agent-model-label { font-size:10px; }
 .flow2 .react-flow__handle { width:4px; height:4px; background:var(--line-strong); border:0; }
 .flow2 .react-flow__node.selected { outline:2px solid var(--violet); outline-offset:5px; border-radius:12px; }
-.flow2-detail { width:clamp(310px, var(--agent-inspector-width, 440px), 56%); flex-shrink:0; min-height:0; border-left:1px solid var(--line); overflow:auto; background:var(--surface); }
+.flow2-detail { width:clamp(310px, 440px, 56%); flex-shrink:0; min-height:0; border-left:1px solid var(--line); overflow:auto; background:var(--surface); }
 .flow2-detail--project { padding:16px; }
-.flow2-detail--agent { display:flex; flex-direction:column; overflow:hidden; }
 .flow2-detail header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-.flow2-detail--agent > header { flex:none; padding:12px 14px; }
-.flow2-detail__actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; }
-.flow2-detail header button, .flow2-detail__sharing button {
+.flow2-detail header button {
   display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:5px 8px;
   color:var(--text); font:inherit; font-size:12px; border:1px solid var(--line-strong); border-radius:7px; background:var(--surface-raised); cursor:pointer;
 }
-.flow2-detail__scope, .flow2-detail__sharing { flex:none; padding:8px 14px; border-block-start:1px solid var(--line); }
-.flow2-detail__scope summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-soft); font-size:13px; cursor:pointer; }
-.flow2-detail__scope[open] { overflow:auto; max-height:30%; }
 .flow2-resize { position:relative; z-index:1; flex:0 0 8px; margin-inline-end:-4px; background:var(--surface-subtle); border:solid var(--line); border-width:0 1px; cursor:ew-resize; touch-action:none; }
 .flow2-resize:hover, .flow2-resize:focus-visible { background:var(--violet-soft); outline:1px solid var(--violet); }
 .flow2-detail h3 { margin:0; font-size:17px; }
 .flow2-detail h4 { margin:20px 0 6px; font-size:12px; color:var(--text-soft); }
 .flow2-detail p { font-size:12px; overflow-wrap:anywhere; line-height:1.55; }
-.flow2-detail .agent-chat-feed { flex:1; }
 .flow2-detail a { font-size:12px; }
 .flow2 button:focus-visible, .flow2 select:focus-visible, .flow2 summary:focus-visible { outline:2px solid var(--violet); outline-offset:2px; }
 @media (max-width: 900px) {
@@ -78,7 +71,7 @@
   .flow2-workspace:has(.flow2-detail) .flow2-canvas { visibility:hidden; }
   .flow2-detail { position:absolute; z-index:1; inset:0; width:100%; border:0; }
   .flow2-resize { display:none; }
-  .flow2-detail header button, .flow2-detail__sharing button { min-height:44px; }
+  .flow2-detail header button { min-height:44px; }
 }
 
 .flow2-operation-idle, .flow2-operation-planned { --flow2-color: var(--text-muted); }

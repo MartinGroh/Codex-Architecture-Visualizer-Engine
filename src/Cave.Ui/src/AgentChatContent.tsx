@@ -1,14 +1,10 @@
 import { Expand, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Components } from 'react-markdown'
+import type { AgentChatArtifact } from './agentChat'
 import { CodexText } from './CodexText'
 import { renderAgentChatDiagram } from './agentChatDiagram'
 import './AgentChatContent.css'
-
-interface ChatArtifact {
-  id: string
-  contentType: string | null
-}
 
 const rasterTypes = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
@@ -29,20 +25,28 @@ const chatComponents: Components = {
 /** Renders shared chat text and artifacts supplied by the scoped read endpoint. */
 export function AgentChatContent({ text, artifacts, artifactUrl }: {
   text: string
-  artifacts: readonly ChatArtifact[]
+  artifacts: readonly AgentChatArtifact[]
   artifactUrl: (id: string) => string
 }) {
   return <div className="agent-chat-content">
     {text && <CodexText text={text} attributed={false} components={chatComponents} />}
     {artifacts.length > 0 && <div className="agent-chat-content__artifacts">
-      {artifacts.map(({ id, contentType }, index) => {
-        const src = contentType && rasterTypes.has(contentType) ? localArtifactUrl(artifactUrl(id)) : null
-        const label = artifacts.length === 1 ? 'Shared image' : `Shared image ${index + 1}`
-        return src ? <MediaPreview key={`${id}:${src}`} src={src} label={label} />
-          : <small key={id} className="agent-chat-content__unavailable">Image preview unavailable</small>
-      })}
+      {artifacts.map((artifact, index) => <SharedImagePreview key={artifact.id}
+        artifact={artifact} artifactUrl={artifactUrl}
+        label={artifacts.length === 1 ? 'Shared image' : `Shared image ${index + 1}`} />)}
     </div>}
   </div>
+}
+
+export function SharedImagePreview({ artifact, artifactUrl, label = 'Shared image' }: {
+  artifact: AgentChatArtifact
+  artifactUrl: (id: string) => string
+  label?: string
+}) {
+  const src = artifact.contentType && rasterTypes.has(artifact.contentType)
+    ? localArtifactUrl(artifactUrl(artifact.id)) : null
+  return src ? <MediaPreview key={src} src={src} label={label} />
+    : <small className="agent-chat-content__unavailable">Image preview unavailable</small>
 }
 
 function localArtifactUrl(value: string): string | null {
@@ -78,7 +82,7 @@ function MediaPreview({ src, label }: { src: string; label: string }) {
   </>
 }
 
-function MermaidPreview({ source }: { source: string }) {
+export function MermaidPreview({ source }: { source: string }) {
   const id = `cave-diagram-${useId().replace(/[^A-Za-z0-9-]/g, '')}`
   const figure = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined')

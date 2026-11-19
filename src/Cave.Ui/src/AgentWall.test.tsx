@@ -29,11 +29,23 @@ it('places the parent first and keeps pane identity when an older child is newly
   rerender(<AgentWall {...props} lanes={[beta, { ...alpha, active: false, agent: { ...alpha.agent, state: 'Completed' } }, root]} />)
   expect(headings()).toEqual(['Main', 'Rowan', 'Kai'])
   expect(screen.getByRole('region', { name: 'Rowan conversation and activity' })).toBe(alphaFeed)
-  expect(within(screen.getByRole('article', { name: 'Rowan · Subagent' })).getByText('Subagent · Completed')).toBeTruthy()
+  expect(within(screen.getByRole('article', { name: 'Rowan · worker' })).getByText('worker · Completed')).toBeTruthy()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Expand Kai' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Expand Kai · worker' }))
   expect(headings()).toEqual(['Kai'])
-  fireEvent.click(screen.getByRole('button', { name: 'Restore wall from Kai' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Restore wall from Kai · worker' }))
   expect(headings()).toEqual(['Main', 'Rowan', 'Kai'])
   expect(screen.getByRole('region', { name: 'Rowan conversation and activity' })).toBe(alphaFeed)
+})
+
+it('distinguishes repeated names by observed role and keeps identical roles addressable', () => {
+  const root = lane('task', 'Main', '2026-11-01T09:00:00Z')
+  const reader = lane('reader', 'Kai', '2026-11-01T09:01:00Z')
+  reader.agent.agentType = 'Review agent'
+  const builder = lane('builder', 'Kai', '2026-11-01T09:02:00Z')
+  const secondBuilder = lane('second-builder', 'Kai', '2026-11-01T09:03:00Z')
+  render(<AgentWall workspaceId="workspace" taskId="task" lanes={[root, reader, builder, secondBuilder]} sharingEnabled={false} onBack={vi.fn()} />)
+  expect(screen.getByRole('option', {name: 'Kai · Review agent'})).toBeTruthy()
+  expect(screen.getByRole('button', {name: 'Expand Kai · worker · 3'})).toBeTruthy()
+  expect(within(screen.getByRole('article', {name: 'Kai · worker · 4'})).getByRole('heading').textContent).toBe('Kai · 4')
 })

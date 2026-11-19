@@ -77,11 +77,11 @@
   gap: 8px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-subtle);
+  background: color-mix(in srgb, var(--model-family-color, var(--text-soft)) 10%, var(--surface));
 }
 
 .agent-wall__identity { flex: 1; min-width: 0; }
-.agent-wall__identity h3 { margin: 0; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-wall__identity h3 { margin: 0; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .agent-wall__identity > span { display: block; margin-top: 3px; color: var(--text-soft); font-size: .73rem; }
 .agent-wall .agent-wall__expand { justify-content: center; flex: none; width: 34px; padding: 0; }
 

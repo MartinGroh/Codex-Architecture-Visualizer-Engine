@@ -1,5 +1,5 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Position, type Edge, type Node } from '@xyflow/react'
+import { MarkerType, Position, type Edge, type Node } from '@xyflow/react'
 import type { MachineActivityLane } from './machineActivityTimeline'
 import type { AgentActivityPhase } from './types'
 
@@ -11,8 +11,8 @@ export interface AgentFlowNodeData extends Record<string, unknown> {
 export type AgentFlowNode = Node<AgentFlowNodeData, 'hub' | 'agent'>
 export interface AgentFlowLayout { nodes: AgentFlowNode[]; edges: Edge[] }
 const elk = new ELK()
-const hubSize = { width: 220, height: 140 }
-const agentSize = { width: 240, height: 150 }
+const hubSize = { width: 224, height: 108 }
+const agentSize = { width: 278, height: 156 }
 
 /** Presentation-only topology. A project link means membership, not delegation. */
 export function agentFlowTopology(lanes: MachineActivityLane[]) {
@@ -23,13 +23,14 @@ export function agentFlowTopology(lanes: MachineActivityLane[]) {
   })).sort((a, b) => a.id.localeCompare(b.id))
 }
 
-/** ELK owns radial positioning; state changes do not alter the topology. */
+/** Keep the workspace, parents, and children in reading order. Live phase changes do not affect geometry. */
 export async function layoutAgentFlow(topology: ReturnType<typeof agentFlowTopology>): Promise<AgentFlowLayout> {
-  // Layout is a project-centered star; rendered relationships retain their actual evidence.
-  const links = topology.map(({ id }) => ({ id: `link:${id}`, sources: ['project-hub'], targets: [id] }))
+  const links = topology.map(({ id, parent }) => ({ id: `link:${id}`, sources: [parent], targets: [id] }))
   const result = await elk.layout({ id: 'flow', layoutOptions: {
-    'elk.algorithm': 'radial', 'elk.spacing.nodeNode': '40',
-    'elk.radial.radius': '320', 'elk.radial.centerOnRoot': 'true',
+    'elk.algorithm': 'layered', 'elk.direction': 'RIGHT', 'elk.spacing.nodeNode': '26',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '68',
+    'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
   }, children: [{ id: 'project-hub', ...hubSize },
     ...topology.map(({ id }) => ({ id, ...agentSize }))], edges: links })
   return {
@@ -52,7 +53,8 @@ export async function layoutAgentFlow(topology: ReturnType<typeof agentFlowTopol
       }
     }),
     edges: topology.map(({ id, parent }) => ({ id: `link:${id}`, source: parent, target: id,
-      type: 'straight', className: parent === 'project-hub' ? 'flow2-membership' : 'flow2-delegation',
+      type: 'smoothstep', className: parent === 'project-hub' ? 'flow2-membership' : 'flow2-delegation',
+      markerEnd: parent === 'project-hub' ? undefined : { type: MarkerType.ArrowClosed, width: 14, height: 14, color: 'var(--text-muted)' },
       ariaLabel: parent === 'project-hub' ? 'Agent belongs to project' : 'Observed parent to subagent',
     })),
   }

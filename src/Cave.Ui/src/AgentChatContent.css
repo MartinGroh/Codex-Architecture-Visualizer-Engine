@@ -7,105 +7,176 @@
   gap: 8px;
   margin-top: 10px;
 }
-
 .agent-chat-content__unavailable { color: var(--text-soft); }
 
 .agent-chat-content .agent-chat-preview {
   display: inline-grid;
   grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
   min-width: 0;
   max-width: 100%;
-  min-height: 44px;
-  gap: 8px;
-  padding: 8px;
-  color: var(--text-soft);
+  padding: 0;
+  overflow: hidden;
   text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  cursor: zoom-in;
 }
-
-.agent-chat-preview:hover { border-color: var(--violet); }
-.agent-chat-preview img { display: block; max-width: 100%; max-height: 11rem; object-fit: contain; }
-.agent-chat-preview > span {
+.agent-chat-content .agent-chat-preview:hover { border-color: var(--violet); }
+.agent-chat-preview__bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: .45rem;
+  min-height: 32px;
+  padding: 4px 9px;
+  color: var(--text-soft);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
   font-size: .75rem;
-  overflow-wrap: normal;
 }
-.agent-chat-preview > span svg { flex: none; }
+.agent-chat-preview__bar strong { color: var(--text); font-weight: 600; }
+.agent-chat-preview__bar small { font-size: .7rem; font-variant-numeric: tabular-nums; }
+.agent-chat-preview__bar svg { flex: none; }
+.agent-chat-preview__expand { margin-left: auto; }
+.agent-chat-preview img { display: block; justify-self: center; max-width: 100%; max-height: 11rem; object-fit: contain; }
+.agent-chat-diagram { margin: 8px 0; }
+.agent-chat-diagram .agent-chat-preview { background: var(--diagram-paper, var(--bg)); }
+.agent-chat-diagram .agent-chat-preview img { padding: 8px; }
+.agent-wall .agent-chat-diagram .agent-chat-preview { width: min(100%, 42rem); gap: 0; }
+.agent-wall .agent-chat-diagram .agent-chat-preview img { width: 100%; }
+.agent-chat-diagram details { margin-top: 4px; }
+.agent-chat-diagram summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .32rem;
+  min-height: 30px;
+  color: var(--text-soft);
+  font-size: .75rem;
+  list-style: none;
+  cursor: pointer;
+}
+.agent-chat-diagram summary::-webkit-details-marker { display: none; }
+.agent-chat-diagram summary:hover { color: var(--text); }
+.agent-chat-diagram details[open] summary svg:last-child { transform: rotate(180deg); }
+.agent-chat-diagram details pre {
+  max-width: 100%;
+  max-height: 16rem;
+  margin: 0;
+  overflow: auto;
+  padding: .75rem;
+  color: var(--text);
+  background: var(--surface-subtle);
+  border-radius: 6px;
+}
+
+.agent-inspector .agent-chat-content .agent-chat-preview { display: grid; width: 100%; }
+.agent-inspector .agent-chat-preview__bar { min-height: 39px; padding-inline: 13px; }
+.agent-inspector .agent-chat-preview__bar > svg:first-child { color: var(--violet); }
+.agent-inspector .agent-chat-preview > img { width: 100%; max-height: 18rem; padding: 12px; }
+.agent-inspector .agent-chat-diagram .agent-chat-preview > img { padding: clamp(14px, 3cqw, 26px); }
+.agent-inspector .agent-chat-content__artifacts { justify-items: stretch; }
 
 .agent-chat-preview-dialog {
-  width: fit-content;
-  max-width: min(90vw, 80rem);
-  max-height: 90dvh;
-  padding: 12px;
+  box-sizing: border-box;
+  width: min(92vw, 88rem);
+  height: min(86dvh, 64rem);
+  max-height: none;
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: 12px;
 }
-
-.agent-chat-preview-dialog::backdrop { background: rgb(0 0 0 / 58%); }
-
-.agent-chat-preview-dialog header {
+.agent-chat-preview-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.agent-chat-preview-dialog::backdrop { background: rgb(0 0 0 / 62%); }
+.agent-chat-preview-dialog > header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
-
+.agent-chat-preview-dialog > header > strong {
+  display: flex;
+  flex: 1;
+  gap: .55rem;
+  align-items: center;
+  min-width: 0;
+  font-size: .94rem;
+  line-height: 1.25;
+}
+.agent-chat-preview-dialog > header > strong svg { flex: none; color: var(--violet); }
+.agent-chat-preview-dialog__zoom {
+  display: flex;
+  align-items: center;
+  border-radius: 7px;
+  background: var(--surface-raised);
+}
+.agent-chat-preview-dialog__zoom output {
+  min-width: 3ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: .8rem;
+  font-weight: 600;
+}
 .agent-chat-content .agent-chat-preview-dialog button {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
   cursor: pointer;
 }
-
-.agent-chat-preview-dialog img { display: block; max-width: 100%; max-height: 76dvh; object-fit: contain; }
-.agent-chat-diagram { margin: 8px 0; }
-.agent-chat-diagram .agent-chat-preview-dialog { width: min(90vw, 75rem); }
-.agent-chat-diagram .agent-chat-preview-dialog img { width: 100%; height: auto; }
-.agent-chat-diagram .agent-chat-preview img,
-.agent-chat-diagram .agent-chat-preview-dialog img { background: white; }
-.agent-chat-diagram details { margin-top: 6px; }
-.agent-chat-diagram summary { width: fit-content; cursor: pointer; color: var(--text-soft); font-size: .75rem; }
-.agent-chat-diagram summary:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
-
-.agent-inspector .agent-chat-content .agent-chat-preview {
+.agent-chat-content .agent-chat-preview-dialog button:hover:enabled { background: var(--surface-hover); }
+.agent-chat-content .agent-chat-preview-dialog button:disabled { color: var(--text-faint); cursor: default; }
+.agent-chat-preview-dialog__canvas {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  container-type: size;
+  background: var(--surface-raised);
+  scrollbar-color: var(--line-strong) transparent;
+}
+.agent-chat-diagram .agent-chat-preview-dialog__canvas { background: var(--diagram-paper, var(--bg)); }
+.agent-chat-preview-dialog__canvas[data-zoomed] { cursor: grab; }
+.agent-chat-preview-dialog__canvas[data-zoomed]:active { cursor: grabbing; }
+.agent-chat-preview-dialog__sheet {
   display: grid;
-  width: 100%;
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
+  place-items: center;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
 }
-
-.agent-inspector .agent-chat-preview > img { width: 100%; padding: .75rem; max-height: 18rem; }
-.agent-inspector .agent-chat-preview > span {
-  width: 100%;
-  padding: .5rem .75rem;
-  background: var(--surface-subtle);
-  border-top: 1px solid var(--line);
+.agent-chat-preview-dialog__sheet img { display: block; max-width: none; max-height: none; height: auto; user-select: none; }
+.agent-chat-content :is(.agent-chat-preview, .agent-chat-preview-dialog button, .agent-chat-diagram summary):focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
 }
-.agent-inspector .agent-chat-preview > span svg { order: 1; margin-inline-start: auto; }
-.agent-inspector .agent-chat-content__artifacts { justify-items: stretch; }
+.agent-chat-preview-dialog__canvas:focus-visible { outline: 2px solid var(--violet); outline-offset: -2px; }
 
-.agent-inspector .agent-chat-preview-dialog {
-  width: min(90vw, 75rem);
+@media (max-width: 650px) {
+  .agent-chat-preview-dialog {
+    width: 100%; height: 100dvh; border: 0; border-radius: 0;
+    padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  }
+  .agent-chat-preview-dialog > header { padding: 4px 6px; gap: 6px; }
+  .agent-chat-preview-dialog > header > strong { font-size: .84rem; }
+  .agent-chat-preview-dialog > header > strong svg { display: none; }
+  .agent-chat-content .agent-chat-preview-dialog button { width: 44px; height: 44px; }
 }
-
-.agent-inspector .agent-chat-preview-dialog img {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
+@media (pointer: coarse) {
+  .agent-chat-diagram summary { min-height: 44px; }
+  .agent-chat-content .agent-chat-preview-dialog button { min-width: 44px; min-height: 44px; }
 }
 
 .agent-chat-diagram-workspace {

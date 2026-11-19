@@ -12,13 +12,15 @@ export function AgentChatOutputs({ outputs, artifactUrl, onOpenMessage }: {
     {outputs.map((output) => {
       const time = new Date(output.occurredAtUtc)
       return <li key={output.id}>
-        {output.caption && <p className="agent-chat-outputs__caption">{output.caption}</p>}
         {output.kind === 'diagram' ? <MermaidPreview source={output.source} />
           : <SharedImagePreview artifact={output.artifact} artifactUrl={artifactUrl} />}
         <div className="agent-chat-outputs__origin">
-          {Number.isFinite(time.valueOf()) && <time dateTime={output.occurredAtUtc} title={time.toLocaleString()}>
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </time>}
+          <div>
+            {output.caption && <p className="agent-chat-outputs__caption">{output.caption}</p>}
+            {Number.isFinite(time.valueOf()) && <time dateTime={output.occurredAtUtc} title={time.toLocaleString()}>
+              {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </time>}
+          </div>
           <button type="button" onClick={() => onOpenMessage(output.messageId)}>
             <MessageSquareText aria-hidden="true" size={14} />View message
           </button>

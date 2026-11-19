@@ -5,6 +5,7 @@ import { AgentActivityEntry, AgentChatFeed } from './AgentChatFeed'
 import { AgentChatOutputs } from './AgentChatOutputs'
 import { useAgentChatOutputs } from './agentChatOutputIndex'
 import { AgentModelLabel } from './AgentModel'
+import { agentModelFamily } from './agentModelPresentation'
 import { agentChatNotice, sharedAgentMessages, useAgentChat, type AgentChatSession } from './agentChat'
 import { agentDisplayName, agentFocusLabel, agentRoleLabel } from './agentIdentity'
 import { agentHistoryMilestones, type MachineActivityLane } from './machineActivityTimeline'
@@ -100,7 +101,8 @@ export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, oper
         }
         event.preventDefault()
       }} />
-    <dialog ref={dialog} id={id} className="agent-inspector" aria-label={name + ' agent inspector'}
+    <dialog ref={dialog} id={id}
+      className={'agent-inspector model-family-' + agentModelFamily(lane.agent.configuration?.model)} aria-label={name + ' agent inspector'}
       style={{ '--agent-inspector-width': panelWidth + 'px' } as CSSProperties}
       onCancel={(event) => {
         if (event.target !== dialog.current) return
@@ -114,9 +116,11 @@ export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, oper
         }
       }}>
       <header className="agent-inspector__heading">
-        <AgentAvatar phase={lane.agent.phase} active={lane.active} isSubagent={lane.agent.isSubagent} size={36} />
+        <div className="agent-inspector__portrait">
+          <AgentAvatar phase={lane.agent.phase} active={lane.active} isSubagent={lane.agent.isSubagent} size={40} />
+        </div>
         <div className="agent-inspector__identity">
-          <div><h3 className="agent-inspector__name">{name}{agentOptions.length > 1 && <>
+          <div><h3 className="agent-inspector__name" aria-label={name}>{name}{agentOptions.length > 1 && <>
             <ChevronDown size={15} aria-hidden="true" />
             <select aria-label="Switch inspected agent" value={lane.agent.agentId} onChange={(event) => onSelectAgent(event.currentTarget.value)}>
               {agentOptions}
@@ -130,6 +134,10 @@ export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, oper
           </button>}
           <button type="button" onClick={close} aria-label="Close agent details" title="Close agent details"><X size={18} aria-hidden="true" /></button>
         </div>
+        {lane.agent.summary && <dl className="agent-inspector__work">
+          <dt>{agentFocusLabel(lane.agent)}</dt>
+          <dd>{lane.agent.summary}</dd>
+        </dl>}
       </header>
       <InspectorViews key={JSON.stringify([workspaceId, taskId, lane.agent.agentId])}
         lane={lane} workspaceId={workspaceId} chat={chat} taskId={taskId} section={section} setSection={setSection} />
@@ -203,14 +211,13 @@ function InspectorViews({ lane, workspaceId, chat, taskId, section, setSection }
     <div id={tabId + 'Activity-panel'} aria-labelledby={tabId + 'Activity'} role="tabpanel" tabIndex={0}
       className="agent-inspector__reader agent-inspector__activity" hidden={section !== 'Activity'}>
       {section === 'Activity' && <>
-        <dl>{lane.agent.summary && <><dt>{agentFocusLabel(lane.agent)}</dt><dd>{lane.agent.summary}</dd></>}
-          {lane.agent.lastObservedActivity && lane.agent.lastObservedActivity !== lane.agent.summary &&
-            <><dt>Last observed action</dt><dd>{lane.agent.lastObservedActivity}</dd></>}
-        </dl>
-        <h4>Recent activity</h4>
-        <ol>{agentHistoryMilestones(lane).map((event) => <AgentActivityEntry key={event.id} event={event} />)}</ol>
-        {lane.agent.publicId && <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(lane.agent.publicId)}`}>
-          Open full timeline <ArrowUpRight size={15} aria-hidden="true" /></a>}
+        {lane.agent.lastObservedActivity && lane.agent.lastObservedActivity !== lane.agent.summary &&
+          <dl><dt>Last observed action</dt><dd>{lane.agent.lastObservedActivity}</dd></dl>}
+        <header><h4>Recent activity</h4>
+          {lane.agent.publicId && <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(lane.agent.publicId)}`}>
+            Open full timeline <ArrowUpRight size={15} aria-hidden="true" /></a>}
+        </header>
+        <ol>{agentHistoryMilestones(lane).map((event) => <AgentActivityEntry key={event.id} event={event} detailed />)}</ol>
       </>}
     </div>
   </>

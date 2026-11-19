@@ -1,12 +1,12 @@
 .agent-chat-outputs {
   margin: 0;
-  padding: 0 1rem;
+  padding: 0 var(--inspector-inset, 1rem);
   list-style: none;
 }
 
 .agent-chat-outputs > li {
   min-width: 0;
-  padding-block: 1rem;
+  padding-block: 1.15rem;
 }
 
 .agent-chat-outputs > li + li { border-top: 1px solid var(--line); }
@@ -14,7 +14,7 @@
 .agent-chat-outputs p.agent-chat-outputs__caption {
   display: -webkit-box;
   overflow: hidden;
-  margin: 0 0 .75rem;
+  margin: 0 0 .25rem;
   color: var(--text);
   font-size: .9375rem;
   font-weight: 600;
@@ -29,22 +29,13 @@
   max-height: min(24rem, 45dvh);
 }
 .agent-chat-outputs .agent-chat-diagram { margin: 0; }
-.agent-chat-outputs .agent-chat-diagram details > pre {
-  max-width: 100%;
-  max-height: 16rem;
-  overflow: auto;
-  padding: .75rem;
-  color: var(--text);
-  background: var(--surface-subtle);
-  border-radius: 6px;
-}
 
 .agent-chat-outputs__origin {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: .5rem;
-  margin-top: .25rem;
+  margin-top: .65rem;
   color: var(--text-soft);
   font-size: .75rem;
   font-variant-numeric: tabular-nums;
@@ -63,6 +54,7 @@
   background: transparent;
   font: inherit;
   cursor: pointer;
+  flex: none;
 }
 
 .agent-chat-outputs__origin button:hover { background: var(--violet-soft); }

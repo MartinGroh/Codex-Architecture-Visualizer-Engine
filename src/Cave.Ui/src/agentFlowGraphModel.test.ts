@@ -19,10 +19,16 @@ describe('agent flow graph', () => {
     expect(flowOperation({ ...lane('stale'), active: false })).toBe('Idle')
     expect(flowOperation(lane('working'))).toBe('Editing')
   })
-  it('lays out the hub and agents without overlap', async () => {
-    const result = await layoutAgentFlow(agentFlowTopology([lane('main'), lane('child', 'main'), lane('other')]))
-    expect(result.nodes).toHaveLength(4)
-    expect(result.edges).toHaveLength(3)
+  it('lays out each parent before its children without overlapping nodes', async () => {
+    const result = await layoutAgentFlow(agentFlowTopology([lane('main'), lane('child', 'main'), lane('second', 'main'), lane('nested', 'child'), lane('other')]))
+    expect(result.nodes).toHaveLength(6)
+    expect(result.edges).toHaveLength(5)
+    const byId = new Map(result.nodes.map((node) => [node.id, node]))
+    for (const edge of result.edges) {
+      const source = byId.get(edge.source)!
+      const target = byId.get(edge.target)!
+      expect(source.position.x + source.width!).toBeLessThan(target.position.x)
+    }
     for (const node of result.nodes) {
       expect(Number.isFinite(node.position.x)).toBe(true)
       expect(Number.isFinite(node.position.y)).toBe(true)

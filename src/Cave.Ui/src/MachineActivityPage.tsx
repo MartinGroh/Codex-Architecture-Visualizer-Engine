@@ -381,11 +381,11 @@ function ActivityProjectFlow({
   const lanes = timeline.lanes.filter((lane) =>
     lane.active || !dismissedAgents.includes(`${timeline.workspace.workspaceId}:${lane.agent.agentId}:${lane.agent.updatedAtUtc}`))
   return (
-    <section className={`machine-project-flow ${active ? '' : 'is-complete'}`}>
+    <section className={`machine-project-flow ${view === 'graph' && lanes.length > 0 ? 'machine-project-flow--graph' : ''} ${active ? '' : 'is-complete'}`}>
       <header>
         <div>
           <span className="machine-project-flow__icon"><Route size={18} /></span>
-          <span><strong>{timeline.workspace.name}</strong><small>{timeline.workspace.rootPath}</small></span>
+          <span><strong title={timeline.workspace.name}>{timeline.workspace.name}</strong><small title={timeline.workspace.rootPath}>{timeline.workspace.rootPath}</small></span>
         </div>
         <ProjectFlowActions workspace={timeline.workspace} active={active} onDismiss={onDismiss} />
       </header>

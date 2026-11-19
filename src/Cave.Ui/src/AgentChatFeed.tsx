@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, Circle, MessageSquare } from 'lucide-react'
+import { Activity, ArrowDown, Check, Circle, FilePenLine, LogIn, MessageSquare, Network, UserRound } from 'lucide-react'
 import { AgentChatContent } from './AgentChatContent'
 import { agentChatNotice, sharedAgentMessages, type AgentChatAgent, type AgentChatMessage, type AgentChatSession } from './agentChat'
 import { agentDisplayName } from './agentIdentity'
@@ -7,6 +7,9 @@ import { agentHistoryMilestones, type MachineActivityLane, type MachineActivityM
 import './AgentChatFeed.css'
 
 type FeedItem = { id: string; time: string; message: AgentChatMessage } | { id: string; time: string; event: MachineActivityMilestone }
+
+const messageIcons = { Prompt: UserRound, Commentary: MessageSquare, Final: Check }
+const milestoneIcons = { Start: LogIn, Architecture: Network, Edit: FilePenLine, Phase: Activity, Complete: Check }
 
 interface AgentChatFeedProps {
   lane?: MachineActivityLane | null
@@ -113,10 +116,13 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
     >
       {notice && <p className="agent-chat-feed__notice" role="status"><MessageSquare size={14} aria-hidden="true" />{notice}</p>}
       <ol className="agent-chat-feed__entries" ref={feed}>
-        {items.map((item) => 'message' in item
-          ? <li key={item.id} data-message-id={item.message.id} tabIndex={view === 'conversation' ? -1 : undefined}
+        {items.map((item) => {
+          if ('event' in item) return <AgentActivityEntry key={item.id} event={item.event} />
+          const Icon = messageIcons[item.message.kind]
+          return <li key={item.id} data-message-id={item.message.id} tabIndex={view === 'conversation' ? -1 : undefined}
             className={'agent-chat-message agent-chat-message--' + item.message.kind.toLowerCase()}>
             <header>
+              {view === 'conversation' && <span className="agent-chat-message__marker"><Icon size={14} aria-hidden="true" /></span>}
               <strong>{item.message.role === 'User' ? 'You' : item.message.kind === 'Final' ? 'Final reply' : 'Progress'}</strong>
               <MessageTime datetime={item.time} />
             </header>
@@ -125,7 +131,7 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
             </div>
             {item.message.isTruncated && <small className="agent-chat-message__truncated">Message shortened</small>}
           </li>
-          : <AgentActivityEntry key={item.id} event={item.event} />)}
+        })}
       </ol>
     </div>
     {updatesBelow && <div className="agent-chat-feed__jump">
@@ -134,9 +140,11 @@ function AgentChatHistory({ agent, lane, chat, view = 'combined', reveal }: Agen
   </div>
 }
 
-export function AgentActivityEntry({ event }: { event: MachineActivityMilestone }) {
+export function AgentActivityEntry({ event, detailed = false }: { event: MachineActivityMilestone; detailed?: boolean }) {
+  const Icon = milestoneIcons[event.kind]
   return <li className="agent-chat-event">
-    <Circle size={6} aria-hidden="true" />
+    {detailed ? <span className="agent-chat-event__marker"><Icon size={15} aria-hidden="true" /></span>
+      : <Circle size={6} aria-hidden="true" />}
     <span><strong>{event.label}</strong><small>{event.detail}</small></span>
     <MessageTime datetime={event.observedAtUtc} />
   </li>

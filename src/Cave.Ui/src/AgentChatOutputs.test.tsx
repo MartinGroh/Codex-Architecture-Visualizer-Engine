@@ -36,7 +36,7 @@ it('indexes Markdown diagrams and scoped attachments in message order and opens 
   expect(within(items[2]).getByText('Build plan')).toBeTruthy()
   expect(await within(items[2]).findByText('Diagram preview unavailable')).toBeTruthy()
   expect(renderAgentChatDiagram).toHaveBeenCalledTimes(1)
-  expect(renderAgentChatDiagram).toHaveBeenCalledWith(expect.any(String), 'flowchart LR\nA --> B', expect.any(AbortSignal))
+  expect(renderAgentChatDiagram).toHaveBeenCalledWith(expect.any(String), 'flowchart LR\nA --> B', expect.any(AbortSignal), expect.any(Object))
   expect(artifactUrl).toHaveBeenCalledWith('published')
   expect(artifactUrl).not.toHaveBeenCalledWith('file-only')
   expect(document.querySelector('img[src*="example.invalid"]')).toBeNull()

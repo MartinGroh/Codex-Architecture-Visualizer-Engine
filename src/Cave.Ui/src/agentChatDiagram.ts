@@ -5,15 +5,17 @@ const responseTimeoutMs = 5_000
 let framePromise: Promise<HTMLIFrameElement> | undefined
 let renderQueue: Promise<unknown> = Promise.resolve()
 
+interface DiagramPalette { paper: string; node: string; ink: string; edge: string; accent: string }
+
 /** Returns a local static preview for a bounded Mermaid source block. */
-export function renderAgentChatDiagram(id: string, source: string, signal: AbortSignal): Promise<string | null> {
+export function renderAgentChatDiagram(id: string, source: string, signal: AbortSignal, palette: DiagramPalette): Promise<string | null> {
   if (source.length === 0 || source.length > maxSourceLength) return Promise.resolve(null)
-  const render = renderQueue.then(() => signal.aborted ? null : renderInFrame(id, source))
+  const render = renderQueue.then(() => signal.aborted ? null : renderInFrame(id, source, palette))
   renderQueue = render.catch(() => undefined)
   return render
 }
 
-async function renderInFrame(id: string, source: string): Promise<string | null> {
+async function renderInFrame(id: string, source: string, palette: DiagramPalette): Promise<string | null> {
   framePromise ??= createFrame()
   const frame = await framePromise.catch((error: unknown) => {
     framePromise = undefined
@@ -37,7 +39,7 @@ async function renderInFrame(id: string, source: string): Promise<string | null>
       finish(null)
     }, responseTimeoutMs)
     window.addEventListener('message', receive)
-    frame.contentWindow?.postMessage({ type: 'cave-mermaid-render', id, source }, '*')
+    frame.contentWindow?.postMessage({ type: 'cave-mermaid-render', id, source, palette }, '*')
   })
   if (!svg) return null
 
@@ -67,14 +69,24 @@ async function createFrame(): Promise<HTMLIFrameElement> {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:">
     <body><script>${mermaidBundle.replace(/<(?=\/?script\b|!--)/gi, '\\x3c')}</script>
     <script>
-      globalThis.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true,
+      const config = { startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true,
         secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'htmlLabels', 'themeCSS', 'dompurifyConfig'],
-        htmlLabels: false, maxTextSize: ${maxSourceLength}, maxEdges: 128 });
+        htmlLabels: false, maxTextSize: ${maxSourceLength}, maxEdges: 128, look: 'classic', theme: 'base',
+        fontFamily: 'Inter, system-ui, sans-serif' };
       addEventListener('message', async event => {
         if (event.source !== parent || event.data?.type !== 'cave-mermaid-render') return;
-        const { id, source } = event.data;
+        const { id, source, palette } = event.data;
         let svg = null;
-        try { ({ svg } = await globalThis.mermaid.render(id, source)); } catch {}
+        try {
+          globalThis.mermaid.initialize({ ...config, themeVariables: {
+            background: palette.paper, primaryColor: palette.node, primaryTextColor: palette.ink,
+            primaryBorderColor: palette.accent, secondaryColor: palette.paper, secondaryTextColor: palette.ink,
+            tertiaryColor: palette.node, tertiaryTextColor: palette.ink, lineColor: palette.edge,
+            textColor: palette.ink, edgeLabelBackground: palette.paper, clusterBkg: palette.paper,
+            clusterBorder: palette.edge, nodeTextColor: palette.ink, fontFamily: config.fontFamily
+          } });
+          ({ svg } = await globalThis.mermaid.render(id, source));
+        } catch {}
         parent.postMessage({ type: 'cave-mermaid-result', id, svg }, '*');
       });
     </script></body>`

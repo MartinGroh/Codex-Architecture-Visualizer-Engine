@@ -4,7 +4,8 @@ import { AgentAvatar } from './AgentAvatar'
 import { AgentChatFeed } from './AgentChatFeed'
 import { AgentModelLabel } from './AgentModel'
 import { useAgentChat, type AgentChatAgent } from './agentChat'
-import { agentDisplayName } from './agentIdentity'
+import { agentDisplayName, agentRoleLabel } from './agentIdentity'
+import { agentModelFamily } from './agentModelPresentation'
 import type { MachineActivityLane } from './machineActivityTimeline'
 import './AgentWall.css'
 
@@ -67,8 +68,9 @@ function TaskAgentWall({ workspaceId, taskId, lanes, sharingEnabled, onBack }: A
   })
   const expanded = expandedId && byId.has(expandedId) ? expandedId : null
   const selected = expanded ?? (byId.has(selectedId) ? selectedId : visibleAgents[0]?.id)
-  const nameCounts = new Map<string, number>()
-  visibleAgents.forEach(({ name }) => nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1))
+  const roles = visibleAgents.map(({ id, lane }) => lane ? agentRoleLabel(lane.agent) : id === taskId ? 'Main agent' : 'Subagent')
+  const labels = visibleAgents.map(({ name }, i) => name === roles[i] ? name : `${name} · ${roles[i]}`)
+  const paneLabels = labels.map((label, i) => labels.indexOf(label) === labels.lastIndexOf(label) ? label : `${label} · ${i + 1}`)
 
   const enableSharing = async () => {
     setEnabling(true)
@@ -98,9 +100,7 @@ function TaskAgentWall({ workspaceId, taskId, lanes, sharingEnabled, onBack }: A
         onChange={(event) => { setExpandedId(null); setSelectedId(event.currentTarget.value) }}
       >
         {visibleAgents.map((agent, index) => <option key={agent.id} value={agent.id}>
-          {agent.name}{agent.id === taskId
-            ? agent.name === 'Main agent' ? '' : ' · Main agent'
-            : (nameCounts.get(agent.name) ?? 0) > 1 ? ' · Agent ' + (index + 1) : ''}
+          {paneLabels[index]}
         </option>)}
       </select>}
       {notice && <span className="agent-wall__notice">{notice}</span>}
@@ -119,18 +119,19 @@ function TaskAgentWall({ workspaceId, taskId, lanes, sharingEnabled, onBack }: A
       : chat.status === 'Unavailable' ? 'The selected task is unavailable.'
       : 'No agents are available for this task.'}</p>
       : <div className="agent-wall__panes" data-expanded={expanded !== null}>
-        {visibleAgents.map((agent) => {
+        {visibleAgents.map((agent, index) => {
           const isExpanded = expanded === agent.id
           const isMain = agent.id === taskId
           const phase = agent.lane?.agent.phase ?? null
           const active = agent.lane?.active ?? false
           const configuration = agent.lane?.agent.configuration
+          const heading = paneLabels[index] === labels[index] ? agent.name : `${agent.name} · ${index + 1}`
           const operation = agent.lane
             ? active ? phase ?? 'Working' : agent.lane.agent.state === 'Completed' ? 'Completed' : agent.lane.agent.state
             : null
           return <article
             className="agent-wall__pane"
-            aria-label={agent.name + ' · ' + (isMain ? 'Main agent' : 'Subagent')}
+            aria-label={paneLabels[index]}
             key={agent.id}
             hidden={expanded !== null && !isExpanded}
             data-phone-selected={selected === agent.id}
@@ -142,17 +143,17 @@ function TaskAgentWall({ workspaceId, taskId, lanes, sharingEnabled, onBack }: A
               }
             }}
           >
-            <header className="agent-wall__pane-heading">
-              <AgentAvatar phase={phase} active={active} isSubagent={!isMain} size={28} configuration={configuration} />
+            <header className={`agent-wall__pane-heading model-family-${agentModelFamily(configuration?.model)}`}>
+              <AgentAvatar phase={phase} active={active} isSubagent={!isMain} size={32} configuration={configuration} />
               <div className="agent-wall__identity">
-                <h3 title={agent.name}>{agent.name}</h3>
-                <span>{[isMain ? agent.name === 'Main agent' ? null : 'Main agent' : 'Subagent', operation].filter(Boolean).join(' · ')}</span>
+                <h3 title={heading}>{heading}</h3>
+                <span>{[roles[index] === agent.name ? null : roles[index], operation].filter(Boolean).join(' · ')}</span>
               </div>
               {configuration && <AgentModelLabel configuration={configuration} />}
               <button
                 className="agent-wall__expand"
                 type="button"
-                aria-label={(isExpanded ? 'Restore wall from ' : 'Expand ') + agent.name}
+                aria-label={(isExpanded ? 'Restore wall from ' : 'Expand ') + paneLabels[index]}
                 title={isExpanded ? 'Restore wall' : 'Expand pane'}
                 aria-pressed={isExpanded}
                 onClick={() => {

@@ -786,6 +786,23 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
   .machine-activity-page--focused .machine-activity-content { display: flex; flex: 1; flex-direction: column; min-height: 540px; padding-bottom: 12px; }
   .machine-activity-page--focused .machine-activity-projects { flex: 1; min-height: 0; align-items: stretch; }
   .machine-activity-page--focused .machine-project-flow { display: flex; flex-direction: column; min-height: 0; }
+  .machine-activity-page--focused .machine-activity-content:has(.machine-project-flow--graph) {
+    min-height: 420px;
+    padding-block: 12px;
+  }
+  .machine-activity-page--focused .machine-project-flow--graph {
+    display: grid;
+    grid-template-columns: minmax(310px, min(36%, 490px)) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .machine-project-flow--graph > header { padding: 7px 14px; }
+  .machine-project-flow--graph > header strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .machine-project-flow--graph > header small { color: var(--text-soft); font-size: 10px; }
+  .machine-project-flow--graph .machine-project-flow__actions > a { font-size: 11px; }
+  .machine-activity-page--focused .machine-project-flow--graph .flow2 { display: contents; }
+  .machine-project-flow--graph .flow2-toolbar { background: var(--surface-subtle); }
+  .machine-activity-page--focused .machine-project-flow--graph .flow2-workspace,
+  .machine-activity-page--focused .machine-project-flow--graph .flow2 > p { grid-column: 1 / -1; }
 }
 @media (min-width: 1400px) {
   .machine-activity-overview { display: flex; align-items: center; gap: 24px; margin-bottom: 8px; }

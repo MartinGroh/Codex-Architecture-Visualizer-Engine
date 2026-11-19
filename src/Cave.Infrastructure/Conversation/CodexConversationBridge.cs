@@ -9,6 +9,8 @@ namespace Cave.Infrastructure.Conversation;
 public sealed class CodexConversationBridge : IConversationControl, IDisposable
 {
     private static readonly TimeSpan ScanInterval = TimeSpan.FromSeconds(1);
+    // Idle reconciliation discovers cross-process hooks; browser submissions wake the semaphore immediately.
+    private static readonly TimeSpan IdleScanInterval = TimeSpan.FromSeconds(15);
     private const int MaxMessageLength = 32_768;
     private readonly IWorkspaceCatalogStore _catalogStore;
     private readonly ICodexTaskLocator _taskLocator;
@@ -130,9 +132,10 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            var interval = ScanInterval;
             try
             {
-                await ScanAsync(stoppingToken).ConfigureAwait(false);
+                interval = await ScanAsync(stoppingToken).ConfigureAwait(false) ? ScanInterval : IdleScanInterval;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -147,7 +150,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
 
             try
             {
-                using var timer = new CancellationTokenSource(ScanInterval);
+                using var timer = new CancellationTokenSource(interval);
                 using var linked = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timer.Token);
                 await _wake.WaitAsync(linked.Token).ConfigureAwait(false);
             }
@@ -161,17 +164,19 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
         }
     }
 
-    private async Task ScanAsync(CancellationToken cancellationToken)
+    private async Task<bool> ScanAsync(CancellationToken cancellationToken)
     {
         var catalog = await _catalogStore.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var needsAttention = false;
         foreach (var workspace in catalog.Entries.Where(item => Directory.Exists(item.WorkspaceRoot)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await ProcessWorkspaceAsync(workspace.WorkspaceRoot, cancellationToken).ConfigureAwait(false);
+            needsAttention |= await ProcessWorkspaceAsync(workspace.WorkspaceRoot, cancellationToken).ConfigureAwait(false);
         }
+        return needsAttention;
     }
 
-    private async Task ProcessWorkspaceAsync(string workspaceRoot, CancellationToken cancellationToken)
+    private async Task<bool> ProcessWorkspaceAsync(string workspaceRoot, CancellationToken cancellationToken)
     {
         var binding = await _taskLocator.ResolveAsync(workspaceRoot, cancellationToken).ConfigureAwait(false);
         var pending = await ConversationControlJournal.ReadPendingAsync(
@@ -185,7 +190,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
             {
                 // No hook-bound task and no recoverable work means there is nothing to persist.
                 // This also keeps read-only/catalog-only workspaces free of bridge churn.
-                return;
+                return false;
             }
 
             await _journal.WriteStatusAsync(
@@ -196,7 +201,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 canSend: false,
                 "No exact Codex task has been observed for this workspace yet.",
                 cancellationToken).ConfigureAwait(false);
-            return;
+            return true;
         }
 
         if (pending.Count == 0)
@@ -207,7 +212,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                     cancellationToken)
                 .ConfigureAwait(false))
             {
-                return;
+                return true;
             }
 
             await _journal.WriteStatusAsync(
@@ -218,7 +223,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 canSend: true,
                 error: null,
                 cancellationToken).ConfigureAwait(false);
-            return;
+            return binding.IsActive;
         }
 
         var envelope = pending[0];
@@ -235,7 +240,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 error: null,
                 cancellationToken).ConfigureAwait(false);
             Wake();
-            return;
+            return true;
         }
 
         if (envelope.Record.State == ConversationDeliveryState.Failed)
@@ -264,7 +269,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 cancellationToken).ConfigureAwait(false);
             await WriteFailedStatusAsync(workspaceRoot, binding, envelope.Record.Error!, cancellationToken)
                 .ConfigureAwait(false);
-            return;
+            return true;
         }
 
         if (binding.IsActive)
@@ -277,7 +282,7 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 canSend: false,
                 "Waiting for the desktop-owned Codex turn to finish.",
                 cancellationToken).ConfigureAwait(false);
-            return;
+            return true;
         }
 
         if (!envelope.Record.SessionId.Equals(binding.SessionId, StringComparison.Ordinal))
@@ -291,10 +296,11 @@ public sealed class CodexConversationBridge : IConversationControl, IDisposable
                 cancellationToken).ConfigureAwait(false);
             await WriteFailedStatusAsync(workspaceRoot, binding, envelope.Record.Error!, cancellationToken)
                 .ConfigureAwait(false);
-            return;
+            return true;
         }
 
         await RunDeliveryAsync(workspaceRoot, binding, envelope, cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     private async Task RunDeliveryAsync(

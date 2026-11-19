@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-    [switch] $IncludeHistory
+    [switch] $IncludeHistory,
+    # Head includes every ancestor; All also includes unrelated fetched refs.
+    [ValidateSet('Head', 'All')]
+    [string] $HistoryScope = 'All'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -134,14 +137,16 @@ try {
             }
         }
 
-        $revisions = @(& git rev-list --all)
+        $revisionSelector = if ($HistoryScope -eq 'Head') { 'HEAD' } else { '--all' }
+        Write-Host "Auditing Git history scope: $HistoryScope ($revisionSelector)."
+        $revisions = @(& git rev-list $revisionSelector)
         if ($LASTEXITCODE -ne 0) {
             throw 'Unable to enumerate Git history.'
         }
 
         # Public source uses GitHub noreply identities. A later clean commit cannot erase
         # private author/committer addresses from an ancestor's raw commit object.
-        $identityRecords = @(& git log --all '--format=%H%x09%ae%x09%ce')
+        $identityRecords = @(& git log $revisionSelector '--format=%H%x09%ae%x09%ce')
         if ($LASTEXITCODE -ne 0) {
             throw 'Unable to inspect Git commit identities.'
         }
@@ -197,7 +202,7 @@ try {
         exit 1
     }
 
-    $scopeDescription = if ($IncludeHistory) { 'current tree and Git history' } else { 'current tree' }
+    $scopeDescription = if ($IncludeHistory) { "current tree and $HistoryScope Git history" } else { 'current tree' }
     Write-Host "Public-readiness audit passed for the $scopeDescription." -ForegroundColor Green
     # Git grep returns 1 for no matches; GitHub's PowerShell wrapper propagates it
     # unless the successful audit explicitly terminates with a zero exit code.

@@ -39,3 +39,17 @@ describe('AgentWorkContext', () => {
     expect(screen.getByText('Goal read timed out.')).toBeTruthy()
   })
 })
+
+it('labels root-task statistics and avoids redundant subagent tree panels', () => {
+  const agent = { agentType: 'default', state: 'Active' as const, phase: 'Reading' as const,
+    summary: null, hasObservedActivity: true, hasDeclaredScope: false, startedAtUtc: '2026-11-18T10:00:00Z', updatedAtUtc: '2026-11-18T10:01:00Z' }
+  render(<AgentWorkContext conversation={conversation} workspaceId="test" agents={[
+    { ...agent, agentId: 'main', displayName: 'Anna', statisticsTaskId: 'root-task', isSubagent: false },
+    { ...agent, agentId: 'child', parentAgentId: 'main', displayName: 'Bella', statisticsTaskId: 'child-task', isSubagent: true },
+    { ...agent, agentId: 'orphan', parentAgentId: 'absent', displayName: 'Claire', statisticsTaskId: 'orphan-task', isSubagent: true },
+  ]} />)
+  expect(screen.getByText('Task 1 statistics · Anna')).toBeTruthy()
+  expect(screen.queryByText(/statistics · Bella/)).toBeNull()
+  expect(screen.getByText('Task 2 statistics · Claire')).toBeTruthy()
+  expect(screen.getAllByText('Project lifetime statistics')).toHaveLength(1)
+})

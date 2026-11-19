@@ -36,8 +36,9 @@ export function AgentWorkContext({ conversation, agents, workspaceId, statistics
       </div>
         {(workspaceId || statisticsReader) && <div className="architecture-work-context__statistics">
           <AgentStatisticsPanel title="Project lifetime statistics" workspaceId={workspaceId} reader={statisticsReader} />
-          {[...new Set(agents.map(agent => agent.statisticsTaskId).filter((id): id is string => !!id))].map(taskId =>
-            <AgentStatisticsPanel key={taskId} title="Current task statistics" workspaceId={workspaceId} taskId={taskId} reader={statisticsReader} />)}
+          {[...new Set(agents.filter(agent => !agent.parentAgentId || !agents.some(parent =>
+            parent.agentId === agent.parentAgentId && !!parent.statisticsTaskId)).map(agent => agent.statisticsTaskId).filter((id): id is string => !!id))].map((taskId, index) =>
+            <AgentStatisticsPanel key={taskId} title={`Task ${index + 1} statistics · ${agents.filter(agent => agent.statisticsTaskId === taskId).map(agentDisplayName).join(', ')}`} workspaceId={workspaceId} taskId={taskId} reader={statisticsReader} />)}
         </div>}
     </details>
   )

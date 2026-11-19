@@ -47,6 +47,53 @@ public sealed class AgentTelemetryServiceTests
         Assert.Equal(AgentDisplayNames.PublicId("main"), result.Agents[0].StatisticsTaskId);
     }
 
+    /// <summary>Unchanged completed work stops launching native reads until reconciliation is due.</summary>
+    [Fact]
+    public async Task IdleCollectionSkipsNativeReadsButSamplesChangesAndResumption()
+    {
+        var clock = new Clock();
+        var agents = new[] { Agent("child", true, clock.Now) with { State = AgentWorkState.Completed } };
+        var source = new Source(clock);
+        var store = new TestTelemetry.MemoryStore(new([], null));
+        var service = new AgentTelemetryService(store, source, new Activity(agents), clock);
+        WorkspaceCatalogEntry[] projects = [new("one", "one", clock.Now)];
+        await service.CollectAsync(projects, CancellationToken.None);
+        for (var i = 0; i < 19; i++)
+        {
+            clock.Now += TimeSpan.FromSeconds(15);
+            await service.CollectAsync(projects, CancellationToken.None);
+        }
+        Assert.Single(source.Requests);
+        clock.Now += TimeSpan.FromSeconds(15);
+        await service.CollectAsync(projects, CancellationToken.None);
+        Assert.Equal(2, source.Requests.Count);
+        clock.Now += TimeSpan.FromSeconds(15);
+        agents[0] = agents[0] with { UpdatedAtUtc = clock.Now };
+        await service.CollectAsync(projects, CancellationToken.None);
+        Assert.Equal(3, source.Requests.Count);
+        clock.Now += TimeSpan.FromSeconds(15);
+        agents[0] = agents[0] with { State = AgentWorkState.Active, UpdatedAtUtc = clock.Now };
+        await service.CollectAsync(projects, CancellationToken.None);
+        Assert.Equal(4, source.Requests.Count);
+        clock.Now += TimeSpan.FromSeconds(15);
+        agents[0] = agents[0] with { State = AgentWorkState.Completed, UpdatedAtUtc = clock.Now };
+        await service.CollectAsync(projects, CancellationToken.None);
+        Assert.Equal(5, source.Requests.Count);
+        Assert.False(Assert.Single(store.State.Records).WasActive);
+    }
+    /// <summary>Idle sampling does not make completed model icons blink while active metadata still expires.</summary>
+    [Fact]
+    public async Task CompletedAgentKeepsLastReportedConfigurationBetweenIdleSamples()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var prior = Record("finished", "main", now.AddMinutes(-4), "gpt-6-astra");
+        var service = TestTelemetry.Create(new([prior], null));
+        var result = await service.EnrichAsync(new([
+            Agent("finished", true, now) with { State = AgentWorkState.Completed }
+        ], [], [], null, [], null), CancellationToken.None);
+        Assert.Equal("gpt-6-astra", Assert.Single(result.Agents).Configuration?.Model);
+    }
+
     private static AgentTelemetryRecord Record(string id, string? parent, DateTimeOffset now, string model) =>
         new(id, parent, ["one"], parent is not null, now, now, now, true, new(model, "high"), null, false, null, 0, false, [], null);
 

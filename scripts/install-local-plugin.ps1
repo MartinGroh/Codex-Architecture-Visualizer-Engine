@@ -1,7 +1,11 @@
 [CmdletBinding()]
-param([switch] $PreflightOnly, [switch] $ReplaceMarketplaceSource)
+param([switch] $PreflightOnly, [switch] $ReplaceMarketplaceSource, [string] $MachineDataRoot)
 
 $ErrorActionPreference = 'Stop'
+
+if (-not [string]::IsNullOrWhiteSpace($MachineDataRoot) -and -not [IO.Path]::IsPathFullyQualified($MachineDataRoot)) {
+    throw 'MachineDataRoot must be an absolute CAVE data directory.'
+}
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $pluginPath = Join-Path $repoRoot 'plugins\cave'
@@ -35,7 +39,12 @@ $pluginServerPath = Join-Path $pluginPath 'server'
 $viewerPort = 5098
 $viewerBaseUri = "http://127.0.0.1:$viewerPort"
 $pluginCacheRoot = Join-Path $codexHomePath "plugins\cache\$marketplaceName\cave"
-$machineCaveRoot = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'CAVE'
+# Desktop-packaged and standalone shells can resolve different local-data roots. An explicit
+# existing installation target keeps viewer ownership and its workspace catalog together.
+
+$machineCaveRoot = if ([string]::IsNullOrWhiteSpace($MachineDataRoot)) {
+    Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'CAVE'
+} else { [IO.Path]::GetFullPath($MachineDataRoot) }
 $machineViewerRoot = Join-Path $machineCaveRoot 'viewer'
 $machineViewerExecutable = Join-Path $machineViewerRoot 'Cave.Host.exe'
 
@@ -268,6 +277,7 @@ function Start-InstalledCaveViewer {
     $viewerProcess = Start-Process `
         -FilePath $ExecutablePath `
         -WorkingDirectory (Split-Path -Parent $ExecutablePath) `
+        -ArgumentList @("--Cave:WorkspaceCatalogRoot=`"$(Join-Path $machineCaveRoot 'workspaces')`"") `
         -WindowStyle Hidden `
         -PassThru
     foreach ($attempt in 1..40) {

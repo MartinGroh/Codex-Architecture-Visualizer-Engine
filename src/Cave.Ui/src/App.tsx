@@ -1792,7 +1792,7 @@ function App() {
   if (!isEmbedded && selectedWorkspaceId === null && window.location.pathname.startsWith('/settings')) {
     return <SettingsPage />
   }
-  if (!isEmbedded && window.location.pathname === '/activity') {
+  if (!isEmbedded && ['/activity', '/activity/flow2'].includes(window.location.pathname)) {
     return <MachineActivityPage />
   }
 

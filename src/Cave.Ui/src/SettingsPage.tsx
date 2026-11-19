@@ -16,6 +16,7 @@ import {
   type ProbeLinkAddressMode,
 } from './probeLinkPreference'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
+import './MachineOverview.css'
 
 type SettingsSection = 'service-probes' | 'fleet-setup'
 type SaveStatus = 'saved' | 'session-only' | null
@@ -46,9 +47,8 @@ export function SettingsPage() {
     <MachinePageFrame className="machine-settings-page">
       <section className="dashboard-content settings-content">
         <header className="settings-heading">
-          <a href="/" className="settings-back"><ArrowLeft size={15} /> Projects</a>
           <h1>Machine settings</h1>
-          <p>Configure how this browser works with the CAVE service and its monitored machines.</p>
+          <a href="/" className="settings-back"><ArrowLeft size={15} /> Projects</a>
         </header>
 
         <div className="settings-layout">
@@ -59,7 +59,7 @@ export function SettingsPage() {
               aria-current={section === 'service-probes' ? 'page' : undefined}
             >
               <RadioTower size={18} />
-              <span><strong>Service probes</strong><small>Link and connection behavior</small></span>
+              <strong>Service probes</strong>
             </a>
             <a
               href="/settings/fleet-setup"
@@ -67,7 +67,7 @@ export function SettingsPage() {
               aria-current={section === 'fleet-setup' ? 'page' : undefined}
             >
               <Network size={18} />
-              <span><strong>Fleet setup</strong><small>Machine discovery and membership</small></span>
+              <strong>Fleet setup</strong>
             </a>
           </nav>
 
@@ -125,10 +125,11 @@ export function SettingsPage() {
                   </div>
 
                   <p className={`settings-saved ${saveStatus ? 'is-visible' : ''} ${saveStatus === 'session-only' ? 'is-warning' : ''}`} role="status">
-                    <Check size={15} />
-                    {saveStatus === 'session-only'
-                      ? 'Browser storage is unavailable. This choice lasts for this page only.'
-                      : 'Saved for this browser'}
+                    {saveStatus && <><Check size={15} />
+                      {saveStatus === 'session-only'
+                        ? 'Browser storage is unavailable. This choice lasts for this page only.'
+                        : 'Saved for this browser'}
+                    </>}
                   </p>
                 </section>
               )
@@ -143,10 +144,7 @@ export function SettingsPage() {
                   </div>
                   <div className="settings-empty-section">
                     <Network size={28} />
-                    <div>
-                      <strong>Fleet discovery is not configured in this build.</strong>
-                      <p>The settings home is ready, but the current backend has no fleet registration contract yet. No synthetic machines or controls are shown.</p>
-                    </div>
+                    <strong>Fleet discovery is not configured in this build.</strong>
                   </div>
                   <a className="settings-inline-link" href="/settings/service-probes">
                     Configure service-probe links <ExternalLink size={14} />

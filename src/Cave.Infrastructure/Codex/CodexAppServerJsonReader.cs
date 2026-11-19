@@ -4,7 +4,8 @@ using System.Text.Json;
 namespace Cave.Infrastructure.Codex;
 
 /// <summary>Bounds JSON-line reads at the external process boundary before allocating complete payloads.</summary>
-internal sealed class CodexAppServerJsonReader(StreamReader reader)
+internal sealed class CodexAppServerJsonReader(StreamReader reader, int maxLineCharacters = 131_072,
+    bool consumeOversizedLine = false)
 {
     private readonly char[] _buffer = new char[4096];
     private int _position;
@@ -39,8 +40,27 @@ internal sealed class CodexAppServerJsonReader(StreamReader reader)
             }
             var character = _buffer[_position++];
             if (character == '\n') return line.ToString().TrimEnd('\r');
-            if (line.Length >= 131_072)
-                throw new InvalidOperationException("The native response exceeded the 131072 character limit.");
+            if (line.Length >= maxLineCharacters)
+            {
+                if (consumeOversizedLine)
+                {
+                    // Keep the next response readable without retaining the oversized payload.
+                    do
+                    {
+                        var end = Array.IndexOf(_buffer, '\n', _position, _count - _position);
+                        if (end >= 0)
+                        {
+                            _position = end + 1;
+                            break;
+                        }
+
+                        _count = await reader.ReadAsync(_buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+                        _position = 0;
+                    } while (_count > 0);
+                    throw new InvalidDataException($"The native response exceeded the {maxLineCharacters} character limit.");
+                }
+                throw new InvalidOperationException($"The native response exceeded the {maxLineCharacters} character limit.");
+            }
             line.Append(character);
         }
     }

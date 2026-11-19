@@ -18,6 +18,7 @@ export interface MachineActivityMilestone {
   id: string
   label: string
   detail: string
+  filePath?: string
   observedAtUtc: string
   positionPercent: number
   kind: 'Start' | 'Architecture' | 'Edit' | 'Phase' | 'Complete'
@@ -48,6 +49,18 @@ export interface MachineActivityProjectTimeline {
   lanes: MachineActivityLane[]
 }
 
+/** Returns the hook-observed main task owning this agent, when every parent is present. */
+export function observedTaskRoot(lanes: MachineActivityLane[], agentId: string): MachineActivityLane | undefined {
+  const agents = new Map(lanes.map((lane) => [lane.agent.agentId, lane]))
+  const visited = new Set<string>()
+  let lane = agents.get(agentId)
+  while (lane?.agent.isSubagent && lane.agent.parentAgentId && !visited.has(lane.agent.agentId)) {
+    visited.add(lane.agent.agentId)
+    lane = agents.get(lane.agent.parentAgentId)
+  }
+  return lane?.agent.hasObservedActivity && !lane.agent.isSubagent && lane.agent.publicId ? lane : undefined
+}
+
 /** Both flow presentations use the same terminal milestone projection. */
 export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean): MachineActivityMilestone[] {
   if (active) return lane.milestones
@@ -56,6 +69,11 @@ export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean
     { id: `complete:${lane.agent.agentId}`, label: 'Complete', detail: lane.completionSummary?.text ?? lane.agent.lastObservedActivity ?? lane.agent.summary ?? 'No work detail was observed',
       observedAtUtc: lane.agent.updatedAtUtc, positionPercent: 100, kind: 'Complete' },
   ]
+}
+
+/** Shared final replies belong to the conversation. Activity uses only lifecycle and work evidence. */
+export function agentHistoryMilestones(lane: MachineActivityLane): MachineActivityMilestone[] {
+  return visibleLaneMilestones({ ...lane, completionSummary: null }, lane.active)
 }
 
 /** Builds comparable evidence-only timelines, retaining finished work for at most ten minutes. */
@@ -124,6 +142,7 @@ export function buildMachineActivityTimelines(
             id: `edit:${edit.filePath}:${edit.observedAtUtc}`,
             label: fileName(edit.filePath),
             detail: 'Observed edit',
+            filePath: edit.filePath,
             observedAtUtc: edit.observedAtUtc,
             kind: 'Edit' as const,
           }))

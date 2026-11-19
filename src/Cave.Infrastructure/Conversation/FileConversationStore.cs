@@ -2,13 +2,15 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cave.Application;
 using Cave.Domain;
+using Cave.Infrastructure.Files;
 
 namespace Cave.Infrastructure.Conversation;
 
 /// <summary>
 /// Reads opt-in public conversation hook records and atomically controls workspace sharing.
 /// </summary>
-public sealed class FileConversationStore : IConversationStore
+/// <param name="timeProvider">The clock identifying when sharing begins.</param>
+public sealed class FileConversationStore(TimeProvider? timeProvider = null) : IConversationStore
 {
     /// <summary>Gets the workspace-relative directory containing conversation hook records.</summary>
     public const string ConversationDirectory = ".cave/conversation/inbox";
@@ -18,6 +20,14 @@ public sealed class FileConversationStore : IConversationStore
 
     private const int MaxProjectedMessages = 512;
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly SemaphoreSlim SharingWrites = new(1, 1);
+
+    /// <inheritdoc />
+    public async Task<ConversationSharingState> ReadSharingAsync(string workspaceRoot, CancellationToken cancellationToken)
+    {
+        var settings = await ReadSettingsAsync(Path.GetFullPath(workspaceRoot), cancellationToken).ConfigureAwait(false);
+        return new ConversationSharingState(settings.Enabled, settings.AgentChatPeriod);
+    }
 
     /// <inheritdoc />
     public async Task<ConversationOverlay> ReadAsync(
@@ -114,7 +124,7 @@ public sealed class FileConversationStore : IConversationStore
 
         var projectedMessages = messages
             .GroupBy(
-                item => $"{item.SessionId}\0{item.TurnId}\0{item.Role}\0{item.Kind}\0{item.Text}",
+                item => $"{item.SessionId}\0{item.AgentId}\0{item.TurnId}\0{item.Role}\0{item.Kind}\0{item.Text}",
                 StringComparer.Ordinal)
             .Select(group => group
                 .OrderBy(item => item.IsStreaming)
@@ -149,9 +159,30 @@ public sealed class FileConversationStore : IConversationStore
         Directory.CreateDirectory(directory);
         var finalPath = Path.Combine(directory, "settings.json");
         var temporaryPath = Path.Combine(directory, $".settings-{Guid.NewGuid():N}.tmp");
-        var json = JsonSerializer.Serialize(new ConversationSettings(1, enabled), JsonOptions);
-        await File.WriteAllTextAsync(temporaryPath, json, cancellationToken).ConfigureAwait(false);
-        File.Move(temporaryPath, finalPath, overwrite: true);
+        await SharingWrites.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = await ReadSettingsAsync(canonicalRoot, cancellationToken).ConfigureAwait(false);
+            var period = enabled
+                ? current.AgentChatPeriod ?? new AgentChatSharingPeriod(Guid.NewGuid(), (timeProvider ?? TimeProvider.System).GetUtcNow())
+                : null;
+            if (current.Error is null && current.Enabled == enabled && current.AgentChatPeriod == period)
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(new ConversationSettings(1, enabled, period), JsonOptions);
+            await File.WriteAllTextAsync(temporaryPath, json, cancellationToken).ConfigureAwait(false);
+            await AtomicFilePublisher.PublishAsync(temporaryPath, finalPath, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            SharingWrites.Release();
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -226,7 +257,9 @@ public sealed class FileConversationStore : IConversationStore
                 JsonOptions,
                 cancellationToken).ConfigureAwait(false);
             return settings is { SchemaVersion: 1 }
-                ? new SettingsRead(settings.ConversationSharingEnabled, null)
+                ? new SettingsRead(settings.ConversationSharingEnabled, null,
+                    settings is { ConversationSharingEnabled: true, AgentChatPeriod: { Id: var id, StartedAtUtc: var started } }
+                        && id != Guid.Empty && started != default ? settings.AgentChatPeriod : null)
                 : new SettingsRead(false, "Conversation settings use an unsupported schema.");
         }
         catch (JsonException exception)
@@ -251,7 +284,8 @@ public sealed class FileConversationStore : IConversationStore
 
     private sealed record ConversationSettings(
         int SchemaVersion,
-        bool ConversationSharingEnabled);
+        bool ConversationSharingEnabled,
+        AgentChatSharingPeriod? AgentChatPeriod);
 
     private sealed record ConversationEvent(
         int SchemaVersion,
@@ -268,5 +302,5 @@ public sealed class FileConversationStore : IConversationStore
         bool IsTruncated,
         bool IsStreaming = false);
 
-    private sealed record SettingsRead(bool Enabled, string? Error);
+    private sealed record SettingsRead(bool Enabled, string? Error, AgentChatSharingPeriod? AgentChatPeriod = null);
 }

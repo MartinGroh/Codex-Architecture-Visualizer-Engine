@@ -65,6 +65,7 @@ import {
   type NodeMemoState,
 } from './NodeMemo'
 import { buildNodeMemoPrompt } from './nodeConversation'
+import { LongText } from './LongText'
 import {
   createAgentNodeDecorations,
   highlightConnectedEdges,
@@ -1118,46 +1119,77 @@ function ArchitectureApp({
               <span>Collapse all</span>
             </button>
           </div>
-          <div className="layout-density-controls" role="group" aria-label="Graph layout density">
-            <span>Layout</span>
-            {(['Normal', 'Tight'] as const).map((density) => (
-              <button
-                key={density}
-                type="button"
-                aria-pressed={layoutDensity === density}
-                title={`${density} graph spacing`}
-                onClick={() => selectLayoutDensity(density)}
-              >
-                {density}
-              </button>
-            ))}
+          <button className="mode-button graph-options-trigger" type="button" popoverTarget="cave-graph-options">
+            Display options
+          </button>
+          <div className="graph-options" id="cave-graph-options" popover="auto" role="group" aria-label="Graph display options">
+            <div className="layout-density-controls" role="group" aria-label="Graph layout density">
+              <span>Layout</span>
+              {(['Normal', 'Tight'] as const).map((density) => (
+                <button
+                  key={density}
+                  type="button"
+                  aria-pressed={layoutDensity === density}
+                  title={`${density} graph spacing`}
+                  onClick={() => selectLayoutDensity(density)}
+                >
+                  {density}
+                </button>
+              ))}
+            </div>
+            <button
+              className={`test-filter ${hideTests ? 'is-active' : ''}`}
+              type="button"
+              aria-pressed={hideTests}
+              title={hideTests
+                ? 'Show test projects and their classes'
+                : 'Hide test projects and their classes'}
+              onClick={toggleTests}
+            >
+              <TestTube2 size={13} />
+              <span>{hideTests ? 'Tests hidden' : 'Tests shown'}</span>
+              <b>{testProjectCount}</b>
+            </button>
+            <button
+              className={`package-filter ${hideExternalPackages ? 'is-active' : ''}`}
+              type="button"
+              aria-pressed={hideExternalPackages}
+              title={hideExternalPackages
+                ? 'Show read-only external package nodes'
+                : 'Hide read-only external package nodes'}
+              onClick={toggleExternalPackages}
+            >
+              <PackageOpen size={13} />
+              <span>{hideExternalPackages ? 'External hidden' : 'External shown'}</span>
+              <b>{externalPackageCount}</b>
+            </button>
+            {graphMode === 'Live' && (
+              <div className="work-indicator-controls" role="group" aria-label="Work indicator reset">
+                <button
+                  className="work-indicator-reset"
+                  type="button"
+                  title="Clear visible active and completed work markers without deleting activity history"
+                  onClick={resetVisibleWorkIndicators}
+                >
+                  <RotateCcw size={12} aria-hidden="true" /> Reset indicators
+                </button>
+                <label className="work-indicator-setting">
+                  <span>Auto reset</span>
+                  <select
+                    aria-label="Automatically reset work indicators"
+                    value={workIndicatorState.mode}
+                    onChange={(event) => changeWorkIndicatorResetMode(
+                      event.target.value as WorkIndicatorResetMode,
+                    )}
+                  >
+                    {workIndicatorResetOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
           </div>
-          <button
-            className={`test-filter ${hideTests ? 'is-active' : ''}`}
-            type="button"
-            aria-pressed={hideTests}
-            title={hideTests
-              ? 'Show test projects and their classes'
-              : 'Hide test projects and their classes'}
-            onClick={toggleTests}
-          >
-            <TestTube2 size={13} />
-            <span>{hideTests ? 'Tests hidden' : 'Tests shown'}</span>
-            <b>{testProjectCount}</b>
-          </button>
-          <button
-            className={`package-filter ${hideExternalPackages ? 'is-active' : ''}`}
-            type="button"
-            aria-pressed={hideExternalPackages}
-            title={hideExternalPackages
-              ? 'Show read-only external package nodes'
-              : 'Hide read-only external package nodes'}
-            onClick={toggleExternalPackages}
-          >
-            <PackageOpen size={13} />
-            <span>{hideExternalPackages ? 'External hidden' : 'External shown'}</span>
-            <b>{externalPackageCount}</b>
-          </button>
           {graphMode === 'Changes' ? (
             <>
               <span className="graph-stat"><b>{projectedSnapshot?.git.nodes.length ?? 0}</b> changed nodes · {snapshot?.git.files.length ?? 0} files</span>
@@ -1186,30 +1218,6 @@ function ArchitectureApp({
                   <CircleAlert size={11} /> Activity degraded
                 </span>
               )}
-              <div className="work-indicator-controls" role="group" aria-label="Work indicator reset">
-                <button
-                  className="work-indicator-reset"
-                  type="button"
-                  title="Clear visible active and completed work markers without deleting activity history"
-                  onClick={resetVisibleWorkIndicators}
-                >
-                  <RotateCcw size={12} aria-hidden="true" /> Reset indicators
-                </button>
-                <label className="work-indicator-setting">
-                  <span>Auto reset</span>
-                  <select
-                    aria-label="Automatically reset work indicators"
-                    value={workIndicatorState.mode}
-                    onChange={(event) => changeWorkIndicatorResetMode(
-                      event.target.value as WorkIndicatorResetMode,
-                    )}
-                  >
-                    {workIndicatorResetOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
             </>
           ) : (
             <>
@@ -1567,14 +1575,14 @@ function DetailPanel({
                           size={30}
                           className="activity-agent-avatar"
                         />
-                        <span>
+                        <div className="agent-activity-list__copy">
                           <strong>
                             {agentDisplayName(agent)}
                             <i>{agent.state}{agent.state === 'Active' && agent.phase !== null ? ` · ${agent.phase}` : ''}</i>
                           </strong>
-                          <small>{agent.summary ?? 'No work summary supplied.'}</small>
+                          <LongText text={agent.summary ?? ''} title="work summary" byline={agentDisplayName(agent)}><small>{agent.summary ?? 'No work summary supplied.'}</small></LongText>
                           <em>{agent.hasObservedActivity ? 'Observed session activity' : ''}{agent.hasObservedActivity && agent.hasDeclaredScope ? ' · ' : ''}{agent.hasDeclaredScope ? 'Agent-declared scope' : ''}</em>
-                        </span>
+                        </div>
                       </li>
                     ))}
                   </ul>

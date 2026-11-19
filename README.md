@@ -135,6 +135,14 @@ Codex 0.157 integration checks and the supported public-chat text formats are do
 
 ## Develop and verify
 
+### Follow agent chats
+
+Open **Agent flow → Flow 2** to follow a project in **Mind map**, **Org tree**, or left-to-right **Flow**. **Work bubbles** show each agent’s focus, observed actions, recent shared reply, diagrams, and images on the canvas. Use the count on an agent to collapse or expand its work. **Focus branch on map** in the inspector frames one agent and its work. **Wall** shows the parent task and its subagents in independently scrolling panes.
+
+In the demo, open **CAVE-Demo-Workspace** in **Flow 2** and select **Read reply** on Kai’s final reply. The map shows an excerpt and word count. The reader opens the exact handoff with its headings, table, log, and diagram. Use **Contents** to jump to a section or select the diagram to enlarge it. Long messages in the wall and workspace conversation have the same reading controls. When a source supplies a shortened message, the reader identifies the captured portion.
+
+Conversation sharing controls this view. **Enable live agent chats** starts sharing newly published messages for the workspace. With sharing off, the graph and wall still show observed activity.
+
 ### Agent Flow Light for apps and devices
 
 `GET /api/agent-flow?workspace=<catalog-id>` returns bounded agent status, stable first names, declared focus, and the opt-in shared main goal without loading a semantic graph. Download its portable JSON schema, assets, polling example, and fixed-buffer C client from `GET /api/agent-flow/resources`.

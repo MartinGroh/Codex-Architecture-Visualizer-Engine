@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Check, RefreshCw, Route, Smartphone, WifiOff } from 'lucide-react'
+import { Check, RefreshCw, Route, Smartphone, WifiOff } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
 import { AgentModelLabel } from './AgentModel'
 import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { readAgentFlowLight } from './api'
+import { LongText } from './LongText'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { AgentFlowLightAgent, AgentFlowLightMainGoal, AgentFlowLightSnapshot, WorkspaceOverview } from './types'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
@@ -33,10 +34,16 @@ export function AgentFlowLightPage() {
   return <MachinePageFrame className="agent-flow-light-page">
     <section className="agent-flow-light-content">
       <header className="agent-flow-light-heading">
-        <a className="machine-activity-back" href="/"><ArrowLeft size={15} /> Projects</a>
-        <div className="agent-flow-light-heading__row">
-          <div><h1>Agent Flow Light</h1>
-            <p>Follow main agents and subagents across projects. This view uses the same compact feed as device clients.</p></div>
+        <h1>Agent Flow Light</h1>
+        <div className="agent-flow-light-heading__actions">
+          {available.length > 0 && <div className="agent-flow-light-toolbar">
+            <label htmlFor="agent-flow-light-workspace">Project</label>
+            <select id="agent-flow-light-workspace" value={selection} onChange={(event) => setSelection(event.target.value)}>
+              <option value={allProjects}>All projects</option>
+              {selection !== allProjects && selected.length === 0 && <option value={selection} disabled>Selected project unavailable</option>}
+              {available.map((workspace) => <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>)}
+            </select>
+          </div>}
           <a className="agent-flow-light-full-link" href="/activity"><Route size={17} /> Full agent flow</a>
         </div>
       </header>
@@ -44,22 +51,11 @@ export function AgentFlowLightPage() {
       {diagnostics.length > 0 && <div className="dashboard-alert dashboard-alert--warning" role="status"><WifiOff size={17} /><span><strong>Some projects need attention.</strong>{diagnostics.join(' ')}</span></div>}
       {isLoading && available.length === 0 ? <div className="dashboard-empty" role="status">Finding projects…</div>
         : available.length === 0 ? <div className="dashboard-empty"><Smartphone size={26} /><strong>No available projects yet.</strong><span>Open a repository through the CAVE plugin, then return to this view.</span></div>
-          : <>
-            <div className="agent-flow-light-toolbar">
-              <label htmlFor="agent-flow-light-workspace">Project</label>
-              <select id="agent-flow-light-workspace" value={selection} onChange={(event) => setSelection(event.target.value)}>
-                <option value={allProjects}>All projects</option>
-                {selection !== allProjects && selected.length === 0 && <option value={selection} disabled>Selected project unavailable</option>}
-                {available.map((workspace) => <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>)}
-              </select>
-            </div>
-            {selection !== allProjects && selected.length === 0
-              ? <div className="agent-flow-light-state" role="status">This project is unavailable on this CAVE viewer. Choose another project.</div>
-              : <div className="agent-flow-light-projects">
-                {selected.map((workspace) => <WorkspaceFlow key={workspace.workspaceId} workspace={workspace}
-                  dismissed={dismissed} onDismiss={(keys) => setDismissed((current) => [...current, ...keys])} />)}
-              </div>}
-          </>}
+          : selected.length === 0 ? <div className="agent-flow-light-state" role="status">This project is unavailable on this CAVE viewer. Choose another project.</div>
+            : <div className="agent-flow-light-projects">
+              {selected.map((workspace) => <WorkspaceFlow key={workspace.workspaceId} workspace={workspace}
+                dismissed={dismissed} onDismiss={(keys) => setDismissed((current) => [...current, ...keys])} />)}
+            </div>}
     </section>
   </MachinePageFrame>
 }
@@ -134,18 +130,20 @@ function WorkspaceFlow({ workspace, dismissed, onDismiss }: { workspace: Workspa
         <span>Last activity: {current.sourceUpdatedAtUtc === null ? 'not observed' : <time dateTime={current.sourceUpdatedAtUtc}>{new Date(current.sourceUpdatedAtUtc).toLocaleTimeString()}</time>}</span>
       </div>
       {current.sourceStatus !== 'Ready' && <div className="dashboard-alert dashboard-alert--warning" role="status"><WifiOff size={17} /><span><strong>{current.sourceStatus === 'Unobserved' ? 'No agent activity has been observed yet.' : 'Agent activity is degraded.'}</strong>{current.error}</span></div>}
-      <section className="agent-flow-light-goal" aria-label="Main goal">
-        <div className="agent-flow-light-section-heading"><h3>Main goal</h3>{current.mainGoal.status === 'Ready' && current.mainGoal.goal !== null && <span className="agent-flow-light-goal-state">{current.mainGoal.goal.status}</span>}</div>
-        <GoalContent mainGoal={current.mainGoal} />
-      </section>
-      <div className="agent-flow-light-tree">
-        {main.length === 0 && <AgentGroup title="Main agent" agents={[]} workspaceId={workspace.workspaceId} onDismiss={dismiss} />}
-        {main.map((parent) => <div className="agent-flow-light-branch" key={parent.agentId}>
-          <AgentGroup title="Main agent" agents={[parent]} workspaceId={workspace.workspaceId} onDismiss={dismiss} />
-          {children.some((child) => child.parentAgentId === parent.agentId) &&
-            <div className="agent-flow-light-children"><AgentGroup title="Subagents" agents={children.filter((child) => child.parentAgentId === parent.agentId)} workspaceId={workspace.workspaceId} onDismiss={dismiss} /></div>}
-        </div>)}
-        {unlinkedChildren.length > 0 && <div className="agent-flow-light-children"><AgentGroup title="Subagents without an observed parent" agents={unlinkedChildren} workspaceId={workspace.workspaceId} onDismiss={dismiss} /></div>}
+      <div className="agent-flow-light-project__body">
+        <section className="agent-flow-light-goal" aria-label="Main goal">
+          <div className="agent-flow-light-section-heading"><h3>Main goal</h3>{current.mainGoal.status === 'Ready' && current.mainGoal.goal !== null && <span className="agent-flow-light-goal-state">{current.mainGoal.goal.status}</span>}</div>
+          <GoalContent mainGoal={current.mainGoal} />
+        </section>
+        <div className="agent-flow-light-tree">
+          {main.length === 0 && <AgentGroup title="Main agent" agents={[]} workspaceId={workspace.workspaceId} onDismiss={dismiss} />}
+          {main.map((parent) => <div className="agent-flow-light-branch" key={parent.agentId}>
+            <AgentGroup title="Main agent" agents={[parent]} workspaceId={workspace.workspaceId} onDismiss={dismiss} />
+            {children.some((child) => child.parentAgentId === parent.agentId) &&
+              <div className="agent-flow-light-children"><AgentGroup title="Subagents" agents={children.filter((child) => child.parentAgentId === parent.agentId)} workspaceId={workspace.workspaceId} onDismiss={dismiss} /></div>}
+          </div>)}
+          {unlinkedChildren.length > 0 && <div className="agent-flow-light-children"><AgentGroup title="Subagents without an observed parent" agents={unlinkedChildren} workspaceId={workspace.workspaceId} onDismiss={dismiss} /></div>}
+        </div>
       </div>
     </>}
   </section>
@@ -155,7 +153,7 @@ function dismissKey(workspaceId: string, agent: AgentFlowLightAgent): string { r
 
 function AgentGroup({ title, agents, workspaceId, onDismiss }: { title: string; agents: AgentFlowLightAgent[]; workspaceId: string; onDismiss: (agent: AgentFlowLightAgent) => void }) {
   return <section aria-label={title}>
-    <div className="agent-flow-light-section-heading"><h3>{title}</h3><span>{agents.length}</span></div>
+    <div className="agent-flow-light-section-heading"><h3>{title}</h3>{agents.length > 1 && <span>{agents.length}</span>}</div>
     {agents.length === 0 ? <p className="agent-flow-light-no-agents">No {title.toLowerCase()} currently visible.</p>
       : <ul className="agent-flow-light-agents">{agents.map((agent) => <AgentRow key={agent.agentId} workspaceId={workspaceId} agent={agent} onDismiss={() => onDismiss(agent)} />)}</ul>}
   </section>
@@ -166,7 +164,9 @@ function GoalContent({ mainGoal }: { mainGoal: AgentFlowLightMainGoal }) {
   if (mainGoal.status === 'Unbound') return <p className="agent-flow-light-goal-empty">No exact Codex task is bound to this project.</p>
   if (mainGoal.status === 'Unavailable') return <p className="agent-flow-light-goal-empty">{mainGoal.error ?? 'The main goal is currently unavailable.'}</p>
   if (mainGoal.goal === null) return <p className="agent-flow-light-goal-empty">No main goal is set for this task.</p>
-  return <><p className="agent-flow-light-objective">{mainGoal.goal.objective}</p>{mainGoal.goal.isTruncated && <small>Goal text shortened for this display.</small>}</>
+  return <div className="agent-flow-light-objective">
+    <LongText text={mainGoal.goal.objective} title="main goal" truncated={mainGoal.goal.isTruncated} compact />
+  </div>
 }
 
 function AgentRow({ agent, workspaceId, onDismiss }: { agent: AgentFlowLightAgent; workspaceId: string; onDismiss: () => void }) {
@@ -174,15 +174,25 @@ function AgentRow({ agent, workspaceId, onDismiss }: { agent: AgentFlowLightAgen
   const finished = agent.state === 'Completed' || agent.state === 'Idle'
   const focusLabel = agent.currentFocus !== null ? 'Declared focus'
     : agent.summaryEvidence === 'Observed' ? 'Last observed activity' : 'Activity summary'
+  const focus = agent.currentFocus ?? agent.summary
+  const observedActivity = agent.lastObservedActivity
   return <li className={`agent-flow-light-agent ${active ? 'is-active' : ''}`}>
     <AgentAvatar phase={agent.phase} active={active} isSubagent={agent.isSubagent} configuration={agent.configuration ?? null} size={38} />
     <div className="agent-flow-light-agent__body">
       <div className="agent-flow-light-agent__identity"><strong>{agent.displayName}</strong><span>{active ? agent.phase ?? 'Working' : agent.state}</span></div>
       <AgentModelLabel configuration={agent.configuration} />
-      {agent.statisticsTaskId && !agent.isSubagent && <AgentStatisticsPanel title="Task statistics" workspaceId={workspaceId} taskId={agent.statisticsTaskId} />}
-      <small>{focusLabel}</small><p>{agent.currentFocus ?? agent.summary ?? 'No work detail was observed.'}</p>
-      {agent.currentFocus !== null && <><small>Last observed activity</small><p>{agent.lastObservedActivity ?? 'No work action was observed.'}</p></>}
+      <small>{focusLabel}</small>
+      <div className="agent-flow-light-agent__detail">
+        {focus ? <LongText text={focus} title={focusLabel.toLowerCase()} compact /> : 'No work detail was observed.'}
+      </div>
+      {agent.currentFocus !== null && <>
+        <small>Last observed activity</small>
+        <div className="agent-flow-light-agent__detail">
+          {observedActivity ? <LongText text={observedActivity} title="last observed activity" compact /> : 'No work action was observed.'}
+        </div>
+      </>}
       <a href={`/activity?workspace=${encodeURIComponent(workspaceId)}&agent=${encodeURIComponent(agent.agentId)}`}>View flow as list</a>
+      {agent.statisticsTaskId && !agent.isSubagent && <AgentStatisticsPanel title="Task statistics" workspaceId={workspaceId} taskId={agent.statisticsTaskId} />}
     </div>
     <div className="agent-flow-light-agent__trailing">
       <time dateTime={agent.updatedAtUtc} title="Last activity">{new Date(agent.updatedAtUtc).toLocaleTimeString()}</time>

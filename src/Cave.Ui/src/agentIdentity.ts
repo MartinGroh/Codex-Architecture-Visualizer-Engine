@@ -5,6 +5,10 @@ export function agentDisplayName(agent: Pick<AgentActivity, 'isSubagent' | 'disp
   return agent.displayName ?? (agent.isSubagent ? 'Subagent' : 'Main agent')
 }
 
+export function agentRoleLabel(agent: Pick<AgentActivity, 'agentType' | 'isSubagent'>): string {
+  return agent.agentType.trim() || (agent.isSubagent ? 'Subagent' : 'Main agent')
+}
+
 /** A declared focus is intent; an observed tool summary is an action, not a subgoal. */
 export function agentFocusLabel(agent: AgentActivity): string {
   return agent.summaryEvidence === 'Declared'

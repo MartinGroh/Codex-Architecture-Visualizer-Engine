@@ -10,6 +10,7 @@ import {
   Type,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import { LongText } from './LongText'
 import type {
   SemanticAssetReference,
   SemanticContentBlock,
@@ -148,7 +149,8 @@ function renderBlock(
             </label>
           )}
           <div className="rich-content-markdown">
-            {block.text ? <ReactMarkdown>{block.text}</ReactMarkdown> : <p className="rich-content-placeholder">No text yet.</p>}
+            {block.text ? <LongText text={block.text} title="text block" format="markdown"><ReactMarkdown>{block.text}</ReactMarkdown></LongText>
+              : <p className="rich-content-placeholder">No text yet.</p>}
           </div>
         </div>
       )

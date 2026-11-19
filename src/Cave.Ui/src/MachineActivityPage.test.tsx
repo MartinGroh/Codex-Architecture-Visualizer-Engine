@@ -247,6 +247,11 @@ describe('MachineActivityPage', () => {
     expect(screen.getByText('Editing')).toBeTruthy()
     expect(screen.getByText('App').parentElement?.classList.contains('label-row-1')).toBe(true)
     expect(screen.getAllByText('Observed work detail').length).toBeGreaterThan(0)
+
+    const editMilestone = screen.getByRole('button', { name: 'App.tsx' })
+    fireEvent.click(editMilestone)
+    expect(editMilestone.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('src/App.tsx').closest('[hidden]')).toBeNull()
   })
 
   it('keeps project slots stable and persists the selected project layout', async () => {

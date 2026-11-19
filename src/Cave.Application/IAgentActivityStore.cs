@@ -52,4 +52,11 @@ public sealed record AgentScopeDeclaration(
     IReadOnlyList<string> Projects,
     IReadOnlyList<string> Namespaces,
     IReadOnlyList<string> Classes,
-    IReadOnlyList<string> Files);
+    IReadOnlyList<string> Files)
+{
+    /// <summary>
+    /// Whether a main-agent declaration should join the latest hook-observed Codex task.
+    /// External agents keep their own identity rather than borrowing another task's activity.
+    /// </summary>
+    public bool BindToObservedMainTask { get; init; } = true;
+}

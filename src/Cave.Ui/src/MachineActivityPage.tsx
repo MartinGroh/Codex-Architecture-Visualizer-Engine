@@ -311,6 +311,7 @@ export function MachineActivityPage() {
               ) : (
                 <ActivityProjectFlow
                   key={workspace.workspaceId}
+                  focused={displayWorkspaces.length === 1}
                   timeline={requestedAgentId === null || view === 'graph' ? timeline : {
                     ...timeline,
                     lanes: timeline.lanes.filter((lane) => lane.agent.publicId === requestedAgentId),
@@ -359,6 +360,7 @@ function ActivityProjectLoading({
 
 function ActivityProjectFlow({
   view,
+  focused,
   timeline,
   nowMs,
   active,
@@ -369,6 +371,7 @@ function ActivityProjectFlow({
   onDismiss,
 }: {
   view: MachineActivityView
+  focused: boolean
   timeline: MachineActivityProjectTimeline
   nowMs: number
   active: boolean
@@ -424,7 +427,7 @@ function ActivityProjectFlow({
 
       </details>}
       {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
-      {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} onOpenWall={onOpenWall} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
+      {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} focused={focused} onOpenWall={onOpenWall} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
         {lanes.map((lane) => (
           <AgentTimelineLane key={lane.agent.agentId} lane={lane} workspaceId={timeline.workspace.workspaceId} nowMs={nowMs} active={lane.active}
             onDismiss={() => onDismissAgent(lane.agent.agentId, lane.agent.updatedAtUtc)} />

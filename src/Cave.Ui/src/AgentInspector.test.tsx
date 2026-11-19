@@ -1,12 +1,8 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AgentInspector } from './AgentInspector'
-import { useAgentChat, type AgentChatAgent, type AgentChatSession } from './agentChat'
+import type { AgentChatAgent, AgentChatSession } from './agentChat'
 import type { MachineActivityLane } from './machineActivityTimeline'
-
-vi.mock('./agentChat', async (original) => ({
-  ...await original<typeof import('./agentChat')>(), useAgentChat: vi.fn(),
-}))
 
 const timestamp = '2026-11-19T13:00:00Z'
 const lane: MachineActivityLane = {
@@ -29,8 +25,8 @@ const chat: AgentChatSession = {
   artifactUrl: (id) => '/api/agent-chat/artifacts?artifact=' + id, enableSharing: vi.fn(),
 }
 const props = {
-  lane, workspaceId: 'workspace', taskId: 'main', sharingEnabled: true, operation: 'Validating', width: null,
-  agentOptions: [], onSelectAgent: vi.fn(), onResize: vi.fn(), onClose: vi.fn(), onOpenWall: vi.fn(),
+  lane, chat, workspaceId: 'workspace', taskId: 'main', sharingEnabled: true, operation: 'Validating', width: null,
+  agentOptions: [], onSelectAgent: vi.fn(), onResize: vi.fn(), onClose: vi.fn(), onFocusBranch: vi.fn(), onOpenWall: vi.fn(),
 }
 
 beforeEach(() => {
@@ -40,7 +36,6 @@ beforeEach(() => {
     showModal(this: HTMLDialogElement) { this.open = true },
     close(this: HTMLDialogElement) { this.open = false },
   })
-  vi.mocked(useAgentChat).mockReturnValue(chat)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
 })
@@ -68,8 +63,7 @@ it('clears open previews on revocation and still exposes independently observed 
   fireEvent.click(screen.getByRole('tab', { name: /Outputs/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Open shared image preview' }))
   expect(screen.getByRole('dialog', { name: 'Shared image' })).toBeTruthy()
-  vi.mocked(useAgentChat).mockReturnValue({ ...chat, sharing: 'Private', periodId: null, status: 'Idle' })
-  rerender(<AgentInspector {...props} sharingEnabled={false} />)
+  rerender(<AgentInspector {...props} sharingEnabled={false} chat={{ ...chat, sharing: 'Private', periodId: null, status: 'Idle' }} />)
   expect(screen.queryByRole('dialog', { name: 'Shared image' })).toBeNull()
   expect(document.querySelector('img')).toBeNull()
   expect(screen.queryByText('review result')).toBeNull()

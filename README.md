@@ -137,7 +137,7 @@ Codex 0.157 integration checks and the supported public-chat text formats are do
 
 ### Follow agent chats
 
-Open **Agent flow → Flow 2** and select an agent to view its observed work and shared conversation. Open **Wall** to follow the parent task and its subagents in independently scrolling panes. Shared Mermaid diagrams and inline raster images open in a larger preview.
+Open **Agent flow → Flow 2** to follow a project in **Mind map**, **Org tree**, or left-to-right **Flow**. **Work bubbles** show each agent’s focus, observed actions, recent shared reply, diagrams, and images on the canvas. Use the count on an agent to collapse or expand its work. Select a reply to read its source or select a thumbnail to enlarge it. **Focus branch on map** in the inspector frames one agent and its work. **Wall** shows the parent task and its subagents in independently scrolling panes.
 
 Conversation sharing controls this view. **Enable live agent chats** starts sharing newly published messages for the workspace. With sharing off, the graph and wall still show observed activity.
 

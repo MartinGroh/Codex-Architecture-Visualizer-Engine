@@ -1,12 +1,12 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Activity, ArrowUpRight, ChevronDown, Images, LayoutGrid, MessagesSquare, X } from 'lucide-react'
+import { Activity, ArrowUpRight, ChevronDown, Images, LayoutGrid, MessagesSquare, Scan, X } from 'lucide-react'
 import { AgentAvatar } from './AgentAvatar'
 import { AgentActivityEntry, AgentChatFeed } from './AgentChatFeed'
 import { AgentChatOutputs } from './AgentChatOutputs'
 import { useAgentChatOutputs } from './agentChatOutputIndex'
 import { AgentModelLabel } from './AgentModel'
 import { agentModelFamily } from './agentModelPresentation'
-import { agentChatNotice, sharedAgentMessages, useAgentChat, type AgentChatSession } from './agentChat'
+import { agentChatNotice, sharedAgentMessages, type AgentChatSession } from './agentChat'
 import { agentDisplayName, agentFocusLabel, agentRoleLabel } from './agentIdentity'
 import { agentHistoryMilestones, type MachineActivityLane } from './machineActivityTimeline'
 import './AgentInspector.css'
@@ -17,11 +17,19 @@ const sections = [
   { name: 'Activity', icon: Activity },
 ] as const
 type InspectorSection = typeof sections[number]['name']
+type MessageLocation = { messageId: string; periodId: string | null; sharing: AgentChatSession['sharing'] }
+export interface AgentInspectorTarget {
+  agentId: string
+  section: InspectorSection
+  message?: MessageLocation
+}
 
 interface InspectorProps {
   lane: MachineActivityLane
   workspaceId: string
   taskId?: string | null
+  chat: AgentChatSession
+  target?: AgentInspectorTarget
   sharingEnabled: boolean
   operation: ReactNode
   agentOptions: ReactNode[]
@@ -29,11 +37,11 @@ interface InspectorProps {
   width: number | null
   onResize: (width: number) => void
   onClose: () => void
+  onFocusBranch: () => void
   onOpenWall: (taskId: string) => void
 }
 
-export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, operation, agentOptions, onSelectAgent, width, onResize, onClose, onOpenWall }: InspectorProps) {
-  const chat = useAgentChat(workspaceId, taskId, sharingEnabled)
+export function AgentInspector({ lane, workspaceId, taskId, chat, target, sharingEnabled, operation, agentOptions, onSelectAgent, width, onResize, onClose, onFocusBranch, onOpenWall }: InspectorProps) {
   const [section, setSection] = useState<InspectorSection>(sharingEnabled && taskId ? 'Conversation' : 'Activity')
   const id = useId()
   const dialog = useRef<HTMLDialogElement>(null)
@@ -129,6 +137,9 @@ export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, oper
           <div>{role !== name && <span>{role}</span>}<AgentModelLabel configuration={lane.agent.configuration} /></div>
         </div>
         <div className="agent-inspector__actions">
+          <button type="button" onClick={onFocusBranch} aria-label="Focus branch on map" title="Focus branch on map">
+            <Scan size={16} aria-hidden="true" />
+          </button>
           {taskId && <button type="button" onClick={() => onOpenWall(taskId)} aria-label="Open agent wall" title="Open agent wall">
             <LayoutGrid size={16} aria-hidden="true" /><span>Wall</span>
           </button>}
@@ -140,24 +151,31 @@ export function AgentInspector({ lane, workspaceId, taskId, sharingEnabled, oper
         </dl>}
       </header>
       <InspectorViews key={JSON.stringify([workspaceId, taskId, lane.agent.agentId])}
-        lane={lane} workspaceId={workspaceId} chat={chat} taskId={taskId} section={section} setSection={setSection} />
+        lane={lane} workspaceId={workspaceId} chat={chat} taskId={taskId} section={section} setSection={setSection}
+        target={target?.agentId === lane.agent.agentId ? target : undefined} />
     </dialog>
   </>
 }
 
-function InspectorViews({ lane, workspaceId, chat, taskId, section, setSection }: {
+function InspectorViews({ lane, workspaceId, chat, taskId, section, setSection, target }: {
   lane: MachineActivityLane
   workspaceId: string
   chat: AgentChatSession
   taskId?: string | null
   section: InspectorSection
   setSection: (section: InspectorSection) => void
+  target?: AgentInspectorTarget
 }) {
   const tabId = useId()
   const agent = chat.agents.find((row) => row.id === lane.agent.publicId)
   const messages = sharedAgentMessages(chat, agent)
   const outputs = useAgentChatOutputs(messages)
-  const [reveal, setReveal] = useState<{ messageId: string; periodId: string | null; sharing: AgentChatSession['sharing'] } | null>(null)
+  const [reveal, setReveal] = useState<MessageLocation | null>(null)
+  useLayoutEffect(() => {
+    if (!target) return
+    setSection(target.section)
+    setReveal(target.message ?? null)
+  }, [target, setSection])
   const [sharingRequest, setSharingRequest] = useState<'idle' | 'sending' | 'failed'>('idle')
   const notice = agentChatNotice(chat, agent)
   const scopeKey = JSON.stringify([chat.sharing, chat.periodId])

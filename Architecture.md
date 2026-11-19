@@ -197,7 +197,9 @@ Telemetry retains its 15-second lightweight activity pass but refreshes unchange
 
 The shared browser catalog owner permits one request at a time. It polls every two seconds during work, every 15 seconds while idle and every 60 seconds while hidden, with immediate focus/visibility wake and cancellation on disposal. These are reduced work budgets, not OS process suspension or a claim of zero idle resource use.
 
-Agent Flow 2 uses the same observed activity, task identity and agent/model icons as the Timeline, Compact and Light views. ELK places the workspace and observed agent hierarchy from left to right. Dashed lines show project membership and arrows show delegation. Opening or resizing the inspector keeps a fitted overview in frame. A manually positioned view retains its center and zoom.
+Agent Flow 2 uses the same observed activity, task identity and agent/model icons as the Timeline, Compact and Light views. The browser lays out one directed graph in three ways. Mind map balances whole branches around the main agent, or around the workspace when there are several roots. Org tree runs top to bottom and Flow runs left to right. Dashed lines show project membership. Arrows connect parents to delegated agents and agents to their own work. Changing layouts fits the new arrangement. Opening or resizing the inspector preserves a manually positioned view.
+
+Work bubbles show each lane’s declared focus and observed actions. A focused project also reads the chosen task’s published messages through one feed shared with the inspector. When several tasks are available the operator can choose a task or inspect one of its agents. Reply excerpts and previews carry the originating message and sharing period. The canvas shows recent work, with the conversation and activity history available through the inspector. The multi-project overview opens with work bubbles collapsed.
 
 ### Task-scoped chat and the agent wall
 

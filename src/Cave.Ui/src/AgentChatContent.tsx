@@ -1,5 +1,5 @@
 import { ChevronDown, Code2, Expand, Frame, Image, Minus, Plus, Waypoints, X } from 'lucide-react'
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react'
 import type { Components } from 'react-markdown'
 import type { AgentChatArtifact } from './agentChat'
 import { CodexText } from './CodexText'
@@ -38,14 +38,15 @@ export function AgentChatContent({ text, artifacts, artifactUrl }: {
   </div>
 }
 
-export function SharedImagePreview({ artifact, artifactUrl, label = 'Shared image' }: {
+export function SharedImagePreview({ artifact, artifactUrl, label = 'Shared image', compact = false }: {
   artifact: AgentChatArtifact
   artifactUrl: (id: string) => string
   label?: string
+  compact?: boolean
 }) {
   const src = artifact.contentType && rasterTypes.has(artifact.contentType)
     ? localArtifactUrl(artifactUrl(artifact.id)) : null
-  return src ? <MediaPreview key={src} src={src} label={label} />
+  return src ? <MediaPreview key={src} src={src} label={label} compact={compact} />
     : <small className="agent-chat-content__unavailable">Image preview unavailable</small>
 }
 
@@ -60,7 +61,13 @@ function localArtifactUrl(value: string): string | null {
 
 interface ImageSize { width: number; height: number }
 
-function MediaPreview({ src, label, diagram = false }: { src: string; label: string; diagram?: boolean }) {
+// Native preview controls inside a React Flow node have their own interaction target.
+const canvasInteractionClasses = 'nodrag nopan nowheel'
+function stopCanvasEvent(event: SyntheticEvent) { event.stopPropagation() }
+
+function MediaPreview({ src, label, diagram = false, compact = false }: {
+  src: string; label: string; diagram?: boolean; compact?: boolean
+}) {
   const opener = useRef<HTMLButtonElement>(null)
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
@@ -70,16 +77,25 @@ function MediaPreview({ src, label, diagram = false }: { src: string; label: str
   if (failed) return <small className="agent-chat-content__unavailable">{label} preview unavailable</small>
 
   return <>
-    <button type="button" className="agent-chat-preview" aria-label={`Open ${label.toLowerCase()} preview`}
-      ref={opener} onClick={() => setOpen(true)}>
-      <span className="agent-chat-preview__bar"><Icon size={16} aria-hidden="true" /><strong>{label}</strong>
+    <button type="button" className={`agent-chat-preview${compact ? ` agent-chat-preview--compact ${canvasInteractionClasses}` : ''}`}
+      aria-label={`Open ${label.toLowerCase()} preview`} ref={opener}
+      onPointerDown={compact ? stopCanvasEvent : undefined}
+      onDoubleClick={compact ? stopCanvasEvent : undefined}
+      onKeyDown={compact ? stopCanvasEvent : undefined}
+      onClick={(event) => {
+        if (compact) stopCanvasEvent(event)
+        setOpen(true)
+      }}>
+      {compact
+        ? <span className="agent-chat-preview__corner"><Expand size={14} aria-hidden="true" /></span>
+        : <span className="agent-chat-preview__bar"><Icon size={16} aria-hidden="true" /><strong>{label}</strong>
         {!diagram && size && <small>{size.width} × {size.height}</small>}
         <Expand className="agent-chat-preview__expand" size={15} aria-hidden="true" />
-      </span>
+      </span>}
       <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)}
         onLoad={({ currentTarget }) => setSize({ width: currentTarget.naturalWidth, height: currentTarget.naturalHeight })} />
     </button>
-    {open && <ExpandedPreview src={src} label={label} size={size} diagram={diagram} onClose={() => {
+    {open && <ExpandedPreview src={src} label={label} size={size} diagram={diagram} compact={compact} onClose={() => {
       setOpen(false)
       opener.current?.focus({ preventScroll: true })
     }} />}
@@ -88,8 +104,8 @@ function MediaPreview({ src, label, diagram = false }: { src: string; label: str
 
 const zoomSteps = [1, 1.5, 2, 3, 4, 6, 8, 12, 16]
 
-function ExpandedPreview({ src, label, size, diagram, onClose }: {
-  src: string; label: string; size: ImageSize | null; diagram: boolean; onClose: () => void
+function ExpandedPreview({ src, label, size, diagram, compact, onClose }: {
+  src: string; label: string; size: ImageSize | null; diagram: boolean; compact: boolean; onClose: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const canvas = useRef<HTMLDivElement>(null)
@@ -124,9 +140,13 @@ function ExpandedPreview({ src, label, size, diagram, onClose }: {
     anchor.current = null
   }, [step])
 
-  return <dialog ref={dialog} className="agent-chat-preview-dialog" aria-label={label}
+  return <dialog ref={dialog} className={`agent-chat-preview-dialog${compact ? ` ${canvasInteractionClasses}` : ''}`} aria-label={label}
+    onPointerDown={compact ? stopCanvasEvent : undefined}
+    onDoubleClick={compact ? stopCanvasEvent : undefined}
+    onClick={compact ? stopCanvasEvent : undefined}
     onClose={(event) => { if (!event.currentTarget.open) onClose() }}
     onKeyDown={(event) => {
+      if (compact) stopCanvasEvent(event)
       if (event.ctrlKey || event.metaKey || event.altKey) return
       switch (event.key) {
         case '+': case '=': zoom(step + 1); break
@@ -168,7 +188,7 @@ function ExpandedPreview({ src, label, size, diagram, onClose }: {
   </dialog>
 }
 
-export function MermaidPreview({ source }: { source: string }) {
+export function MermaidPreview({ source, compact = false }: { source: string; compact?: boolean }) {
   const id = `cave-diagram-${useId().replace(/[^A-Za-z0-9-]/g, '')}`
   const figure = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined')
@@ -210,12 +230,14 @@ export function MermaidPreview({ source }: { source: string }) {
     return () => { controller.abort(); observer.disconnect() }
   }, [id, source, visible])
 
-  return <figure className="agent-chat-diagram" ref={figure} style={{ '--diagram-paper': result?.paper || undefined } as CSSProperties}>
-    {src && <MediaPreview key={source} src={src} label="Mermaid diagram" diagram />}
+  return <figure className={`agent-chat-diagram${compact ? ' agent-chat-diagram--compact' : ''}`}
+    ref={figure} style={{ '--diagram-paper': result?.paper || undefined } as CSSProperties}>
+    {src && <MediaPreview key={source} src={src} label="Mermaid diagram" diagram compact={compact} />}
     {failed && <small className="agent-chat-content__unavailable" role="status">Diagram preview unavailable</small>}
-    <details open={failed || undefined}>
+    {compact && !src && !failed && <small className="agent-chat-content__unavailable">Rendering diagram…</small>}
+    {!compact && <details open={failed || undefined}>
       <summary><Code2 size={14} aria-hidden="true" />Mermaid source<ChevronDown size={13} aria-hidden="true" /></summary>
       <pre><code>{source}</code></pre>
-    </details>
+    </details>}
   </figure>
 }

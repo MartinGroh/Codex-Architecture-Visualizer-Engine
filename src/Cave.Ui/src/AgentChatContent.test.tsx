@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AgentChatContent } from './AgentChatContent'
+import { AgentChatContent, MermaidPreview } from './AgentChatContent'
 import { renderAgentChatDiagram } from './agentChatDiagram'
 
 vi.mock('./agentChatDiagram', () => ({ renderAgentChatDiagram: vi.fn() }))
@@ -77,5 +77,30 @@ describe('AgentChatContent', () => {
     expect(renderAgentChatDiagram).toHaveBeenCalledWith(expect.stringMatching(/^cave-diagram-/), source, expect.any(AbortSignal), expect.any(Object))
     expect(screen.getByText('Mermaid source').closest('details')?.open).toBe(true)
     expect(screen.getByText('Non-diagram').tagName).toBe('CODE')
+  })
+
+  it('keeps compact preview clicks and keys within the preview and its dialog', async () => {
+    Object.assign(HTMLDialogElement.prototype, {
+      showModal(this: HTMLDialogElement) { this.open = true },
+      close(this: HTMLDialogElement) { this.open = false; this.dispatchEvent(new Event('close')) },
+    })
+    vi.mocked(renderAgentChatDiagram).mockResolvedValue('/diagram.svg')
+    const canvasClick = vi.fn()
+    const canvasKey = vi.fn()
+    render(<div className="agent-chat-content" onClick={canvasClick} onKeyDown={canvasKey}>
+      <MermaidPreview source="graph LR; A --> B" compact />
+    </div>)
+
+    const opener = await screen.findByRole('button', { name: 'Open mermaid diagram preview' })
+    expect(opener.classList.contains('nopan')).toBe(true)
+    fireEvent.keyDown(opener, { key: 'Enter' })
+    fireEvent.click(opener)
+    const dialog = screen.getByRole('dialog', { name: 'Mermaid diagram' })
+    fireEvent.keyDown(within(dialog).getByRole('region'), { key: '+' })
+    expect(within(dialog).getByLabelText('Zoom relative to fit').textContent).toBe('1.5×')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close preview' }))
+    expect(document.activeElement).toBe(opener)
+    expect(canvasClick).not.toHaveBeenCalled()
+    expect(canvasKey).not.toHaveBeenCalled()
   })
 })

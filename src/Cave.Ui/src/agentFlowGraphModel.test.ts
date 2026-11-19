@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Position } from '@xyflow/react'
 import { agentFlowTopology, flowOperation, layoutAgentFlow } from './agentFlowGraphModel'
 import type { MachineActivityLane } from './machineActivityTimeline'
 const lane = (id: string, parent: string | null = null): MachineActivityLane => ({ agent: {
@@ -29,6 +30,19 @@ describe('agent flow graph', () => {
     for (const a of result.nodes) for (const b of result.nodes) if(a.id !== b.id) {
       expect(a.position.x + a.width! <= b.position.x || b.position.x + b.width! <= a.position.x
         || a.position.y + a.height! <= b.position.y || b.position.y + b.height! <= a.position.y).toBe(true)
+    }
+  })
+  it('provides fixed handles for both relationship types before browser measurement', async () => {
+    const { nodes, edges } = await layoutAgentFlow(agentFlowTopology([lane('main'), lane('child', 'main')]))
+    expect(edges).toMatchObject([
+      { source: 'main', target: 'child', className: 'flow2-delegation' },
+      { source: 'project-hub', target: 'main', className: 'flow2-membership' },
+    ])
+    for (const node of nodes) {
+      expect(node.handles).toEqual([
+        { type: 'target', position: Position.Left, x: 0, y: node.height! / 2 },
+        { type: 'source', position: Position.Right, x: node.width! - 1, y: node.height! / 2 },
+      ])
     }
   })
 })

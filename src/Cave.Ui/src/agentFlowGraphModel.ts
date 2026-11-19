@@ -1,5 +1,5 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
-import type { Edge, Node } from '@xyflow/react'
+import { Position, type Edge, type Node } from '@xyflow/react'
 import type { MachineActivityLane } from './machineActivityTimeline'
 import type { AgentActivityPhase } from './types'
 
@@ -11,6 +11,8 @@ export interface AgentFlowNodeData extends Record<string, unknown> {
 export type AgentFlowNode = Node<AgentFlowNodeData, 'hub' | 'agent'>
 export interface AgentFlowLayout { nodes: AgentFlowNode[]; edges: Edge[] }
 const elk = new ELK()
+const hubSize = { width: 220, height: 140 }
+const agentSize = { width: 240, height: 150 }
 
 /** Presentation-only topology. A project link means membership, not delegation. */
 export function agentFlowTopology(lanes: MachineActivityLane[]) {
@@ -28,14 +30,27 @@ export async function layoutAgentFlow(topology: ReturnType<typeof agentFlowTopol
   const result = await elk.layout({ id: 'flow', layoutOptions: {
     'elk.algorithm': 'radial', 'elk.spacing.nodeNode': '40',
     'elk.radial.radius': '320', 'elk.radial.centerOnRoot': 'true',
-  }, children: [{ id: 'project-hub', width: 220, height: 140 },
-    ...topology.map(({ id }) => ({ id, width: 240, height: 150 }))], edges: links })
+  }, children: [{ id: 'project-hub', ...hubSize },
+    ...topology.map(({ id }) => ({ id, ...agentSize }))], edges: links })
   return {
-    nodes: (result.children ?? []).map((node) => ({ id: node.id,
-      type: node.id === 'project-hub' ? 'hub' : 'agent',
-      position: { x: node.x ?? 0, y: node.y ?? 0 },
-      data: { name: '' }, width: node.width, height: node.height,
-    })),
+    nodes: (result.children ?? []).map((node) => {
+      const isHub = node.id === 'project-hub'
+      const { width, height } = isHub ? hubSize : agentSize
+      return {
+        id: node.id,
+        type: isHub ? 'hub' : 'agent',
+        position: { x: node.x ?? 0, y: node.y ?? 0 },
+        data: { name: '' },
+        width,
+        height,
+        // CONSTRAINT: Live data replaces the controlled nodes without resizing them. Supply
+        // handle bounds with each node so React Flow keeps edges between measurements.
+        handles: [
+          { type: 'target', position: Position.Left, x: 0, y: height / 2 },
+          { type: 'source', position: Position.Right, x: width - 1, y: height / 2 },
+        ],
+      }
+    }),
     edges: topology.map(({ id, parent }) => ({ id: `link:${id}`, source: parent, target: id,
       type: 'straight', className: parent === 'project-hub' ? 'flow2-membership' : 'flow2-delegation',
       ariaLabel: parent === 'project-hub' ? 'Agent belongs to project' : 'Observed parent to subagent',

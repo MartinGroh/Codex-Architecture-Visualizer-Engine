@@ -56,7 +56,7 @@ public static class AgentDisplayNames
         {
             Agents = activity.Agents.Select(agent => agent with
             {
-                DisplayName = Get(agent.AgentId, agent.IsSubagent),
+                DisplayName = agent.AgentType == "Dot" ? "Dot" : Get(agent.AgentId, agent.IsSubagent),
                 PublicId = PublicId(agent.AgentId),
             }).ToArray(),
         };

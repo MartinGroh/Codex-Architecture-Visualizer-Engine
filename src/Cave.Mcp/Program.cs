@@ -13,6 +13,19 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Extensions.Apps;
 
+if (args is ["dot-scope"])
+{
+    var timeProvider = TimeProvider.System;
+    Environment.ExitCode = await DotScopeCommand.RunAsync(
+        Console.In,
+        Console.Out,
+        Console.Error,
+        new FileAgentActivityStore(timeProvider),
+        new MachineWorkspaceCatalogStore(MachineWorkspaceCatalogStore.GetDefaultCatalogRoot(), timeProvider),
+        CancellationToken.None);
+    return;
+}
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);

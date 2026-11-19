@@ -49,4 +49,17 @@ public sealed class AgentDisplayNamesTests
         Assert.Equal(AgentDisplayNames.PublicId("child"), enriched.PublicId);
         Assert.Null(agent.DisplayName);
     }
+
+    /// <summary>Distinguishes explicitly declared Dot work from the observed Codex main agent.</summary>
+    [Fact]
+    public void DotDeclarationKeepsItsOwnRoleLabel()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var agent = new AgentActivity("dot:rollout-42", "Dot", false, AgentWorkState.Active,
+            AgentActivityPhase.Working, "Check dashboard", true, false, now, now);
+        var result = AgentDisplayNames.Apply(new AgentActivityOverlay([agent], [], [], null, [], null));
+
+        Assert.Equal("Dot", Assert.Single(result.Agents).DisplayName);
+        Assert.Equal(AgentDisplayNames.PublicId(agent.AgentId), Assert.Single(result.Agents).PublicId);
+    }
 }

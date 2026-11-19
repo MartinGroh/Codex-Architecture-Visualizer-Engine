@@ -99,6 +99,23 @@ Run `pwsh ./scripts/install-local-plugin.ps1 -PreflightOnly` to check source met
 
 A marketplace registered to another checkout fails closed. Review a proposed local CAVE-only rebind with `-PreflightOnly -ReplaceMarketplaceSource`, then use `-ReplaceMarketplaceSource` for the approved installation.
 
+### Declare Dot work without Codex MCP tools
+
+Dot sessions do not currently load this local Codex plugin's MCP tools or Codex lifecycle hooks. On a computer where CAVE is installed, Dot can explicitly report a task's scope through the installed `server/Cave.Mcp.exe dot-scope` command. Pipe one JSON object to standard input, using the **exact Git checkout or worktree root** and a stable `taskId` for subsequent updates:
+
+```powershell
+$caveMcp = '<installed CAVE plugin directory>\server\Cave.Mcp.exe'
+@{
+    workspacePath = 'C:\Code\Example'
+    taskId = 'dashboard-fix-20261112'
+    state = 'Active'
+    summary = 'Checking the dashboard header'
+    files = @('src/Dashboard.cs')
+} | ConvertTo-Json -Compress | & $caveMcp dot-scope
+```
+
+Send another declaration with the same `taskId` as work changes, then `state = 'Completed'` when done. Active declarations expire after five minutes without fresh evidence. The command records **agent-declared** status only; it does not observe Dot's commands, capture its conversation, attach to a Codex task, or make Codex account usage available. It prints `architectureIndexed = false` and a warning if the exact worktree needs `/cave:init` before its architecture graph is navigable. The activity-only view can still show its declared status. Keep summaries and file paths appropriate for everyone allowed to reach your CAVE viewer.
+
 ## Privacy and network boundary
 
 CAVE is local-first, but architecture and activity metadata can still be sensitive.

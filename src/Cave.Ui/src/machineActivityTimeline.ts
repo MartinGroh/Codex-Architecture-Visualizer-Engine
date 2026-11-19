@@ -48,6 +48,18 @@ export interface MachineActivityProjectTimeline {
   lanes: MachineActivityLane[]
 }
 
+/** Returns the hook-observed main task owning this agent, when every parent is present. */
+export function observedTaskRoot(lanes: MachineActivityLane[], agentId: string): MachineActivityLane | undefined {
+  const agents = new Map(lanes.map((lane) => [lane.agent.agentId, lane]))
+  const visited = new Set<string>()
+  let lane = agents.get(agentId)
+  while (lane?.agent.isSubagent && lane.agent.parentAgentId && !visited.has(lane.agent.agentId)) {
+    visited.add(lane.agent.agentId)
+    lane = agents.get(lane.agent.parentAgentId)
+  }
+  return lane?.agent.hasObservedActivity && !lane.agent.isSubagent && lane.agent.publicId ? lane : undefined
+}
+
 /** Both flow presentations use the same terminal milestone projection. */
 export function visibleLaneMilestones(lane: MachineActivityLane, active: boolean): MachineActivityMilestone[] {
   if (active) return lane.milestones

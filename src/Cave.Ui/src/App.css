@@ -677,6 +677,9 @@ a.workspace-card:hover { border-color: color-mix(in srgb, var(--violet) 45%, var
 .machine-activity-projects { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px; }
 .machine-activity-projects--grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 640px), 1fr)); }
 .machine-activity-projects--list { grid-template-columns: minmax(0, 1fr); }
+.machine-agent-wall { display: flex; flex: 1; flex-direction: column; gap: 8px; min-height: 0; }
+.machine-agent-wall > .machine-activity-project-select { display: flex; align-items: center; gap: 8px; }
+.machine-agent-wall > .machine-activity-project-select select { max-width: min(520px, 84%); }
 .machine-project-flow { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .machine-project-flow.is-complete { border-color: color-mix(in srgb, var(--teal) 30%, var(--line)); }
 .machine-project-flow > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--surface-subtle); }

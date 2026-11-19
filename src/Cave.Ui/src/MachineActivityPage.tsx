@@ -1,6 +1,7 @@
 import { MainGoal } from './AgentWorkContext'
 import { AgentFlowGraph } from './AgentFlowGraph'
 import { AgentFlowCompact } from './AgentFlowCompact'
+import { AgentWall } from './AgentWall'
 import { agentDisplayName, agentFocusLabel } from './agentIdentity'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -25,6 +26,7 @@ import { connectArchitectureFeed } from './api'
 import { MachinePageFrame } from './MachinePageFrame'
 import {
   buildMachineActivityTimelines,
+  observedTaskRoot,
   visibleLaneMilestones,
   type MachineActivityLane,
   type MachineActivityProjectTimeline,
@@ -35,7 +37,8 @@ import { useWorkspaceOverview } from './useWorkspaceOverview'
 const clockRefreshMs = 1_000
 const machineActivityLayoutKey = 'cave.machine-activity.layout'
 type MachineActivityLayout = 'grid' | 'list'
-type MachineActivityView = 'timeline' | 'compact' | 'graph'
+type MachineActivityView = 'timeline' | 'compact' | 'graph' | 'wall'
+type WallSelection = { workspaceId: string; taskId: string }
 const machineActivityViewKey = 'cave.machine-activity.view'
 
 /** Shows the current work streams across every active machine workspace. */
@@ -59,6 +62,7 @@ export function MachineActivityPage() {
   const [dismissedAgents, setDismissedAgents] = useState<string[]>([])
   const [layout, setLayout] = useState<MachineActivityLayout>(readMachineActivityLayout)
   const [view, setView] = useState<MachineActivityView>(() => window.location.pathname === '/activity/flow2' ? 'graph' : requestedAgentId ? 'compact' : readMachineActivityView())
+  const [wallSelection, setWallSelection] = useState<WallSelection | null>(null)
   const [nowMs, setNowMs] = useState(Date.now)
 
   useEffect(() => {
@@ -169,7 +173,29 @@ export function MachineActivityPage() {
     try { window.localStorage.setItem(machineActivityViewKey, nextView) } catch { /* Optional preference. */ }
   }
 
-  const focusedCanvas = view === 'graph' && displayWorkspaces.length === 1
+  const switchToWall = (selection: WallSelection | null) => {
+    setWallSelection(selection)
+    selectView('wall')
+  }
+  const wallChoices = view === 'wall' ? timelines.flatMap((timeline) =>
+    requestedWorkspaceId !== null && requestedWorkspaceId !== timeline.workspace.workspaceId ? []
+      : timeline.lanes.filter(({ agent }) => !agent.isSubagent && agent.hasObservedActivity && agent.publicId)
+      .map((root) => ({
+        key: timeline.workspace.workspaceId + ':' + root.agent.publicId,
+        workspaceId: timeline.workspace.workspaceId,
+        taskId: root.agent.publicId!,
+        root,
+        timeline,
+      }))) : []
+  const selectedWall = wallSelection
+    ? wallChoices.find((choice) => choice.workspaceId === wallSelection.workspaceId && choice.taskId === wallSelection.taskId)
+    : wallChoices.length === 1 ? wallChoices[0] : undefined
+  if (!wallSelection && selectedWall) {
+    setWallSelection({ workspaceId: selectedWall.workspaceId, taskId: selectedWall.taskId })
+  }
+  const wallLanes = selectedWall?.timeline.lanes.filter((lane) =>
+    observedTaskRoot(selectedWall.timeline.lanes, lane.agent.agentId)?.agent.publicId === selectedWall.taskId) ?? []
+  const focusedCanvas = view === 'wall' || view === 'graph' && displayWorkspaces.length === 1
   return (
     <MachinePageFrame className={`machine-activity-page${focusedCanvas ? ' machine-activity-page--focused' : ''}`}>
       <section className="dashboard-content machine-activity-content">
@@ -187,10 +213,11 @@ export function MachineActivityPage() {
               </label>
               <div className="machine-activity-layout-toggle" role="group" aria-label="Agent flow view">
                 <button type="button" aria-pressed={view === 'graph'} className={view === 'graph' ? 'is-active' : ''} onClick={() => selectView('graph')}><Route size={14} /> Flow 2</button>
+                <button type="button" aria-pressed={view === 'wall'} className={view === 'wall' ? 'is-active' : ''} onClick={() => switchToWall(null)}><LayoutGrid size={14} /> Wall</button>
                 <button type="button" aria-pressed={view === 'timeline'} className={view === 'timeline' ? 'is-active' : ''} onClick={() => selectView('timeline')}><Route size={14} /> Timeline</button>
                 <button type="button" aria-pressed={view === 'compact'} className={view === 'compact' ? 'is-active' : ''} onClick={() => selectView('compact')}><List size={14} /> Compact</button>
               </div>
-              {view !== 'graph' && <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
+              {(view === 'timeline' || view === 'compact') && <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
                 <button
                   type="button"
                   className={layout === 'grid' ? 'is-active' : ''}
@@ -239,7 +266,27 @@ export function MachineActivityPage() {
           </div>
         )}
 
-        {isLoading && workspaces.length === 0 ? (
+        {view === 'wall' ? <div className="machine-agent-wall">
+          {wallChoices.length > 0 && (wallChoices.length > 1 || !selectedWall) && <label className="machine-activity-project-select">
+            <span>Task</span>
+            <select value={selectedWall?.key ?? ''} onChange={(event) => {
+              const selected = wallChoices.find((choice) => choice.key === event.target.value)
+              setWallSelection(selected ? { workspaceId: selected.workspaceId, taskId: selected.taskId } : null)
+            }}>
+              <option value="">Choose a task</option>
+              {wallChoices.map(({ key, root, timeline }) => <option key={key} value={key}>
+                {timeline.workspace.name} · {formatClock(root.agent.startedAtUtc)} {root.agent.summary ? '· ' + root.agent.summary.slice(0, 80) : ''}
+              </option>)}
+            </select>
+          </label>}
+          {selectedWall ? <AgentWall key={selectedWall.key} workspaceId={selectedWall.workspaceId}
+            taskId={selectedWall.taskId} lanes={wallLanes} sharingEnabled={selectedWall.timeline.sharingEnabled}
+            onBack={() => selectView('graph')} />
+            : <p role="status">{wallChoices.length === 0
+              ? isLoading || displayWorkspaces.length > 0 && timelines.length === 0
+                ? 'Finding recent Codex tasks…' : 'No recent Codex tasks are available.'
+              : 'Choose a task to follow its agents.'}</p>}
+        </div> : isLoading && workspaces.length === 0 ? (
           <div className="dashboard-empty"><span className="loading-orbit"><Route size={22} /></span>Reading active work…</div>
         ) : displayWorkspaces.length === 0 ? (
           <div className="dashboard-empty machine-activity-empty">
@@ -264,7 +311,7 @@ export function MachineActivityPage() {
               ) : (
                 <ActivityProjectFlow
                   key={workspace.workspaceId}
-                  timeline={requestedAgentId === null ? timeline : {
+                  timeline={requestedAgentId === null || view === 'graph' ? timeline : {
                     ...timeline,
                     lanes: timeline.lanes.filter((lane) => lane.agent.publicId === requestedAgentId),
                   }}
@@ -274,6 +321,7 @@ export function MachineActivityPage() {
                   selectedAgentId={requestedAgentId}
                   onDismissAgent={(agentId, updatedAtUtc) => dismissAgent(workspace.workspaceId, agentId, updatedAtUtc)}
                   dismissedAgents={dismissedAgents}
+                  onOpenWall={(taskId) => switchToWall({ workspaceId: workspace.workspaceId, taskId })}
                   onDismiss={() => dismissCompletedProject(workspace.workspaceId)}
                 />
               )
@@ -316,6 +364,7 @@ function ActivityProjectFlow({
   active,
   selectedAgentId,
   dismissedAgents,
+  onOpenWall,
   onDismissAgent,
   onDismiss,
 }: {
@@ -325,6 +374,7 @@ function ActivityProjectFlow({
   active: boolean
   selectedAgentId: string | null
   dismissedAgents: string[]
+  onOpenWall: (taskId: string) => void
   onDismissAgent: (agentId: string, updatedAtUtc: string) => void
   onDismiss: () => void
 }) {
@@ -374,7 +424,7 @@ function ActivityProjectFlow({
 
       </details>}
       {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
-      {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
+      {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} onOpenWall={onOpenWall} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
         {lanes.map((lane) => (
           <AgentTimelineLane key={lane.agent.agentId} lane={lane} workspaceId={timeline.workspace.workspaceId} nowMs={nowMs} active={lane.active}
             onDismiss={() => onDismissAgent(lane.agent.agentId, lane.agent.updatedAtUtc)} />
@@ -544,7 +594,7 @@ function formatClock(value: string): string {
 function readMachineActivityView(): MachineActivityView {
   try {
     const saved = window.localStorage.getItem(machineActivityViewKey)
-    if (saved === 'compact' || saved === 'timeline') return saved
+    if (saved === 'compact' || saved === 'timeline' || saved === 'wall' || saved === 'graph') return saved
   } catch { /* Optional preference. */ }
   return window.matchMedia?.('(max-width: 760px)').matches ? 'compact' : 'timeline'
 }

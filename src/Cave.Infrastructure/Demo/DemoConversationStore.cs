@@ -10,6 +10,14 @@ namespace Cave.Infrastructure.Demo;
 public sealed class DemoConversationStore(TimeProvider timeProvider) : IConversationStore
 {
     /// <inheritdoc />
+    public Task<ConversationSharingState> ReadSharingAsync(string workspaceRoot, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new ConversationSharingState(true,
+            new AgentChatSharingPeriod(new Guid("7528d92b-ff13-4c7a-b8ad-cd747cf98b0f"), DateTimeOffset.UnixEpoch)));
+    }
+
+    /// <inheritdoc />
     public Task<ConversationOverlay> ReadAsync(
         string workspaceRoot,
         CancellationToken cancellationToken)

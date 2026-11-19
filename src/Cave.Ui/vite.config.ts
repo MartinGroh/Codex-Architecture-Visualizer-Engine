@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { mermaidBundle } from './build/mermaidBundle.ts'
 import { singleHtml } from './build/singleHtml.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), singleHtml()],
+  plugins: [react(), mermaidBundle(), singleHtml()],
   build: {
     outDir: '../Cave.Host/wwwroot',
     emptyOutDir: true,

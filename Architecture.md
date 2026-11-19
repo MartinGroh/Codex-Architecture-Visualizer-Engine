@@ -198,3 +198,27 @@ Telemetry retains its 15-second lightweight activity pass but refreshes unchange
 The shared browser catalog owner permits one request at a time. It polls every two seconds during work, every 15 seconds while idle and every 60 seconds while hidden, with immediate focus/visibility wake and cancellation on disposal. These are reduced work budgets, not OS process suspension or a claim of zero idle resource use.
 
 Agent Flow 2 is an additive React Flow presentation alongside the existing Timeline, Compact and Light views. It consumes the same observed activity and task identity, retains the existing agent/model icon vocabulary and distinguishes observed parent relationships from project membership. The original flow remains available.
+
+### Task-scoped chat and the agent wall
+
+The browser graph inspector and wall read the same task-scoped feed. The inspector keeps graph navigation open on desktop and uses the whole canvas area on a narrow screen. The wall displays one root task and its verified descendants. Each pane combines published messages with observed milestones and controls its own scroll position. The project canvas and wall fill the available desktop height. Current work in the project graph opens on demand and remembers the operator's choice.
+
+What grants access to a published message or raster preview?
+
+```mermaid
+flowchart LR
+    Browser["Graph inspector or wall"] -->|"Opaque workspace and task keys"| Host["GET /api/agent-chat"]
+    Host --> Service["WorkspaceAgentChatService"]
+    Service -->|"Observed task"| Activity["WorkspaceActivityService"]
+    Service -->|"Current sharing period and hook messages"| Settings["IConversationStore"]
+    Service -->|"Exact thread IDs and sharing start"| Source["ICodexAgentChatSource"]
+    Source -->|"Read-only thread and item pages"| Codex["Local Codex App Server"]
+    Browser -->|"Opaque artifact key"| Image["GET /api/agent-chat/artifacts"]
+    Image -->|"Recheck task and sharing period"| Service
+```
+
+An additive `agentChatPeriod` field in the existing conversation settings records when a workspace opted into native history. Legacy enabled settings continue to show their captured hook messages. Enabling live agent chats starts a sharing period. Disabling sharing revokes access, including outstanding reads and cached raster references. Re-enabling establishes a fresh cutoff and identifier. Both HTTP routes require an observed task in the selected workspace. Native author and parent identities are verified before messages are projected. Opaque identities keep raw task IDs and artifact paths out of the feed.
+
+The App Server adapter bounds its process lifetime, paging, response size, chat history, and image payloads. An independent reader on Desktop 0.169.0-alpha.11.1 observed published parent and child commentary and a generated PNG before their turns completed. The read-only surface follows completed public message items. It derives no activity phase from App Server's read status. Native file IDs and local paths without inline raster bytes produce an unavailable preview. The renderer uses a local sandboxed Mermaid runtime with network access disabled. Agent Flow Light continues to expose its existing activity and goal contract.
+
+Evidence owners are `WorkspaceAgentChatService`, `FileConversationStore`, `CodexAppServerAgentChatSource`, and the React agent chat feed. The demo registers explicit synthetic implementations of the same ports.

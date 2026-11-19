@@ -15,6 +15,9 @@ public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, 
     /// <summary>Gets the maximum number of agent rows returned in one feed response.</summary>
     public const int MaximumAgents = 32;
 
+    internal Task<AgentActivityOverlay> ReadEvidenceAsync(string workspaceRoot, CancellationToken cancellationToken) =>
+        activityStore.ReadAsync(workspaceRoot, EmptyGraph, cancellationToken);
+
     /// <summary>
     /// Reads bounded activity for an already-resolved catalog entry. The caller owns workspace selection.
     /// </summary>
@@ -27,7 +30,7 @@ public sealed class WorkspaceActivityService(IAgentActivityStore activityStore, 
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(workspace);
-        var activity = await activityStore.ReadAsync(workspace.WorkspaceRoot, EmptyGraph, cancellationToken)
+        var activity = await ReadEvidenceAsync(workspace.WorkspaceRoot, cancellationToken)
             .ConfigureAwait(false);
         activity = await telemetry.EnrichAsync(activity, cancellationToken).ConfigureAwait(false);
         var selectedAgents = activity.Agents

@@ -1,0 +1,91 @@
+.agent-chat-content { min-width: 0; overflow-wrap: anywhere; }
+.agent-chat-content .codex-text pre { white-space: pre; overflow: auto; }
+
+.agent-chat-content__artifacts {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.agent-chat-content__unavailable { color: var(--text-soft); }
+
+.agent-chat-content .agent-chat-preview {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  gap: 8px;
+  padding: 8px;
+  color: var(--text-soft);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.agent-chat-preview:hover { border-color: var(--violet); }
+.agent-chat-preview img { display: block; max-width: 100%; max-height: 11rem; object-fit: contain; }
+.agent-chat-preview > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .75rem;
+  overflow-wrap: normal;
+}
+.agent-chat-preview > span svg { flex: none; }
+
+.agent-chat-preview-dialog {
+  width: fit-content;
+  max-width: min(90vw, 80rem);
+  max-height: 90dvh;
+  padding: 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+}
+
+.agent-chat-preview-dialog::backdrop { background: rgb(0 0 0 / 58%); }
+
+.agent-chat-preview-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.agent-chat-content .agent-chat-preview-dialog button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.agent-chat-preview-dialog img { display: block; max-width: 100%; max-height: 76dvh; object-fit: contain; }
+.agent-chat-diagram { margin: 8px 0; }
+.agent-chat-diagram .agent-chat-preview-dialog { width: min(90vw, 75rem); }
+.agent-chat-diagram .agent-chat-preview-dialog img { width: 100%; height: auto; }
+.agent-chat-diagram .agent-chat-preview img,
+.agent-chat-diagram .agent-chat-preview-dialog img { background: white; }
+.agent-chat-diagram details { margin-top: 6px; }
+.agent-chat-diagram summary { width: fit-content; cursor: pointer; color: var(--text-soft); font-size: .75rem; }
+.agent-chat-diagram summary:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+.agent-chat-diagram-workspace {
+  position: fixed;
+  top: 0;
+  left: -100vw;
+  width: 80rem;
+  height: 60rem;
+  visibility: hidden;
+  pointer-events: none;
+}

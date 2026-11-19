@@ -54,6 +54,34 @@ public sealed class FileConversationStoreTests : IDisposable
         Assert.Equal("Explain the host boundary.", message.Text);
     }
 
+    /// <summary>A legacy opt-in acquires a history cutoff only when explicitly enabled again.</summary>
+    [Fact]
+    public async Task NativeChatRequiresANewSharingPeriodAfterRevocation()
+    {
+        var settingsDirectory = Path.Combine(_workspaceRoot, ".cave", "conversation");
+        Directory.CreateDirectory(settingsDirectory);
+        await File.WriteAllTextAsync(Path.Combine(settingsDirectory, "settings.json"),
+            """{"schemaVersion":1,"conversationSharingEnabled":true}""");
+        var store = new FileConversationStore();
+
+        var legacy = await store.ReadSharingAsync(_workspaceRoot, CancellationToken.None);
+        Assert.True(legacy.Enabled);
+        Assert.Null(legacy.AgentChatPeriod);
+        await store.SetSharingAsync(_workspaceRoot, true, CancellationToken.None);
+        var first = await store.ReadSharingAsync(_workspaceRoot, CancellationToken.None);
+        Assert.NotNull(first.AgentChatPeriod);
+        await store.SetSharingAsync(_workspaceRoot, true, CancellationToken.None);
+        Assert.Equal(first, await store.ReadSharingAsync(_workspaceRoot, CancellationToken.None));
+        await store.SetSharingAsync(_workspaceRoot, false, CancellationToken.None);
+        var disabled = await store.ReadSharingAsync(_workspaceRoot, CancellationToken.None);
+        Assert.False(disabled.Enabled);
+        Assert.Null(disabled.AgentChatPeriod);
+        await store.SetSharingAsync(_workspaceRoot, true, CancellationToken.None);
+        var second = await store.ReadSharingAsync(_workspaceRoot, CancellationToken.None);
+        Assert.NotNull(second.AgentChatPeriod);
+        Assert.NotEqual(first.AgentChatPeriod.Id, second.AgentChatPeriod.Id);
+    }
+
     /// <summary>
     /// Verifies that hook records from a marked temporary fork never enter the public transcript.
     /// </summary>

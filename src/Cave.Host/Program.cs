@@ -36,6 +36,7 @@ if (demoMode)
     builder.Services.AddSingleton<IAgentActivityHistoryStore>(services =>
         (IAgentActivityHistoryStore)services.GetRequiredService<IAgentActivityStore>());
     builder.Services.AddSingleton<IConversationStore, DemoConversationStore>();
+    builder.Services.AddSingleton<ICodexAgentChatSource, DemoAgentChatSource>();
     builder.Services.AddSingleton<IConversationControl, DemoConversationControl>();
     builder.Services.AddSingleton<ICodexUsageProvider, DemoCodexUsageProvider>();
     builder.Services.AddSingleton<ICodexGoalProvider, DemoCodexGoalProvider>();
@@ -59,6 +60,7 @@ else
     builder.Services.AddSingleton<IAgentTelemetryStore>(services => new FileAgentTelemetryStore(
         builder.Configuration["Cave:StatisticsRoot"] ?? FileAgentTelemetryStore.DefaultRoot, services.GetRequiredService<TimeProvider>()));
     builder.Services.AddSingleton<IConversationStore, FileConversationStore>();
+    builder.Services.AddSingleton<ICodexAgentChatSource>(_ => new CodexAppServerAgentChatSource(builder.Configuration["Cave:CodexCommand"]));
     builder.Services.AddSingleton<ICodexGoalProvider>(services => new CodexAppServerGoalProvider(
         services.GetRequiredService<TimeProvider>(),
         builder.Configuration["Cave:CodexCommand"]));
@@ -103,6 +105,12 @@ builder.Services.AddSingleton<IWorkspaceCatalogStore>(services => new MachineWor
     services.GetRequiredService<TimeProvider>()));
 builder.Services.AddSingleton<WorkspaceCatalogService>();
 builder.Services.AddSingleton<WorkspaceActivityService>();
+builder.Services.AddSingleton(services => new WorkspaceAgentChatService(
+    services.GetRequiredService<WorkspaceActivityService>(),
+    services.GetRequiredService<IConversationStore>(),
+    services.GetRequiredService<ICodexAgentChatSource>(),
+    services.GetRequiredService<TimeProvider>(),
+    demoMode ? AgentFlowSourceMode.Demo : AgentFlowSourceMode.Live));
 builder.Services.AddSingleton(services => new WorkspaceAgentFlowService(
     services.GetRequiredService<WorkspaceActivityService>(),
     services.GetRequiredService<WorkspaceConversationService>(),
@@ -149,6 +157,7 @@ app.MapGet(
 app.MapRecentActivity();
 app.MapAgentFlow();
 app.MapAgentFlowResources();
+app.MapAgentChat();
 app.MapAgentStatistics();
 app.MapGet(
     "/api/activity",

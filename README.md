@@ -135,6 +135,12 @@ Codex 0.157 integration checks and the supported public-chat text formats are do
 
 ## Develop and verify
 
+### Follow agent chats
+
+Open **Agent flow → Flow 2** and select an agent to view its observed work and shared conversation. Open **Wall** to follow the parent task and its subagents in independently scrolling panes. Shared Mermaid diagrams and inline raster images open in a larger preview.
+
+Conversation sharing controls this view. **Enable live agent chats** starts sharing newly published messages for the workspace. With sharing off, the graph and wall still show observed activity.
+
 ### Agent Flow Light for apps and devices
 
 `GET /api/agent-flow?workspace=<catalog-id>` returns bounded agent status, stable first names, declared focus, and the opt-in shared main goal without loading a semantic graph. Download its portable JSON schema, assets, polling example, and fixed-buffer C client from `GET /api/agent-flow/resources`.

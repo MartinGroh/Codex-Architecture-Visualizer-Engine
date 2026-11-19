@@ -1,4 +1,4 @@
-import Markdown from 'react-markdown'
+import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { parseCodexText, remarkCodexAttribution } from './codexTextFormat'
 import './CodexText.css'
@@ -8,12 +8,12 @@ const variants: Record<string, string> = {
 }
 
 /** One read-only rendering owner for public Codex chat and isolated node answers. */
-export function CodexText({ text, attributed = true }: { text: string; attributed?: boolean }) {
+export function CodexText({ text, attributed = true, components }: { text: string; attributed?: boolean; components?: Components }) {
   const parts = attributed ? parseCodexText(text) : [{ kind: 'markdown' as const, text }]
   return (
     <div className="codex-text">
       {parts.map((part, index) => {
-        if (part.kind === 'markdown') return <CodexMarkdown key={index} text={part.text} attributed={attributed} />
+        if (part.kind === 'markdown') return <CodexMarkdown key={index} text={part.text} attributed={attributed} components={components} />
         if (part.kind === 'thread') {
           return <p key={index} className="codex-text__thread">Created chat · <code>{part.attributes.threadId ?? part.attributes.clientThreadId}</code></p>
         }
@@ -23,7 +23,7 @@ export function CodexText({ text, attributed = true }: { text: string; attribute
             <section key={index} className="codex-text__comment" aria-label={title}>
               <strong>{title}</strong>
               <small>{file}{start ? `:${start}${end && end !== start ? `–${end}` : ''}` : ''}</small>
-              <CodexMarkdown text={body} />
+              <CodexMarkdown text={body} components={components} />
             </section>
           )
         }
@@ -37,7 +37,7 @@ export function CodexText({ text, attributed = true }: { text: string; attribute
               {cc && <small>Cc: {cc}</small>}
               {bcc && <small>Bcc: {bcc}</small>}
             </header>
-            <CodexMarkdown text={part.text} />
+            <CodexMarkdown text={part.text} components={components} />
           </section>
         )
       })}
@@ -45,6 +45,6 @@ export function CodexText({ text, attributed = true }: { text: string; attribute
   )
 }
 
-function CodexMarkdown({ text, attributed = true }: { text: string; attributed?: boolean }) {
-  return <Markdown remarkPlugins={attributed ? [remarkGfm, remarkCodexAttribution] : [remarkGfm]}>{text}</Markdown>
+function CodexMarkdown({ text, attributed = true, components }: { text: string; attributed?: boolean; components?: Components }) {
+  return <Markdown components={components} remarkPlugins={attributed ? [remarkGfm, remarkCodexAttribution] : [remarkGfm]}>{text}</Markdown>
 }

@@ -6,16 +6,11 @@
   height: 100%;
   color: var(--text);
   background: var(--surface-subtle);
-}
-
-.engineering-workspace button,
-.engineering-workspace input,
-.engineering-workspace select,
-.engineering-workspace textarea {
-  font: inherit;
+  container: engineering-editor / inline-size;
 }
 
 .engineering-workspace button:focus-visible,
+.engineering-workspace summary:focus-visible,
 .engineering-workspace input:focus-visible,
 .engineering-workspace select:focus-visible,
 .engineering-workspace textarea:focus-visible {
@@ -24,24 +19,30 @@
 }
 
 .engineering-workspace__toolbar {
+  position: relative;
+  z-index: 2;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 8px 14px;
+  gap: 6px 12px;
+  min-width: 0;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 
 .engineering-workspace__projection,
-.engineering-workspace__actions {
+.engineering-workspace__actions,
+.engineering-workspace__context,
+.engineering-workspace__context form {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .engineering-workspace__projection {
-  padding: 3px;
+  flex: none;
+  padding: 2px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-subtle);
@@ -49,9 +50,8 @@
 
 .engineering-workspace__projection button,
 .engineering-workspace__actions button,
-.semantic-diagram-list form button,
-.semantic-diagram-stage > header button,
-.engineering-workspace__board-select button,
+.engineering-workspace__more summary,
+.engineering-workspace__context button,
 .semantic-entity-inspector__buttons button,
 .semantic-relationship-form button,
 .semantic-asset-form button,
@@ -61,10 +61,10 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
+  min-height: 36px;
   padding: 7px 10px;
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -72,6 +72,7 @@
 }
 
 .engineering-workspace__projection button {
+  padding-inline: 8px;
   border-color: transparent;
   background: transparent;
 }
@@ -82,11 +83,48 @@
   box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 58%, transparent);
 }
 
-.engineering-workspace__actions { margin-left: auto; }
+.engineering-workspace__actions > button,
+.engineering-workspace__more > summary,
+.engineering-workspace__context > button { width: 36px; padding: 0; }
+.engineering-workspace__actions,
+.engineering-workspace__context button { flex: none; white-space: nowrap; }
+.engineering-workspace__context { min-width: 0; margin-inline-start: auto; gap: 8px; }
+.engineering-workspace__context form { flex: 1; min-width: 0; gap: 6px; }
+.engineering-workspace__context > select { width: clamp(140px, 20cqi, 280px); font-weight: 650; }
+.engineering-workspace__context input { width: clamp(100px, 15cqi, 200px); }
+.engineering-workspace__context button[type='submit'] {
+  color: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 32%, var(--line));
+  background: var(--violet-soft);
+}
+
+.engineering-workspace__more { position: relative; }
+.engineering-workspace__more summary { list-style: none; }
+.engineering-workspace__more summary::-webkit-details-marker { display: none; }
+.engineering-workspace__more[open] summary { color: var(--violet); background: var(--violet-soft); }
+.engineering-workspace__more-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-start: 0;
+  display: grid;
+  gap: 6px;
+  width: min(288px, calc(100cqi - 24px));
+  max-height: 60dvh;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 26px var(--shadow);
+}
+.engineering-workspace__more-panel form { display: grid; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.engineering-workspace__more-panel button { justify-content: flex-start; }
+.engineering-workspace__more-panel p { margin: 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.engineering-workspace__more-panel small { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
 .engineering-workspace__actions button:hover,
-.semantic-diagram-list form button:hover,
-.semantic-diagram-stage > header button:hover,
-.engineering-workspace__board-select button:hover,
+.engineering-workspace__more summary:hover,
+.engineering-workspace__context button:hover,
 .semantic-entity-inspector__buttons button:hover,
 .semantic-relationship-form button:hover,
 .semantic-asset-form button:hover {
@@ -98,12 +136,6 @@
 .engineering-workspace button:disabled {
   cursor: not-allowed;
   opacity: .48;
-}
-
-.engineering-workspace__revision {
-  color: var(--text-faint);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
 }
 
 .engineering-workspace__error {
@@ -136,22 +168,22 @@
 .engineering-workspace--empty > button { margin-top: 8px; color: var(--violet); border-color: color-mix(in srgb, var(--violet) 34%, var(--line)); }
 
 .engineering-workspace__kanban {
+  display: flex;
+  grid-row: 3;
+  min-width: 0;
   min-height: 0;
-  padding: 18px;
+  padding: 10px 12px;
+}
+
+.engineering-workspace__kanban > .kanban-board {
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.engineering-workspace__kanban .kanban-board__columns {
+  min-height: 0;
   overflow: auto;
-}
-
-.engineering-workspace__board-select {
-  display: flex;
-  align-items: end;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.engineering-workspace__board-select form {
-  display: flex;
-  align-items: end;
-  gap: 8px;
 }
 
 .engineering-workspace label {
@@ -166,99 +198,42 @@
 .engineering-workspace textarea {
   min-width: 0;
   color: var(--text-soft);
-  font-size: 11px;
+  font: inherit;
+  font-size: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
 }
 
 .engineering-workspace input,
-.engineering-workspace select { min-height: 34px; padding: 7px 9px; }
+.engineering-workspace select { min-height: 36px; padding: 7px 9px; }
 .engineering-workspace textarea { min-height: 94px; padding: 9px; line-height: 1.5; resize: vertical; }
 .engineering-workspace__empty-note { margin: 30px 0; color: var(--text-muted); font-size: 12px; text-align: center; }
 
 .engineering-workspace__diagram {
+  position: relative;
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-row: 3;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
 
 .engineering-workspace__diagram.has-inspector {
-  grid-template-columns: 210px minmax(360px, 1fr) minmax(320px, 390px);
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 30cqi, 420px);
 }
-
-.semantic-diagram-list {
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  min-width: 0;
-  padding: 14px 10px;
-  overflow-y: auto;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.semantic-diagram-list__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 5px 8px 8px;
-  color: var(--text-soft);
-  font-size: 11px;
-}
-
-.semantic-diagram-list__heading span { color: var(--text-faint); font-variant-numeric: tabular-nums; }
-
-.semantic-diagram-list > button {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 38px;
-  padding: 8px 9px;
-  color: var(--text-muted);
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: transparent;
-}
-
-.semantic-diagram-list > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.semantic-diagram-list > button:hover { color: var(--text); background: var(--surface-subtle); }
-.semantic-diagram-list > button.is-active { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 28%, var(--line)); background: var(--violet-soft); }
-.semantic-diagram-list form { display: grid; gap: 7px; margin-top: 10px; padding: 11px 8px 0; border-top: 1px solid var(--line); }
 
 .semantic-diagram-stage {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   background: var(--canvas, var(--surface-subtle));
 }
 
-.semantic-diagram-stage > header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-  min-height: 74px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.semantic-diagram-stage > header > div { min-width: 0; }
-.semantic-diagram-stage > header h2 { margin: 3px 0 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.15; letter-spacing: -.025em; }
-.semantic-diagram-stage > header p { max-width: 68ch; margin: 5px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.45; }
-.semantic-diagram-stage > header > div > button { min-height: 28px; padding: 4px 7px; border-color: transparent; background: transparent; }
-.semantic-diagram-stage > header form { display: flex; align-items: end; gap: 8px; }
-.semantic-diagram-stage > header input { width: min(220px, 24vw); }
+.semantic-diagram-stage:focus-visible { outline: 2px solid var(--violet); outline-offset: -2px; }
+.engineering-workspace__sr-only { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .semantic-flow { min-width: 0; min-height: 0; }
 .semantic-flow .react-flow__background { color: color-mix(in srgb, var(--line) 72%, transparent); }
@@ -329,12 +304,16 @@
 }
 
 .semantic-entity-inspector > header {
+  position: sticky;
+  z-index: 1;
+  inset-block-start: 0;
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 14px;
   padding: 16px;
   border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 .semantic-entity-inspector > header span { color: var(--text-faint); font-size: 10px; text-transform: uppercase; }
 .semantic-entity-inspector > header h2 { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 20px; line-height: 1.2; letter-spacing: -.025em; }
@@ -368,36 +347,52 @@
 .semantic-block-actions button:hover { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 34%, var(--line)); }
 .semantic-entity-inspector > .rich-content { margin: 0 16px 18px; }
 
-@media (max-width: 1100px) {
-  .engineering-workspace__diagram.has-inspector { grid-template-columns: 180px minmax(300px, 1fr) minmax(300px, 350px); }
-  .engineering-workspace__diagram:not(.has-inspector) { grid-template-columns: 180px minmax(0, 1fr); }
-  .semantic-diagram-stage > header { align-items: start; }
-  .semantic-diagram-stage > header form { display: grid; }
+@container engineering-editor (max-width: 820px) {
+  .engineering-workspace__toolbar { padding-inline: 10px; }
+  .engineering-workspace__context { flex: 1 0 100%; margin-inline-start: 0; }
+  .engineering-workspace__context > select { flex: 0 1 40%; width: 0; min-width: 72px; }
+  .engineering-workspace__context:not(:has(form)) > select { flex: 1; }
+  .engineering-workspace__context input { width: 0; flex: 1; }
+  .engineering-workspace__actions { margin-inline-start: auto; }
+  .engineering-workspace__more { position: static; }
+  .engineering-workspace__more-panel { inset-inline: auto 10px; inset-block-start: 100%; }
+  .engineering-workspace__diagram.has-inspector { grid-template-columns: minmax(0, 1fr); }
+  .engineering-workspace__diagram.has-inspector > .semantic-diagram-stage { visibility: hidden; }
+  .semantic-entity-inspector {
+    position: absolute;
+    inset: 0;
+    border-left: 0;
+  }
 }
 
-@media (max-width: 760px) {
-  .engineering-workspace { grid-template-rows: auto auto minmax(0, 1fr); }
-  .engineering-workspace__toolbar { align-items: stretch; flex-wrap: wrap; padding: 8px 10px; }
-  .engineering-workspace__projection { flex: 1; }
-  .engineering-workspace__projection button { flex: 1; }
-  .engineering-workspace__actions { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
-  .engineering-workspace__revision { align-self: center; }
-  .engineering-workspace__kanban { padding: 12px 10px; }
-  .engineering-workspace__board-select { align-items: stretch; flex-direction: column; }
-  .engineering-workspace__board-select form { align-items: stretch; }
-  .engineering-workspace__board-select form label { flex: 1; }
-  .engineering-workspace__diagram,
-  .engineering-workspace__diagram.has-inspector,
-  .engineering-workspace__diagram:not(.has-inspector) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(440px, 1fr); overflow-y: auto; }
-  .semantic-diagram-list { grid-auto-flow: column; grid-auto-columns: minmax(150px, 58vw); overflow: auto hidden; border-right: 0; border-bottom: 1px solid var(--line); }
-  .semantic-diagram-list__heading { display: none; }
-  .semantic-diagram-list form { display: none; }
-  .semantic-diagram-stage { min-height: 540px; }
-  .semantic-diagram-stage > header { align-items: stretch; flex-direction: column; }
-  .semantic-diagram-stage > header form { display: flex; }
-  .semantic-diagram-stage > header form label { flex: 1; }
-  .semantic-diagram-stage > header input { width: 100%; }
-  .semantic-entity-inspector { position: fixed; z-index: 120; inset: max(12px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 54px color-mix(in srgb, var(--shadow) 88%, transparent); }
+@container engineering-editor (max-width: 600px) {
+  .engineering-workspace__toolbar button,
+  .engineering-workspace__toolbar summary,
+  .engineering-workspace__toolbar select,
+  .engineering-workspace__toolbar input,
+  .semantic-entity-inspector > header button { min-height: 44px; }
+  .engineering-workspace__actions > button,
+  .engineering-workspace__more > summary,
+  .engineering-workspace__context > button,
+  .semantic-entity-inspector > header > button { width: 44px; }
+  .engineering-workspace__kanban { padding-inline: 8px; }
+  .engineering-workspace__kanban .kanban-board__columns {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: min(84cqi, 320px);
+    scroll-snap-type: x mandatory;
+  }
+  .engineering-workspace__kanban .kanban-column { min-width: 0; scroll-snap-align: start; }
+  .semantic-flow .react-flow__minimap { display: none; }
+}
+
+@container engineering-editor (max-width: 340px) {
+  .engineering-workspace__projection button > svg { display: none; }
+}
+
+@container engineering-editor (max-width: 300px) {
+  .engineering-workspace__context { flex-wrap: wrap; }
+  .engineering-workspace__context form { flex-basis: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,22 @@
-.flow2 { --flow2-color: var(--teal); }
-.flow2-legend { display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; padding:14px 20px; border-bottom:1px solid var(--line); font-size:12px; color:var(--text-soft); }
+.flow2 { --flow2-color: var(--teal); display:flex; flex:1; flex-direction:column; min-width:0; min-height:0; }
+.flow2-toolbar { position:relative; z-index:2; display:flex; align-items:center; gap:8px; min-height:46px; padding:5px 12px; border-bottom:1px solid var(--line); }
+.flow2-toolbar button, .flow2-toolbar select, .flow2-toolbar summary {
+  min-height:34px;
+  padding:5px 9px;
+  color:var(--text);
+  font:inherit;
+  font-size:12px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:7px;
+}
+.flow2-toolbar button, .flow2-toolbar summary { cursor:pointer; }
+.flow2-toolbar select { max-width:min(36%, 200px); }
+.flow2-goal { display:flex; flex:1; align-items:center; gap:8px; min-width:0; text-align:left; }
+.flow2-goal strong { flex:none; }
+.flow2-goal span { overflow:hidden; color:var(--text-soft); text-overflow:ellipsis; white-space:nowrap; }
+.flow2-legend-disclosure > summary { align-content:center; }
+.flow2-legend { position:absolute; top:calc(100% + 4px); right:8px; display:flex; flex-wrap:wrap; gap:10px 14px; width:min(340px, calc(100% - 16px)); padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-raised); font-size:12px; color:var(--text-soft); }
 .flow2-legend-item { display:inline-flex; align-items:center; gap:5px; }
 .flow2-legend-item i { width:18px; height:14px; border:1.5px solid var(--flow2-color); border-radius:3px; }
 .flow2-operation-thinking { --flow2-color: var(--violet); }
@@ -12,9 +29,11 @@
 .flow2-operation-reading.flow2-node, .flow2-operation-reading i { border-radius:3px 18px 3px 18px; }
 .flow2-operation-validating.flow2-node, .flow2-operation-validating i { border-style:double; border-width:3px; }
 .flow2-operation-completed.flow2-node, .flow2-operation-completed i { border-style:dotted; }
-.flow2-edge-key { margin-left:auto; color:var(--text-muted); font-size:11px; }
-.flow2-workspace { display:flex; min-width:0; }
-.flow2-canvas { height:640px; flex:1; min-width:0; background:var(--bg); }
+.flow2-edge-key { width:100%; color:var(--text-muted); font-size:12px; }
+.flow2-workspace { position:relative; display:flex; flex:1 1 auto; min-width:0; min-height:0; }
+.flow2-canvas { height:clamp(380px, 66dvh, 780px); flex:1; min-width:0; background:var(--bg); }
+.machine-activity-page--focused .flow2-workspace { flex-basis:0; }
+.machine-activity-page--focused .flow2-canvas { height:100%; }
 .flow2-canvas .react-flow__edge-path { stroke:var(--text-muted); stroke-width:1.5; }
 .flow2-canvas .flow2-membership .react-flow__edge-path { stroke-dasharray:5 5; }
 .flow2-canvas .react-flow__controls button { background:var(--surface); color:var(--text); border-color:var(--line); }
@@ -31,7 +50,7 @@
 .flow2-node .agent-model-label { font-size:10px; }
 .flow2 .react-flow__handle { width:4px; height:4px; background:var(--line-strong); border:0; }
 .flow2 .react-flow__node.selected { outline:2px solid var(--violet); outline-offset:5px; border-radius:12px; }
-.flow2-detail { width:290px; flex-shrink:0; box-sizing:border-box; padding:18px; border-left:1px solid var(--line); max-height:640px; overflow:auto; }
+.flow2-detail { width:clamp(310px, 28%, 460px); flex-shrink:0; padding:16px; border-left:1px solid var(--line); overflow:auto; background:var(--surface); }
 .flow2-detail header { display:flex; justify-content:space-between; align-items:center; }
 .flow2-detail h3 { margin:0; font-size:17px; }
 .flow2-detail h4 { margin:20px 0 6px; font-size:12px; color:var(--text-soft); }
@@ -41,22 +60,15 @@
 .flow2-detail li p { margin:4px 0; }
 .flow2-detail time { font-variant-numeric:tabular-nums; font-size:10px; color:var(--text-muted); }
 .flow2-detail a { font-size:12px; }
-.flow2-agent-picker { display:flex; flex-wrap:wrap; gap:6px; padding:12px 20px; border-top:1px solid var(--line); }
-.flow2-agent-picker button { font-size:11px; padding:6px 10px; }
-.flow2-agent-picker button[aria-pressed=true] { border-color:var(--violet); color:var(--violet); }
-.flow2 button:focus-visible { outline:2px solid var(--violet); outline-offset:3px; }
-@media(max-width:760px) { .flow2-workspace { flex-direction:column; } .flow2-canvas { flex:none; height:420px; width:100%; } .flow2-detail { width:100%; border-left:0; border-top:1px solid var(--line); max-height:350px; } .flow2-legend { padding:12px; gap:10px; } .flow2-edge-key { margin-left:0; width:100%; } }
+.flow2 button:focus-visible, .flow2 select:focus-visible, .flow2 summary:focus-visible { outline:2px solid var(--violet); outline-offset:2px; }
+@media (max-width: 900px) {
+  .flow2-toolbar button, .flow2-toolbar select, .flow2-toolbar summary { min-height:44px; }
+  .flow2 .flow2-workspace { flex-basis:auto; }
+  .flow2 .flow2-canvas { height:clamp(360px, 62dvh, 680px); width:100%; }
+  .flow2-workspace:has(.flow2-detail) .flow2-canvas { visibility:hidden; }
+  .flow2-detail { position:absolute; z-index:1; inset:0; width:100%; border:0; }
+}
 
 .flow2-operation-idle, .flow2-operation-planned { --flow2-color: var(--text-muted); }
 .flow2-operation-idle.flow2-node, .flow2-operation-idle i { border-style:dashed; }
 .flow2-operation-planned.flow2-node { border-style:dotted; }
-/* Flow 2 puts the diagram, not its page furniture, first. */
-.machine-activity-page--flow2 .machine-activity-content { padding-top:20px; }
-.machine-activity-page--flow2 .machine-activity-heading { margin-bottom:12px; gap:14px; }
-.machine-activity-page--flow2 .machine-activity-heading h1 { font-size:30px; }
-.machine-activity-page--flow2 .dashboard-kicker { display:none; }
-.machine-activity-page--flow2 .machine-activity-summary { display:flex; flex-wrap:wrap; max-width:none; gap:18px; margin-bottom:14px; }
-.machine-activity-page--flow2 .machine-activity-summary > span { display:flex; align-items:center; gap:7px; padding:0; border:0; background:none; }
-.machine-activity-page--flow2 .machine-activity-summary b { font-size:16px; }
-.machine-activity-page--flow2 .machine-activity-summary small { font-size:10px; text-transform:none; letter-spacing:0; }
-.machine-activity-page--flow2 .machine-activity-summary svg { width:15px; height:15px; }

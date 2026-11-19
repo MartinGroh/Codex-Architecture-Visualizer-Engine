@@ -51,10 +51,22 @@ export function AgentFlowGraph({ timeline, lanes }: { timeline: MachineActivityP
   const selected = lanes.find((lane) => lane.agent.agentId === selectedId)
   const operations: FlowOperation[] = ['Thinking', 'Reading', 'Editing', 'Validating', 'Working', 'Idle', 'Completed']
   return <div className="flow2">
-    <div className="flow2-legend" aria-label="Operation legend">{operations.map((operation) => {
-      const Icon = operationIcons[operation]
-      return <span key={operation} className={`flow2-legend-item flow2-operation-${operation.toLowerCase()}`}><i /><Icon size={13} />{operation}</span>
-    })}<span className="flow2-edge-key">Dashed link: project membership · Solid link: observed parent</span></div>
+    <div className="flow2-toolbar">
+      <button className="flow2-goal" type="button" aria-pressed={selectedId === 'project-hub'} onClick={() => setSelectedId(selectedId === 'project-hub' ? null : 'project-hub')}>
+        <strong>Current work</strong> <span>{timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task'}</span>
+      </button>
+      <select aria-label="Select an agent" value={selected?.agent.agentId ?? ''} onChange={(event) => setSelectedId(event.target.value || null)}>
+        <option value="">Select an agent</option>
+        {lanes.map(({ agent }) => <option key={agent.agentId} value={agent.agentId}>{agentDisplayName(agent)} · {agent.isSubagent ? 'Subagent' : 'Main agent'}</option>)}
+      </select>
+      <details className="flow2-legend-disclosure">
+        <summary>Legend</summary>
+        <div className="flow2-legend">{operations.map((operation) => {
+          const Icon = operationIcons[operation]
+          return <span key={operation} className={`flow2-legend-item flow2-operation-${operation.toLowerCase()}`}><i /><Icon size={13} />{operation}</span>
+        })}<span className="flow2-edge-key">Dashed links show project membership. Solid links show observed parents.</span></div>
+      </details>
+    </div>
     {layoutError ? <p role="alert"><CircleAlert size={16} /> Flow layout unavailable: {layoutError}</p> : layout === null
       ? <p role="status">Arranging agent flow…</p>
       : <div className="flow2-workspace">
@@ -82,8 +94,5 @@ export function AgentFlowGraph({ timeline, lanes }: { timeline: MachineActivityP
           {selected.agent.publicId && <a href={`/activity?workspace=${encodeURIComponent(timeline.workspace.workspaceId)}&agent=${encodeURIComponent(selected.agent.publicId)}`}>Open full timeline</a>}
         </aside>}
       </div>}
-    <div className="flow2-agent-picker" aria-label="Select an agent"><button type="button" aria-pressed={selectedId === 'project-hub'} onClick={() => setSelectedId('project-hub')}>Project goal</button>{lanes.map((lane) => <button key={lane.agent.agentId} type="button" aria-pressed={selectedId === lane.agent.agentId} onClick={() => setSelectedId(lane.agent.agentId)}>
-      {agentDisplayName(lane.agent)} · {flowOperation(lane)}
-    </button>)}</div>
   </div>
 }

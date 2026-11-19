@@ -23,6 +23,7 @@ export interface KanbanBoardProps {
   onOpenSource: (trackable: SemanticTrackable) => void
   onOpenChildDiagram?: (diagramId: string) => void
   onConfigureBoard?: (board: SemanticKanbanBoard) => void
+  showHeading?: boolean
   readOnly?: boolean
 }
 
@@ -43,6 +44,7 @@ export function KanbanBoard({
   onOpenSource,
   onOpenChildDiagram,
   onConfigureBoard,
+  showHeading = true,
   readOnly = false,
 }: KanbanBoardProps) {
   const [dragged, setDragged] = useState<DraggedTrackable | null>(null)
@@ -96,18 +98,26 @@ export function KanbanBoard({
   }
 
   return (
-    <section className="kanban-board" aria-labelledby={`kanban-board-${board.id}`}>
-      <header className="kanban-board__header">
-        <div>
-          <h2 id={`kanban-board-${board.id}`}><LayoutPanelTop size={19} /> {board.title}</h2>
-          <p>{tracked.length} {tracked.length === 1 ? 'source object' : 'source objects'} tracked without duplicating diagram data.</p>
-        </div>
-        {onConfigureBoard && (
-          <button type="button" onClick={() => onConfigureBoard(board)}>
-            <Settings2 size={15} /> Configure
-          </button>
-        )}
-      </header>
+    <section
+      className="kanban-board"
+      aria-label={showHeading ? undefined : board.title}
+      aria-labelledby={showHeading ? `kanban-board-${board.id}` : undefined}
+    >
+      {(showHeading || onConfigureBoard) && (
+        <header className="kanban-board__header">
+          {showHeading && (
+            <div>
+              <h2 id={`kanban-board-${board.id}`}><LayoutPanelTop size={19} /> {board.title}</h2>
+              <p>{tracked.length} {tracked.length === 1 ? 'source object' : 'source objects'} tracked</p>
+            </div>
+          )}
+          {onConfigureBoard && (
+            <button type="button" onClick={() => onConfigureBoard(board)}>
+              <Settings2 size={15} /> Configure
+            </button>
+          )}
+        </header>
+      )}
 
       <div className="kanban-board__columns" style={boardStyle}>
         {columns.map((column) => {

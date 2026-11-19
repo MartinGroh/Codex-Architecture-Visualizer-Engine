@@ -1,0 +1,222 @@
+.workspace-dashboard .dashboard-content,
+.machine-settings-page .settings-content {
+  width: min(var(--machine-content-width), calc(100% - clamp(28px, 4vw, 64px)));
+  padding-block: 24px 48px;
+}
+
+.workspace-dashboard { --machine-content-width: 100rem; }
+.machine-settings-page { --machine-content-width: 65rem; }
+
+.workspace-dashboard .dashboard-heading,
+.machine-settings-page .settings-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 18px;
+}
+
+.workspace-dashboard .dashboard-heading h1,
+.machine-settings-page .settings-heading h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.1vw, 2rem);
+  letter-spacing: -.035em;
+}
+
+.workspace-dashboard .dashboard-heading p {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+}
+
+.workspace-dashboard .dashboard-heading__actions {
+  width: auto;
+  flex-wrap: wrap;
+}
+
+.workspace-dashboard .dashboard-heading__actions > *,
+.machine-settings-page .settings-back,
+.machine-settings-page .settings-inline-link {
+  min-height: 44px;
+  font-size: .8125rem;
+}
+
+.workspace-dashboard__body {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  align-items: start;
+}
+
+.workspace-dashboard__body > .agent-statistics { margin-top: 0; }
+
+.workspace-dashboard .workspace-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: 12px;
+}
+
+.workspace-dashboard .workspace-card {
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  min-height: 0;
+  gap: 12px;
+  padding: 16px;
+  box-shadow: none;
+}
+
+.workspace-dashboard .workspace-card:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.workspace-dashboard a.workspace-card:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.workspace-dashboard .workspace-card.is-active { box-shadow: none; }
+
+.workspace-dashboard .workspace-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.workspace-dashboard .workspace-card__identity { margin: 0; }
+
+.workspace-dashboard .workspace-card__identity h2 {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.workspace-dashboard .workspace-card__identity p {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: .6875rem;
+}
+
+.workspace-dashboard .workspace-card__activity {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  min-height: 0;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.workspace-card__activity > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-dashboard .workspace-card__activity strong { font-size: .75rem; }
+
+.workspace-card__activity > p {
+  display: -webkit-box;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: .75rem;
+  line-height: 1.45;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.workspace-dashboard .workspace-card footer {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 0;
+  color: var(--text-soft);
+  font-size: .75rem;
+}
+
+.workspace-dashboard .dashboard-empty {
+  min-height: 10rem;
+  padding: 20px;
+}
+
+.machine-settings-page .settings-heading { max-width: none; }
+
+.machine-settings-page .settings-layout {
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 16px;
+}
+
+.machine-settings-page .settings-navigation a {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.machine-settings-page .settings-panel { padding: 20px; }
+
+.machine-settings-page .settings-panel__heading {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+.machine-settings-page .settings-panel__heading > span {
+  width: 36px;
+  height: 36px;
+}
+
+.machine-settings-page .settings-fieldset {
+  margin-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
+}
+
+.machine-settings-page .settings-choice {
+  min-height: 60px;
+  padding: 10px 12px;
+}
+
+.machine-settings-page .settings-preview {
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.machine-settings-page .settings-preview a span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.machine-settings-page .settings-saved:empty {
+  min-height: 0;
+  margin: 0;
+}
+
+.machine-settings-page .settings-empty-section {
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.machine-settings-page .settings-inline-link { margin-top: 4px; }
+
+@media (min-width: 75rem) {
+  .workspace-dashboard__body:has(> .workspace-grid > :only-child) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .workspace-dashboard .workspace-grid:has(> :only-child) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 48.75rem) {
+  .workspace-dashboard .dashboard-content,
+  .machine-settings-page .settings-content { padding-block: 16px 36px; }
+
+  .machine-settings-page .settings-layout { grid-template-columns: minmax(0, 1fr); }
+
+  .machine-settings-page .settings-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .machine-settings-page .settings-panel { padding: 14px; }
+}

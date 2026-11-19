@@ -1,9 +1,7 @@
 import {
-  Activity,
   Boxes,
   ChevronRight,
   CircleAlert,
-  Clock3,
   FolderOpen,
   RefreshCw,
   Route,
@@ -16,6 +14,7 @@ import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import { MachinePageFrame } from './MachinePageFrame'
 import type { WorkspaceOverview } from './types'
 import { useWorkspaceOverview } from './useWorkspaceOverview'
+import './MachineOverview.css'
 
 export function WorkspaceDashboard() {
   const { hostName, workspaces, diagnostics, error, isLoading, refresh } = useWorkspaceOverview()
@@ -23,11 +22,10 @@ export function WorkspaceDashboard() {
   return (
     <MachinePageFrame className="workspace-dashboard">
       <section className="dashboard-content">
-        <div className="dashboard-heading">
+        <header className="dashboard-heading">
           <div>
-            <span className="dashboard-kicker"><Activity size={14} /> Live on {hostName ?? 'CAVE host'}</span>
-            <h1>Your architecture workspaces</h1>
-            <p>Choose a project to open its live architecture, Git, and agent activity view.</p>
+            <h1>Projects</h1>
+            {hostName && <p>Live on {hostName}</p>}
           </div>
           <div className="dashboard-heading__actions">
             <a href="/activity"><Route size={15} /> Agent flow</a>
@@ -36,7 +34,7 @@ export function WorkspaceDashboard() {
               <RefreshCw size={15} className={isLoading ? 'is-spinning' : ''} /> Refresh
             </button>
           </div>
-        </div>
+        </header>
 
         {error !== null && (
           <div className="dashboard-alert" role="alert">
@@ -52,20 +50,22 @@ export function WorkspaceDashboard() {
           </div>
         )}
 
-        {isLoading && workspaces.length === 0 ? (
-          <div className="dashboard-empty"><span className="loading-orbit"><Boxes size={22} /></span>Reading machine workspaces…</div>
-        ) : workspaces.length === 0 ? (
-          <div className="dashboard-empty">
-            <FolderOpen size={28} />
-            <strong>No CAVE workspaces have been observed yet.</strong>
-            <span>Open a repository through the CAVE plugin in Codex; it will appear here automatically.</span>
-          </div>
-        ) : (
-          <div className="workspace-grid">
-            {workspaces.map((workspace) => <WorkspaceCard key={workspace.workspaceId} workspace={workspace} />)}
-          </div>
-        )}
-        <AgentStatisticsPanel title="All project statistics" defaultOpen />
+        <div className="workspace-dashboard__body">
+          {isLoading && workspaces.length === 0 ? (
+            <div className="dashboard-empty"><span className="loading-orbit"><Boxes size={22} /></span>Reading machine workspaces…</div>
+          ) : workspaces.length === 0 ? (
+            <div className="dashboard-empty">
+              <FolderOpen size={28} />
+              <strong>No CAVE workspaces have been observed yet.</strong>
+              <span>Open a repository through the CAVE plugin in Codex to add it here.</span>
+            </div>
+          ) : (
+            <div className="workspace-grid">
+              {workspaces.map((workspace) => <WorkspaceCard key={workspace.workspaceId} workspace={workspace} />)}
+            </div>
+          )}
+          <AgentStatisticsPanel title="All project statistics" defaultOpen />
+        </div>
       </section>
     </MachinePageFrame>
   )
@@ -75,6 +75,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
   const hasActiveAgents = workspace.activeAgentCount > 0
   const hasOnlySubagents = hasActiveAgents && workspace.activeAgentCount === workspace.activeSubagentCount
   const phaseToken = (workspace.currentPhase ?? 'Working').toLowerCase()
+  const summary = workspace.activitySummary ?? (hasActiveAgents ? 'Agent activity is live' : 'No recent agent activity')
   const content = (
     <>
       <div className="workspace-card__header">
@@ -83,32 +84,21 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOverview }) {
             ? <AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active isSubagent={hasOnlySubagents} size={29} />
             : <Boxes size={20} />}
         </span>
-        <span className={`workspace-availability ${workspace.isAvailable ? '' : 'is-unavailable'}`}>
-          {workspace.isAvailable ? 'Available' : 'Missing'}
-        </span>
-      </div>
-      <div className="workspace-card__identity">
-        <h2>{workspace.name}</h2>
-        <p title={workspace.rootPath}>{workspace.rootPath}</p>
+        <div className="workspace-card__identity">
+          <h2>{workspace.name}</h2>
+          <p title={workspace.rootPath}>{workspace.rootPath}</p>
+        </div>
+        {!workspace.isAvailable && <span className="workspace-availability is-unavailable">Missing</span>}
       </div>
       <div className="workspace-card__activity">
-        {hasActiveAgents ? (
-          <>
-            <AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active isSubagent={hasOnlySubagents} size={17} />
-            <strong>{workspace.currentPhase ?? 'Working'}</strong>
-            <AgentModelLabel configuration={workspace.currentAgentConfiguration} />
-            <span>{workspace.activitySummary ?? 'Agent activity is live'}</span>
-          </>
-        ) : (
-          <>
-            <Clock3 size={14} />
-            <strong>Quiet</strong>
-            <span>{workspace.activitySummary ?? 'No recent agent activity'}</span>
-          </>
-        )}
+        <div>
+          <strong>{hasActiveAgents ? workspace.currentPhase ?? 'Working' : 'Quiet'}</strong>
+          {hasActiveAgents && <AgentModelLabel configuration={workspace.currentAgentConfiguration} />}
+        </div>
+        <p title={summary}>{summary}</p>
       </div>
       <footer>
-        <span><AgentAvatar phase={workspace.currentPhase} configuration={workspace.currentAgentConfiguration ?? null} active={hasActiveAgents} isSubagent={hasOnlySubagents} size={15} /> {workspace.activeAgentCount} active</span>
+        <span>{workspace.activeAgentCount} active</span>
         <span><UsersRound size={14} /> {workspace.activeSubagentCount} {workspace.activeSubagentCount === 1 ? 'subagent' : 'subagents'}</span>
         {workspace.isAvailable && <ChevronRight size={17} className="workspace-card__open" />}
       </footer>

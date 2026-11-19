@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -26,6 +27,7 @@ import {
   CheckSquare2,
   Code2,
   Download,
+  Ellipsis,
   GitBranch,
   Image as ImageIcon,
   LayoutPanelTop,
@@ -106,6 +108,19 @@ export function EngineeringWorkspace({
   const [relationshipType, setRelationshipType] = useState('generic')
   const [newAssetPath, setNewAssetPath] = useState('')
   const [newAssetAltText, setNewAssetAltText] = useState('')
+  const stageRef = useRef<HTMLElement>(null)
+  const closeEditorRef = useRef<HTMLButtonElement>(null)
+  const moreActionsRef = useRef<HTMLDetailsElement>(null)
+  const hasInspector = projection === 'diagram' && entityDraft !== null && selectedDiagramId !== null
+
+  useEffect(() => {
+    if (hasInspector) closeEditorRef.current?.focus({ preventScroll: true })
+  }, [hasInspector])
+
+  const closeInspector = () => {
+    setSelectedEntityId(null)
+    requestAnimationFrame(() => stageRef.current?.focus({ preventScroll: true }))
+  }
 
   const refresh = useCallback(async () => {
     if (client === null) return
@@ -225,6 +240,10 @@ export function EngineeringWorkspace({
       setNewDiagramTitle('')
       setSelectedDiagramId(id)
       setSelectedEntityId(null)
+      if (moreActionsRef.current) {
+        moreActionsRef.current.open = false
+        moreActionsRef.current.querySelector('summary')?.focus()
+      }
     }
   }
 
@@ -531,49 +550,108 @@ export function EngineeringWorkspace({
           </button>
         </div>
         <div className="engineering-workspace__actions">
-          <button type="button" disabled={busy} title="Undo the last semantic transaction" onClick={() => void runHistory('undo')}>
-            <Undo2 size={14} /> Undo
+          <button type="button" disabled={busy} title="Undo the last semantic transaction" aria-label="Undo" onClick={() => void runHistory('undo')}>
+            <Undo2 size={15} />
           </button>
-          <button type="button" disabled={busy} title="Redo the last undone semantic transaction" onClick={() => void runHistory('redo')}>
-            <Redo2 size={14} /> Redo
+          <button type="button" disabled={busy} title="Redo the last undone semantic transaction" aria-label="Redo" onClick={() => void runHistory('redo')}>
+            <Redo2 size={15} />
           </button>
-          <button type="button" disabled={busy} onClick={() => void downloadExport('json')}>
-            <Download size={14} /> JSON
-          </button>
-          <button type="button" disabled={busy} onClick={() => void downloadExport('markdown')}>
-            <Download size={14} /> Markdown
-          </button>
+          <details
+            className="engineering-workspace__more"
+            ref={moreActionsRef}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape' || !event.currentTarget.open) return
+              event.stopPropagation()
+              event.currentTarget.open = false
+              event.currentTarget.querySelector('summary')?.focus()
+            }}
+          >
+            <summary aria-label="More workspace actions" title="More workspace actions"><Ellipsis size={16} /></summary>
+            <div className="engineering-workspace__more-panel">
+              {projection === 'diagram' && selectedDiagram?.purpose && <p>{selectedDiagram.purpose}</p>}
+              {projection === 'diagram' && (
+                <form onSubmit={(event) => void addDiagram(event)}>
+                  <label>
+                    <span>New diagram</span>
+                    <input value={newDiagramTitle} onChange={(event) => setNewDiagramTitle(event.currentTarget.value)} placeholder="Diagram name" />
+                  </label>
+                  <button type="submit" disabled={busy || !newDiagramTitle.trim()}><Plus size={14} /> Add diagram</button>
+                </form>
+              )}
+              <button type="button" disabled={busy} onClick={() => void downloadExport('json')}>
+                <Download size={14} /> Export JSON
+              </button>
+              <button type="button" disabled={busy} onClick={() => void downloadExport('markdown')}>
+                <Download size={14} /> Export Markdown
+              </button>
+              <small title={workspace.updatedAtUtc}>Revision {workspace.revision}</small>
+            </div>
+          </details>
         </div>
-        <span className="engineering-workspace__revision" title={workspace.updatedAtUtc}>
-          Revision {workspace.revision}
-        </span>
+        <div className="engineering-workspace__context">
+          {projection === 'kanban' ? (
+            <>
+              <select aria-label="Board" value={selectedBoard?.id ?? ''} onChange={(event) => setSelectedBoardId(event.currentTarget.value)}>
+                {!selectedBoard && <option value="">No board</option>}
+                {workspace.boards.map((board) => <option key={board.id} value={board.id}>{board.title}</option>)}
+              </select>
+              {selectedBoard && (
+                <form onSubmit={(event) => void addBoardColumn(event)}>
+                  <input aria-label="New column" value={newColumnTitle} onChange={(event) => setNewColumnTitle(event.currentTarget.value)} placeholder="Name" />
+                  <button type="submit" disabled={busy || !newColumnTitle.trim()}><Plus size={14} /> Add column</button>
+                </form>
+              )}
+            </>
+          ) : (
+            <>
+              {selectedDiagram?.parentDiagramId && (
+                <button
+                  type="button"
+                  aria-label="Parent diagram"
+                  title="Parent diagram"
+                  onClick={() => {
+                    setSelectedDiagramId(selectedDiagram.parentDiagramId)
+                    setSelectedEntityId(null)
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                </button>
+              )}
+              <select
+                aria-label="Diagram"
+                value={selectedDiagram?.id ?? ''}
+                title={selectedDiagram?.title}
+                onChange={(event) => {
+                  setSelectedDiagramId(event.currentTarget.value)
+                  setSelectedEntityId(null)
+                }}
+              >
+                {!selectedDiagram && <option value="">Choose a diagram</option>}
+                {workspace.diagrams.map((diagram) => <option key={diagram.id} value={diagram.id}>{diagram.title}</option>)}
+              </select>
+              {selectedDiagram && (
+                <form onSubmit={(event) => void addEntity(event)}>
+                  <input aria-label="New entity" value={newEntityTitle} onChange={(event) => setNewEntityTitle(event.currentTarget.value)} placeholder="Name" />
+                  <button type="submit" disabled={busy || !newEntityTitle.trim()}><Plus size={14} /> Add entity</button>
+                </form>
+              )}
+            </>
+          )}
+        </div>
       </header>
 
       {error && <p className="engineering-workspace__error" role="alert">{error}</p>}
 
       {projection === 'kanban' ? (
         <div className="engineering-workspace__kanban">
-          <div className="engineering-workspace__board-select">
-            <label>
-              <span>Board</span>
-              <select value={selectedBoardId ?? ''} onChange={(event) => setSelectedBoardId(event.currentTarget.value)}>
-                {workspace.boards.map((board) => <option key={board.id} value={board.id}>{board.title}</option>)}
-              </select>
-            </label>
-            {selectedBoard && (
-              <form onSubmit={(event) => void addBoardColumn(event)}>
-                <label>
-                  <span>New column</span>
-                  <input value={newColumnTitle} onChange={(event) => setNewColumnTitle(event.currentTarget.value)} placeholder="Review" />
-                </label>
-                <button type="submit" disabled={busy || !newColumnTitle.trim()}><Plus size={14} /> Add column</button>
-              </form>
-            )}
-          </div>
           {selectedBoard ? (
             <KanbanBoard
               workspace={workspace}
               boardId={selectedBoard.id}
+              showHeading={false}
               readOnly={busy}
               onMoveTrackable={(trackable, columnId) => void moveTrackable(trackable, columnId)}
               onSetManualProgress={(trackable, value) => void setTrackableProgress(trackable, value)}
@@ -589,64 +667,9 @@ export function EngineeringWorkspace({
           )}
         </div>
       ) : (
-        <div className={`engineering-workspace__diagram ${entityDraft ? 'has-inspector' : ''}`}>
-          <aside className="semantic-diagram-list" aria-label="Semantic diagrams">
-            <div className="semantic-diagram-list__heading">
-              <strong>Diagrams</strong>
-              <span>{workspace.diagrams.length}</span>
-            </div>
-            {workspace.diagrams.map((diagram) => (
-              <button
-                key={diagram.id}
-                type="button"
-                className={diagram.id === selectedDiagramId ? 'is-active' : ''}
-                onClick={() => {
-                  setSelectedDiagramId(diagram.id)
-                  setSelectedEntityId(null)
-                }}
-              >
-                <Network size={14} />
-                <span>{diagram.title}</span>
-                {diagram.parentDiagramId && <GitBranch size={12} aria-label="Child diagram" />}
-              </button>
-            ))}
-            <form onSubmit={(event) => void addDiagram(event)}>
-              <label>
-                <span>New diagram</span>
-                <input value={newDiagramTitle} onChange={(event) => setNewDiagramTitle(event.currentTarget.value)} placeholder="Telemetry flow" />
-              </label>
-              <button type="submit" disabled={busy || !newDiagramTitle.trim()}><Plus size={14} /> Add</button>
-            </form>
-          </aside>
-
-          <section className="semantic-diagram-stage" aria-label={selectedDiagram?.title ?? 'Semantic diagram'}>
-            <header>
-              <div>
-                {selectedDiagram?.parentDiagramId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDiagramId(selectedDiagram.parentDiagramId)
-                      setSelectedEntityId(null)
-                    }}
-                  >
-                    <ArrowLeft size={13} /> Parent diagram
-                  </button>
-                )}
-                <h2>{selectedDiagram?.title ?? 'Choose a diagram'}</h2>
-                {selectedDiagram?.purpose && <p>{selectedDiagram.purpose}</p>}
-              </div>
-              {selectedDiagram && (
-                <form onSubmit={(event) => void addEntity(event)}>
-                  <label>
-                    <span>New entity</span>
-                    <input value={newEntityTitle} onChange={(event) => setNewEntityTitle(event.currentTarget.value)} placeholder="Request handler" />
-                  </label>
-                  <button type="submit" disabled={busy || !newEntityTitle.trim()}><Plus size={14} /> Add entity</button>
-                </form>
-              )}
-            </header>
-
+        <div className={`engineering-workspace__diagram ${hasInspector ? 'has-inspector' : ''}`}>
+          <section className="semantic-diagram-stage" aria-label={selectedDiagram?.title ?? 'Semantic diagram'} tabIndex={-1} ref={stageRef}>
+            <h2 className="engineering-workspace__sr-only">{selectedDiagram?.title ?? 'Choose a diagram'}</h2>
             <div className={`semantic-flow semantic-flow--${zoomBand}`}>
               {selectedDiagram && flowNodes.length > 0 ? (
                 <ReactFlow
@@ -680,13 +703,21 @@ export function EngineeringWorkspace({
           </section>
 
           {entityDraft && selectedDiagram && (
-            <aside className="semantic-entity-inspector" aria-label={`Edit ${entityDraft.title}`}>
+            <aside
+              className="semantic-entity-inspector"
+              aria-label={`Edit ${entityDraft.title}`}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape' || event.defaultPrevented) return
+                event.stopPropagation()
+                closeInspector()
+              }}
+            >
               <header>
                 <div>
                   <span>{entityDraft.type}</span>
                   <h2>{entityDraft.title}</h2>
                 </div>
-                <button type="button" aria-label="Close entity editor" onClick={() => setSelectedEntityId(null)}><X size={16} /></button>
+                <button type="button" aria-label="Close entity editor" ref={closeEditorRef} onClick={closeInspector}><X size={16} /></button>
               </header>
 
               <div className="semantic-entity-inspector__fields">

@@ -5,7 +5,6 @@ import { agentDisplayName, agentFocusLabel } from './agentIdentity'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
-  ArrowLeft,
   Bot,
   Check,
   CircleAlert,
@@ -170,21 +169,16 @@ export function MachineActivityPage() {
     try { window.localStorage.setItem(machineActivityViewKey, nextView) } catch { /* Optional preference. */ }
   }
 
+  const focusedCanvas = view === 'graph' && displayWorkspaces.length === 1
   return (
-    <MachinePageFrame className={`machine-activity-page${view === 'graph' ? ' machine-activity-page--flow2' : ''}`}>
+    <MachinePageFrame className={`machine-activity-page${focusedCanvas ? ' machine-activity-page--focused' : ''}`}>
       <section className="dashboard-content machine-activity-content">
         <div className="machine-activity-overview">
           <div className="machine-activity-heading">
-            <div>
-              <a className="machine-activity-back" href="/"><ArrowLeft size={14} /> Projects</a>
-              <span className="dashboard-kicker"><Route size={14} /> Active work across this machine</span>
-              <h1>{view === 'graph' ? 'Agent flow 2' : 'Agent flow'}</h1>
-              <p>Follow each project’s main goal and agent focus. Open a timeline for observed work details.</p>
-              <a className="machine-activity-back" href="/activity/light">Open Agent Flow Light</a>
-            </div>
+            <h1>Agent flow</h1>
             <div className="machine-activity-heading__actions">
-              <label className="machine-activity-project-select">Project
-                <select value={requestedWorkspaceId ?? ''} onChange={(event) => { window.location.href = event.target.value
+              <label className="machine-activity-project-select">
+                <select aria-label="Project" value={requestedWorkspaceId ?? ''} onChange={(event) => { window.location.href = event.target.value
                   ? `${view === 'graph' ? '/activity/flow2' : '/activity'}?workspace=${encodeURIComponent(event.target.value)}` : view === 'graph' ? '/activity/flow2' : '/activity' }}>
                   <option value="">All active projects</option>
                   {workspaces.filter((workspace) => workspace.isAvailable).map((workspace) =>
@@ -196,7 +190,7 @@ export function MachineActivityPage() {
                 <button type="button" aria-pressed={view === 'timeline'} className={view === 'timeline' ? 'is-active' : ''} onClick={() => selectView('timeline')}><Route size={14} /> Timeline</button>
                 <button type="button" aria-pressed={view === 'compact'} className={view === 'compact' ? 'is-active' : ''} onClick={() => selectView('compact')}><List size={14} /> Compact</button>
               </div>
-              {view === 'timeline' && <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
+              {view !== 'graph' && <div className="machine-activity-layout-toggle" role="group" aria-label="Project layout">
                 <button
                   type="button"
                   className={layout === 'grid' ? 'is-active' : ''}
@@ -222,11 +216,14 @@ export function MachineActivityPage() {
             </div>
           </div>
 
-          <section className="machine-activity-summary" aria-label="Active agent summary">
-            <span><Bot size={18} /><b>{activeAgentCount}</b><small>active agents</small></span>
-            <span><Activity size={18} /><b>{activeWorkspaces.length}</b><small>active projects</small></span>
-            <span><Route size={18} /><b>{activeSubagentCount}</b><small>subagents</small></span>
-          </section>
+          <div className="machine-activity-overview__status">
+            <section className="machine-activity-summary" aria-label="Active agent summary">
+              <span><Bot size={14} /><b>{activeAgentCount}</b><small>active agents</small></span>
+              <span><Activity size={14} /><b>{activeWorkspaces.length}</b><small>active projects</small></span>
+              <span><Route size={14} /><b>{activeSubagentCount}</b><small>subagents</small></span>
+            </section>
+            <a className="machine-activity-back" href="/activity/light">Agent Flow Light</a>
+          </div>
         </div>
 
         {error !== null && (
@@ -252,7 +249,7 @@ export function MachineActivityPage() {
             <a href="/">Open project overview</a>
           </div>
         ) : (
-          <div className={`machine-activity-projects machine-activity-projects--${view !== 'timeline' ? 'list' : layout}`}>
+          <div className={`machine-activity-projects machine-activity-projects--${view === 'graph' ? 'list' : layout}`}>
             {displayWorkspaces.map((workspace) => {
               const timeline = timelines.find((item) => item.workspace.workspaceId === workspace.workspaceId)
               const isActive = workspace.activeAgentCount > 0
@@ -343,7 +340,9 @@ function ActivityProjectFlow({
         <ProjectFlowActions workspace={timeline.workspace} active={active} onDismiss={onDismiss} />
       </header>
 
-      {view !== 'graph' && <><MainGoal goal={timeline.goal} sharingEnabled={timeline.sharingEnabled} />
+      {view !== 'graph' && <details className="machine-project-work">
+        <summary>Current work <span>{timeline.goal?.goal?.objective ?? timeline.prompt?.text ?? 'Observed task'}</span></summary>
+        <MainGoal goal={timeline.goal} sharingEnabled={timeline.sharingEnabled} />
       <div className="machine-prompt-root">
         <span><GitCommitHorizontal size={17} /></span>
         <div>
@@ -373,7 +372,7 @@ function ActivityProjectFlow({
         </div>
       </div>
 
-      </>}
+      </details>}
       {lanes.length === 0 && <p className="machine-agent-empty">{selectedAgentId === null ? 'No recent agents remain in this flow.' : 'This agent is no longer in the recent flow.'}</p>}
       {view === 'graph' ? <AgentFlowGraph timeline={timeline} lanes={lanes} /> : view === 'compact' ? <AgentFlowCompact lanes={lanes} workspaceId={timeline.workspace.workspaceId} openAgentId={selectedAgentId === null ? null : lanes[0]?.agent.agentId} onDismiss={onDismissAgent} /> : <div className="machine-agent-lanes">
         {lanes.map((lane) => (
@@ -483,10 +482,10 @@ function AgentTimelineLane({
       {!active && (
         <section className="machine-completion-summary" aria-label={`${agent.agentId} completion summary`}>
           <Check size={17} />
-          <div>
-            <small>Completed summary</small>
+          <details>
+            <summary>Completed summary</summary>
             <p>{completionText}{lane.completionSummary?.isTruncated === true ? ' …' : ''}</p>
-          </div>
+          </details>
           <time>{formatClock(lane.completionSummary?.occurredAtUtc ?? agent.updatedAtUtc)}</time>
           <button type="button" className="machine-project-flow__dismiss" onClick={onDismiss} aria-label={`Dismiss ${agentDisplayName(agent)}`}><Check size={14} /> Done</button>
         </section>

@@ -1,9 +1,20 @@
 import { agentDisplayName, agentFocusLabel } from './agentIdentity'
+import { useState } from 'react'
 import { sharedGoal } from './goalPresentation'
 import { AgentModelLabel } from './AgentModel'
 import { AgentStatisticsPanel } from './AgentStatisticsPanel'
 import type { StatisticsReader } from './agentStatistics'
 import type { AgentActivity, CodexGoalSnapshot, ConversationOverlay } from './types'
+
+const workContextPreference = 'cave.current-work-expanded'
+
+function readWorkContextPreference() {
+  try {
+    const preference = window.localStorage.getItem(workContextPreference)
+    if (preference !== null) return preference === 'true'
+  } catch { /* Storage is optional. */ }
+  return false
+}
 
 export function MainGoal({ goal, sharingEnabled }: { goal: CodexGoalSnapshot | null; sharingEnabled: boolean }) {
   return (
@@ -21,8 +32,14 @@ export function MainGoal({ goal, sharingEnabled }: { goal: CodexGoalSnapshot | n
 export function AgentWorkContext({ conversation, agents, workspaceId, statisticsReader }: { conversation: ConversationOverlay; agents: AgentActivity[];
   workspaceId?: string | null; statisticsReader?: StatisticsReader }) {
   const goal = sharedGoal(conversation)
+  const [expanded, setExpanded] = useState(readWorkContextPreference)
   return (
-    <details className="architecture-work-context" open>
+    <details className="architecture-work-context" open={expanded} onToggle={(event) => {
+      const open = event.currentTarget.open
+      if (open === expanded) return
+      setExpanded(open)
+      try { window.localStorage.setItem(workContextPreference, String(open)) } catch { /* Storage is optional. */ }
+    }}>
       <summary>Current work <span>{goal?.goal?.objective ?? `${agents.length} active agent${agents.length === 1 ? '' : 's'}`}</span></summary>
       <div className="architecture-work-context__content">
         <MainGoal goal={goal} sharingEnabled={conversation.sharingEnabled} />
@@ -34,7 +51,7 @@ export function AgentWorkContext({ conversation, agents, workspaceId, statistics
           </li>)}
         </ul>}
       </div>
-        {(workspaceId || statisticsReader) && <div className="architecture-work-context__statistics">
+        {expanded && (workspaceId || statisticsReader) && <div className="architecture-work-context__statistics">
           <AgentStatisticsPanel title="Project lifetime statistics" workspaceId={workspaceId} reader={statisticsReader} />
           {[...new Set(agents.filter(agent => !agent.parentAgentId || !agents.some(parent =>
             parent.agentId === agent.parentAgentId && !!parent.statisticsTaskId)).map(agent => agent.statisticsTaskId).filter((id): id is string => !!id))].map((taskId, index) =>
